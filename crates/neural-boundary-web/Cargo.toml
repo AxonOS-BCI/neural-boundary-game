@@ -1,0 +1,15 @@
+[package]
+name = "neural-boundary-web"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Dependency-light WASM boundary core adapter for Neural Boundary Game."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+neural-boundary-core = { path = "../neural-boundary-core" }

@@ -1,0 +1,11 @@
+[package]
+name = "neural-boundary-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Dependency-light replay verifier for Neural Boundary Game."
+
+[dependencies]
+neural-boundary-core = { path = "../neural-boundary-core" }
