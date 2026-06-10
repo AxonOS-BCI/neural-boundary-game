@@ -6,6 +6,7 @@ pub fn native_placeholder() -> &'static str {
 }
 
 #[cfg(target_arch = "wasm32")]
+#[allow(deprecated)]
 mod wasm_app {
     use neural_boundary_core::{
         EntityKind, GameConfig, GamePhase, GameState, GateStatus, PlayerAction,
@@ -68,7 +69,9 @@ mod wasm_app {
             closure.forget();
         }
 
-        let raf = Rc::new(RefCell::new(None::<Closure<dyn FnMut()>>));
+        type RafCallback = Closure<dyn FnMut()>;
+
+        let raf: Rc<RefCell<Option<RafCallback>>> = Rc::new(RefCell::new(None));
         let raf2 = Rc::clone(&raf);
         let win = window.clone();
 
