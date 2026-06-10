@@ -1,0 +1,62 @@
+{
+  "schema": "neural-boundary-replay-v1.0.3",
+  "seed": 1707,
+  "config": {
+    "difficulty": 1
+  },
+  "actions": [
+    {
+      "tick": 1,
+      "action": "validate"
+    },
+    {
+      "tick": 2,
+      "action": "consent_gate"
+    },
+    {
+      "tick": 3,
+      "action": "move_up"
+    },
+    {
+      "tick": 5,
+      "action": "validate"
+    },
+    {
+      "tick": 8,
+      "action": "quarantine"
+    },
+    {
+      "tick": 12,
+      "action": "move_down"
+    },
+    {
+      "tick": 16,
+      "action": "convert"
+    },
+    {
+      "tick": 20,
+      "action": "evidence_gate"
+    },
+    {
+      "tick": 26,
+      "action": "validate"
+    },
+    {
+      "tick": 40,
+      "action": "evidence_gate"
+    },
+    {
+      "tick": 80,
+      "action": "quarantine"
+    },
+    {
+      "tick": 120,
+      "action": "consent_gate"
+    }
+  ],
+  "expected": {
+    "min_trust": 1,
+    "max_risk": 100,
+    "min_integrity": 1
+  }
+}
