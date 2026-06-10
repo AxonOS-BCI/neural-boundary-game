@@ -1,0 +1,18 @@
+<svg width="1280" height="280" viewBox="0 0 1280 280" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Run Neural Boundary Game">
+  <rect width="1280" height="280" rx="28" fill="#03070B"/>
+  <path d="M0 0h1280v280H0z" fill="url(#g)"/>
+  <rect x="44" y="42" width="1192" height="196" rx="24" fill="#071018" stroke="#143140" stroke-width="2"/>
+  <text x="92" y="104" fill="#20D6FF" font-family="Consolas, monospace" font-size="18" font-weight="700">AxonOS-BCI · Rust/WASM · no_std core</text>
+  <text x="92" y="153" fill="#EDF5FF" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800">Neural Boundary Game v1.9.7</text>
+  <text x="92" y="194" fill="#8EA0B6" font-family="Consolas, monospace" font-size="20" font-weight="600">Do not ship raw signal. Ship typed intent.</text>
+  <rect x="910" y="92" width="238" height="74" rx="20" fill="#20D6FF"/>
+  <text x="965" y="138" fill="#031018" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="900">RUN DEMO</text>
+  <circle cx="1180" cy="128" r="24" fill="#7CFF4F"/>
+  <path d="M1172 116l22 12-22 12z" fill="#031018"/>
+  <defs>
+    <radialGradient id="g" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(690 64) rotate(90) scale(240 760)">
+      <stop stop-color="#20D6FF" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#03070B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
