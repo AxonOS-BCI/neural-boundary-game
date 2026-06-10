@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Neural Boundary Game v1.7.0</title>
+  <meta name="description" content="Elite AxonOS Standard Foundation Grande Rust/WASM demo: raw signal stays inside the device; apps receive typed intent only."/>
+  <meta property="og:title" content="Neural Boundary Game v1.7.0"/>
+  <meta property="og:description" content="Do not ship raw signal. Ship typed intent."/>
+  <meta property="og:image" content="preview.png"/>
+  <meta name="theme-color" content="#03070B"/>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #03070B;
+      --panel: #071018;
+      --panel2: #0B1520;
+      --border: #143140;
+      --cyan: #20D6FF;
+      --soft: #8EEBFF;
+      --green: #7CFF4F;
+      --red: #FF4D4D;
+      --violet: #9B7CFF;
+      --amber: #FF9F1C;
+      --text: #EDF5FF;
+      --muted: #8EA0B6;
+      --dim: #617186;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      background:
+        radial-gradient(circle at 50% 8%, rgba(32, 214, 255, .12), transparent 34%),
+        radial-gradient(circle at 88% 18%, rgba(155, 124, 255, .07), transparent 35%),
+        linear-gradient(180deg, #03070B, #06111B 58%, #03070B);
+    }
+    #root {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+    canvas {
+      width: min(100vw, 177.78vh);
+      height: min(56.25vw, 100vh);
+      display: block;
+      touch-action: none;
+      background: #03070B;
+    }
+    #status {
+      position: fixed;
+      left: 12px;
+      bottom: 10px;
+      color: #617186;
+      font: 600 11px Consolas, "SFMono-Regular", monospace;
+      opacity: .9;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <canvas id="nbg" width="1280" height="720" aria-label="Neural Boundary Game"></canvas>
+  </div>
+  <div id="status">loading wasm boundary artifact…</div>
+<script>
+(() => {
+  "use strict";
+
+  const W = 1280;
+  const H = 720;
+  const canvas = document.getElementById("nbg");
+  const ctx = canvas.getContext("2d");
+  const status = document.getElementById("status");
+
+  let tick = 170;
+  let trust = 92;
+  let risk = 12;
+  let integrity = 88;
+  let evidence = "L2";
+  let consent = true;
+  let lane = 2;
+  let gates = 3;
+  let phase = "RUNNING";
+
+  const entities = [
+    { x: 132, lane: 0, label: "RAW", color: "#FF4D4D" },
+    { x: 232, lane: 1, label: "CONSENT", color: "#7CFF4F" },
+    { x: 326, lane: 2, label: "EVIDENCE", color: "#9B7CFF" },
+    { x: 562, lane: 3, label: "CLAIM", color: "#FF9F1C" },
+    { x: 716, lane: 2, label: "TYPED", color: "#7CFF4F" },
+  ];
+
+  fetch("neural_boundary_web.wasm")
+    .then((resp) => {
+      if (!resp.ok) throw new Error("wasm missing");
+      return resp.arrayBuffer();
+    })
+    .then((bytes) => WebAssembly.compile(bytes))
+    .then(() => {
+      status.textContent = "wasm boundary artifact online • v1.7.0";
+    })
+    .catch(() => {
+      status.textContent = "static canvas mode • wasm artifact is built by CI/Pages";
+    });
+
+  function rr(x, y, width, height, radius, fill, stroke, lineWidth = 1) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
+  }
+
+  function text(value, x, y, font, color, align = "left") {
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.fillText(value, x, y);
+  }
+
+  function chip(x, y, label, color) {
+    const width = 46 + label.length * 7.5;
+    rr(x, y, width, 34, 17, "rgba(7,16,24,.94)", "rgba(32,214,255,.14)");
+    text(label, x + 16, y + 22, "700 12px Consolas, monospace", color);
+  }
+
+  function laneY(index) {
+    return 304 + index * 49;
+  }
+
+  function metric(x, y, label, value, color) {
+    text(label, x, y + 17, "700 12px Consolas, monospace", "#8EA0B6");
+    rr(x + 78, y + 6, 96, 10, 5, "rgba(255,255,255,.055)", null);
+    rr(x + 78, y + 6, Math.max(0, Math.min(96, value * .96)), 10, 5, color, null);
+    text(String(value).padStart(3, "0"), x + 184, y + 17, "700 12px Consolas, monospace", "#EDF5FF");
+  }
+
+  function entity(item) {
+    const x = item.x;
+    const y = laneY(item.lane);
+    rr(x, y - 18, 126, 36, 13, "rgba(7,16,24,.94)", item.color);
+    text(item.label, x + 12, y + 4, "800 11px Consolas, monospace", item.color);
+  }
+
+  function pill(x, y, label, color) {
+    rr(x, y, 214, 24, 12, "rgba(255,255,255,.035)", null);
+    text(label, x + 13, y + 17, "700 12px Consolas, monospace", color);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#03070B";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = "rgba(32,214,255,.040)";
+    ctx.lineWidth = 1;
+    for (let x = 80; x < 1200; x += 80) {
+      ctx.beginPath();
+      ctx.moveTo(x, 172);
+      ctx.lineTo(x, 570);
+      ctx.stroke();
+    }
+    for (let y = 190; y < 560; y += 48) {
+      ctx.beginPath();
+      ctx.moveTo(64, y);
+      ctx.lineTo(1216, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "rgba(32,214,255,.075)";
+    ctx.beginPath();
+    ctx.moveTo(160, 76);
+    ctx.lineTo(1120, 76);
+    ctx.stroke();
+
+    text("NEURAL BOUNDARY GAME", 640, 78, "800 42px Inter, system-ui, sans-serif", "#EDF5FF", "center");
+    text("Do not ship raw signal. Ship typed intent.", 640, 112, "600 15px Consolas, monospace", "#20D6FF", "center");
+
+    chip(72, 112, "AxonOS-BCI", "#20D6FF");
+    chip(196, 112, "Rust/WASM", "#8EEBFF");
+    chip(316, 112, "no_std core", "#7CFF4F");
+    chip(1025, 112, "Help", "#A8B4C4");
+    chip(1125, 112, "Restart", "#FF9F1C");
+
+    rr(72, 158, 1136, 44, 18, "rgba(7,16,24,.94)", "#143140");
+    text("RUN", 96, 186, "700 13px Consolas, monospace", "#8EA0B6");
+    text(String(tick).padStart(4, "0"), 134, 186, "700 13px Consolas, monospace", "#20D6FF");
+    metric(250, 172, "TRUST", trust, "#7CFF4F");
+    metric(445, 172, "RISK", risk, "#FF4D4D");
+    metric(640, 172, "INTEGRITY", integrity, "#20D6FF");
+    text("EVIDENCE " + evidence, 845, 186, "700 13px Consolas, monospace", "#9B7CFF");
+    text(consent ? "CONSENT ACTIVE" : "CONSENT IDLE", 1010, 186, "700 13px Consolas, monospace", consent ? "#7CFF4F" : "#8EA0B6");
+
+    rr(72, 222, 820, 354, 24, "rgba(7,16,24,.94)", "rgba(32,214,255,.17)", 2);
+    rr(920, 222, 288, 354, 24, "rgba(7,16,24,.94)", "rgba(32,214,255,.17)", 2);
+
+    text("SIGNAL", 102, 250, "700 12px Consolas, monospace", "#8EA0B6");
+    text("BOUNDARY", 410, 250, "700 12px Consolas, monospace", "#20D6FF");
+    text("APP", 798, 250, "700 12px Consolas, monospace", "#8EA0B6");
+
+    ctx.strokeStyle = "rgba(32,214,255,.14)";
+    for (let i = 0; i < 5; i++) {
+      const y = laneY(i);
+      ctx.beginPath();
+      ctx.moveTo(112, y);
+      ctx.lineTo(852, y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "rgba(32,214,255,.55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(438, 274);
+    ctx.lineTo(438, 532);
+    ctx.stroke();
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,159,28,.28)";
+    ctx.beginPath();
+    ctx.moveTo(782, 274);
+    ctx.lineTo(782, 532);
+    ctx.stroke();
+
+    const playerY = laneY(lane);
+    rr(409, playerY - 24, 58, 48, 16, "rgba(32,214,255,.18)", "#20D6FF");
+    text("GATE", 438, playerY + 5, "800 12px Consolas, monospace", "#20D6FF", "center");
+    entities.forEach(entity);
+
+    text("BOUNDARY PRINCIPLE", 950, 255, "800 14px Consolas, monospace", "#20D6FF");
+    text("Raw signal stays", 950, 294, "500 18px Inter, system-ui, sans-serif", "#EDF5FF");
+    text("inside the device.", 950, 320, "500 18px Inter, system-ui, sans-serif", "#EDF5FF");
+    text("APPS RECEIVE", 950, 366, "600 13px Consolas, monospace", "#8EA0B6");
+    pill(950, 386, "typed intent", "#7CFF4F");
+    pill(950, 420, "consent state", "#20D6FF");
+    pill(950, 454, "confidence", "#9B7CFF");
+    text("APPS NEVER RECEIVE", 950, 504, "600 13px Consolas, monospace", "#8EA0B6");
+    pill(950, 524, "raw frames", "#FF4D4D");
+    text("gates passed " + gates + "/5", 1090, 548, "700 12px Consolas, monospace", "#8EA0B6");
+
+    const actions = [
+      ["1", "Validate", "#20D6FF"],
+      ["2", "Convert", "#7CFF4F"],
+      ["3", "Quarantine", "#FF4D4D"],
+      ["4", "Consent", "#8EEBFF"],
+      ["5", "Evidence", "#9B7CFF"],
+      ["Enter", "Release", "#FF9F1C"],
+    ];
+
+    let x = 72;
+    for (const action of actions) {
+      rr(x, 612, 170, 62, 18, "rgba(7,16,24,.96)", "rgba(32,214,255,.16)");
+      text(action[0], x + 18, 636, "800 13px Consolas, monospace", action[2]);
+      text(action[1], x + 18, 660, "700 16px Inter, system-ui, sans-serif", "#EDF5FF");
+      x += 188;
+    }
+
+    const footer = phase === "RELEASE BLOCKED"
+      ? "release blocked • pass all evidence gates first"
+      : "v1.7.0  •  Elite Foundation Grande AxonOS Standard  •  12 CI jobs";
+    text(footer, 640, 704, "600 12px Consolas, monospace", phase === "RELEASE BLOCKED" ? "#FF9F1C" : "#617186", "center");
+  }
+
+  function actionFromPoint(x, y) {
+    if (y >= 612 && y <= 674) {
+      const idx = Math.floor((x - 72) / 188);
+      if (idx === 0) return "validate";
+      if (idx === 1) return "convert";
+      if (idx === 2) return "quarantine";
+      if (idx === 3) return "consent";
+      if (idx === 4) return "evidence";
+      if (idx === 5) return "release";
+    }
+    if (x < 930 && y > 196 && y < 560) {
+      return y < 378 ? "up" : "down";
+    }
+    return "none";
+  }
+
+  function apply(action) {
+    if (action === "up") lane = Math.max(0, lane - 1);
+    if (action === "down") lane = Math.min(4, lane + 1);
+    if (action === "validate") trust = Math.min(100, trust + 1);
+    if (action === "quarantine") risk = Math.max(0, risk - 1);
+    if (action === "consent") consent = !consent;
+    if (action === "evidence") {
+      gates = Math.min(5, gates + 1);
+      evidence = gates >= 4 ? "L3" : "L2";
+    }
+    if (action === "release") {
+      phase = trust >= 90 && risk <= 20 && gates >= 5 ? "REVIEWER SURVIVAL" : "RELEASE BLOCKED";
+    }
+    tick += 1;
+    draw();
+  }
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowUp" || event.key === "w" || event.key === "W") apply("up");
+    else if (event.key === "ArrowDown" || event.key === "s" || event.key === "S") apply("down");
+    else if (event.key === "1" || event.key === " ") apply("validate");
+    else if (event.key === "2") apply("convert");
+    else if (event.key === "3") apply("quarantine");
+    else if (event.key === "4") apply("consent");
+    else if (event.key === "5") apply("evidence");
+    else if (event.key === "Enter") apply("release");
+  });
+
+  canvas.addEventListener("pointerdown", (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * W / rect.width;
+    const y = (event.clientY - rect.top) * H / rect.height;
+    apply(actionFromPoint(x, y));
+  });
+
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+name: Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build static site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/configure-pages@v5
+
+      - name: Build WASM boundary artifact
+        run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release
+
+      - name: Prepare static site
+        run: |
+          mkdir -p dist
+          cp index.html dist/index.html
+          cp preview.png dist/preview.png
+          cp target/wasm32-unknown-unknown/release/neural_boundary_web.wasm dist/neural_boundary_web.wasm
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: deploy github pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
