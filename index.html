@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Neural Boundary Game</title>
+  <meta name="description" content="AxonOS Standard Foundation Grande Rust/WASM demo: raw signal stays inside the device; apps receive typed intent only."/>
+  <meta property="og:title" content="Neural Boundary Game"/>
+  <meta property="og:description" content="Do not ship raw signal. Ship typed intent."/>
+  <meta property="og:image" content="preview.png"/>
+  <meta name="theme-color" content="#03070B"/>
+  <link data-trunk rel="rust" href="crates/neural-boundary-web/Cargo.toml"/>
+  <style>
+    :root{color-scheme:dark;--bg:#03070B;--panel:#071018;--text:#EDF5FF;--muted:#8EA0B6;--cyan:#20D6FF}
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#03070B;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{background:radial-gradient(circle at 50% 8%,rgba(32,214,255,.10),transparent 34%),radial-gradient(circle at 88% 18%,rgba(140,118,255,.07),transparent 35%),linear-gradient(180deg,#03070B,#06111B 58%,#03070B)}
+    #root{width:100vw;height:100vh;display:grid;place-items:center}
+    canvas{width:min(100vw,177.78vh);height:min(56.25vw,100vh);display:block;background:#03070B;touch-action:none}
+    .fallback{position:fixed;left:24px;bottom:24px;max-width:760px;background:rgba(7,16,24,.94);border:1px solid rgba(32,214,255,.24);border-radius:16px;padding:18px 20px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div id="root">
+    <canvas id="nbg-canvas" width="1280" height="720" aria-label="Neural Boundary Game"></canvas>
+  </div>
+  <noscript>
+    <div class="fallback">Neural Boundary Game requires JavaScript and WebAssembly. The deterministic core is implemented in Rust.</div>
+  </noscript>
+</body>
+</html>

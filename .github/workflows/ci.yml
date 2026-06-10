@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Core tests
+        run: cargo test -p neural-boundary-core
+
+      - name: CLI tests
+        run: cargo test -p neural-boundary-cli
+
+      - name: Native web check
+        run: cargo check -p neural-boundary-web
+
+      - name: WASM build
+        run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown
+
+      - name: Validate replay
+        run: python3 tools/validate_replay.py
+
+      - name: Hygiene
+        run: python3 tools/check_hygiene.py
+
+      - name: Release check
+        run: python3 tools/release_check.py
