@@ -1,0 +1,11 @@
+[package]
+name = "neural-boundary-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "no_std deterministic core for Neural Boundary Game."
+
+[lib]
+path = "src/lib.rs"
