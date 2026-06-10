@@ -1,0 +1,12 @@
+/target
+/dist
+/pkg
+/.trunk
+*.wasm
+*.rlib
+*.rmeta
+.DS_Store
+.idea/
+.vscode/
+*.log
+.env
