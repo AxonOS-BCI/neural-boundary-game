@@ -1,6 +1,5 @@
 # Roadmap
 
-<<<<<<< HEAD
 ## v2.1.x — keep the flagship stable
 
 - keep the public demo and replay vectors stable;
@@ -24,16 +23,3 @@
 
 Anything that changes game rules bumps the replay schema and regenerates the
 vectors — see `docs/REPLAY_SPEC.md`.
-=======
-## v1.8.x
-
-- keep CI green;
-- refine static canvas interaction;
-- add deterministic replay playback overlay.
-
-## v1.8.x
-
-- add guided tutorial overlay;
-- add release summary cards;
-- add screenshot generation in CI.
->>>>>>> origin/main

@@ -1,6 +1,5 @@
 # BCI Boundary
 
-<<<<<<< HEAD
 The game separates the system into three zones:
 
 ```text
@@ -26,8 +25,3 @@ Mapping to the mechanics in `docs/GAME_SPEC.md`:
 Every losing condition is a boundary statement: raw frames crossing
 (`raw_leaks`), stimulation commands crossing (`direct_stim`), or unscoped
 claims eroding integrity until nothing the interface says can be trusted.
-=======
-Applications should receive typed intent, consent state, confidence, and evidence metadata.
-
-Applications should not receive raw signal frames.
->>>>>>> origin/main

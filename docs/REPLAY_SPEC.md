@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Replay Spec — neural-boundary-replay-v2.1.2
 
 A replay vector pins one deterministic run of the core: seed, difficulty, the
@@ -109,16 +108,3 @@ cargo run -p neural-boundary-cli --release -- search \
 After regenerating, refresh `vectors/checksums.txt`
 (`sha256sum vectors/*.json`) and run `python3 tools/validate_replay.py`.
 Game-rule changes require new vectors and a schema bump.
-=======
-# Replay Spec
-
-Current replay schema:
-
-```text
-neural-boundary-replay-v2.0.0
-```
-
-Replay vectors are validated by `tools/validate_replay.py`.
-
-Checksums are validated by `tools/release_check.py`.
->>>>>>> origin/main

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AxonOS Standard — Foundation Grande Style
 
 The visual system of the v2.1.2 stage. It must be calm, dark, precise,
@@ -49,18 +48,3 @@ The footer line is part of the standard:
 ```text
 v2.1.2 • AxonOS Standard Foundation Grande Style • deterministic Rust core
 ```
-=======
-# AxonOS Standard Foundation Grande Style
-
-The style is calm, dark, precise, premium, readable, and grid-aligned.
-
-Reject:
-
-- rotated text;
-- skewed labels;
-- cluttered microcopy;
-- cheap neon;
-- fake complexity;
-- random stock art;
-- medical overclaiming.
->>>>>>> origin/main

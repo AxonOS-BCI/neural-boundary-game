@@ -7,7 +7,6 @@ members = [
 ]
 
 [workspace.package]
-<<<<<<< HEAD
 version = "2.1.2"
 edition = "2021"
 authors = ["Denis Yermakou <connect@axonos.org>"]
@@ -15,14 +14,5 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/AxonOS-BCI/neural-boundary-game"
 homepage = "https://axonos-bci.github.io/neural-boundary-game/"
 description = "AxonOS Standard Foundation Grande Rust/WASM demo: raw signal stays inside the device; apps receive typed intent only."
-=======
-version = "2.0.0"
-edition = "2021"
-authors = ["Denis Yermakou <denissmartrich@gmail.com>"]
-license = "MIT"
-repository = "https://github.com/AxonOS-BCI/neural-boundary-game"
-homepage = "https://axonos-bci.github.io/neural-boundary-game/"
-description = "Elite AxonOS Standard Foundation Grande Rust/WASM boundary demo: raw signal stays inside the device; apps receive typed intent only."
->>>>>>> origin/main
 keywords = ["rust", "wasm", "bci", "no-std", "privacy"]
 categories = ["games", "wasm", "embedded", "simulation"]

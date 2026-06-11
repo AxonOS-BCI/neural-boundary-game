@@ -1,15 +1,9 @@
 ---
 name: Bug report
-<<<<<<< HEAD
 about: Report a defect in the game, build, replay, or docs
 title: "bug: "
 labels: bug
 assignees: ""
-=======
-about: Report a defect in build, game, docs, or release flow
-title: "bug: "
-labels: bug
->>>>>>> origin/main
 ---
 
 ## What happened?
@@ -18,7 +12,6 @@ labels: bug
 
 ## Steps to reproduce
 
-<<<<<<< HEAD
 ## Environment
 
 - OS:
@@ -27,6 +20,3 @@ labels: bug
 - Target:
 
 ## Logs / screenshots
-=======
-## Logs
->>>>>>> origin/main

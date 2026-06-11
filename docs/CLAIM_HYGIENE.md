@@ -1,13 +1,9 @@
 # Claim Hygiene
 
-<<<<<<< HEAD
 Scoped language is a release gate, not a style preference. CI runs
 `tools/check_hygiene.py` over every tracked text file.
 
 ## Preferred wording
-=======
-Preferred wording:
->>>>>>> origin/main
 
 - BCI-adjacent software boundary;
 - educational technical demo;
@@ -15,7 +11,6 @@ Preferred wording:
 - typed intent model;
 - reviewer-safe public artifact.
 
-<<<<<<< HEAD
 ## Forbidden phrases
 
 The checker fails the build on any of these, anywhere in the tree:
@@ -35,6 +30,3 @@ Two escapes exist, both deliberate:
    must name the phrases themselves (this file is excluded by path instead).
 
 If you need a third escape, the claim is probably wrong.
-=======
-Avoid medical, regulatory, certification, or thought-decoding claims.
->>>>>>> origin/main

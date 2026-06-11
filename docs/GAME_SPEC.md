@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Game Spec — Neural Boundary Game v2.1.2
 
 Deterministic specification of the simulation implemented in
@@ -7,18 +6,12 @@ Everything below is normative: the WASM front-end, the CLI verifier and the
 replay vectors all derive from this model. Version: 2.1.2.
 
 Core rule:
-=======
-# Game Spec
-
-The game demonstrates a single boundary rule:
->>>>>>> origin/main
 
 ```text
 Do not ship raw signal.
 Ship typed intent.
 ```
 
-<<<<<<< HEAD
 ## 1. Field model
 
 | Constant | Value | Meaning |
@@ -170,6 +163,3 @@ runs get denser. Claims additionally receive `CLAIM_SPEED_BONUS`.
   entity pool — see `docs/REPLAY_SPEC.md`.
 - Same seed + same input script ⇒ identical run, hash-for-hash, on every
   platform. The shipped vectors in `vectors/` pin this guarantee in CI.
-=======
-A successful release requires high trust, low risk, high integrity, evidence gates, and zero raw leaks.
->>>>>>> origin/main

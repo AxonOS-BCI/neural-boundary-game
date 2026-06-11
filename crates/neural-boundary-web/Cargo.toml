@@ -5,11 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-<<<<<<< HEAD
 description = "Rust/WASM browser front-end for Neural Boundary Game."
-=======
-description = "Dependency-light WASM boundary core adapter for Neural Boundary Game."
->>>>>>> origin/main
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -17,7 +13,6 @@ path = "src/lib.rs"
 
 [dependencies]
 neural-boundary-core = { path = "../neural-boundary-core" }
-<<<<<<< HEAD
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
@@ -40,5 +35,3 @@ web-sys = { version = "0.3", features = [
   "Performance",
   "console",
 ] }
-=======
->>>>>>> origin/main

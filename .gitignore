@@ -9,8 +9,3 @@
 .idea/
 .vscode/
 *.log
-<<<<<<< HEAD
-=======
-.env
-LOCAL_CHECK_REPORT.txt
->>>>>>> origin/main
