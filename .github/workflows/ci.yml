@@ -2,138 +2,62 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, "release/**"]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-<<<<<<< HEAD
-  ci:
-=======
-  fmt:
-    name: 01 fmt
-    runs-on: ubuntu-latest
+  repository-gates:
+    name: Repository gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          components: rustfmt
-      - name: Normalize Rust formatting without failing public status
+          python-version: "3.13"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Validate exact source surface
+        run: ./scripts/verify_release.sh --static
+      - name: Prove reproducible source packaging
+        env:
+          SOURCE_DATE_EPOCH: "946684800"
         run: |
-          cargo fmt --all || true
-          echo "rustfmt normalization completed"
+          python3 tools/package_release.py --output /tmp/release-assets-a
+          python3 tools/package_release.py --output /tmp/release-assets-b
+          cmp /tmp/release-assets-a/neural-boundary-game-v3.0.0-source.zip /tmp/release-assets-b/neural-boundary-game-v3.0.0-source.zip
+          cmp /tmp/release-assets-a/neural-boundary-game-v3.0.0-source.tar.gz /tmp/release-assets-b/neural-boundary-game-v3.0.0-source.tar.gz
+          cmp /tmp/release-assets-a/SHA256SUMS /tmp/release-assets-b/SHA256SUMS
 
-  core-tests:
-    name: 02 core tests
-    runs-on: ubuntu-latest
+  rust-and-protocol:
+    name: Rust, protocol, and WASM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p neural-boundary-core
-
-  cli-tests:
-    name: 03 cli tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p neural-boundary-cli
-
-  web-tests:
-    name: 04 web tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p neural-boundary-web
-
-  web-native-check:
-    name: 05 web native check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check -p neural-boundary-web
-
-  wasm-build:
-    name: 06 wasm build
->>>>>>> origin/main
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          targets: wasm32-unknown-unknown
-<<<<<<< HEAD
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Format
-        run: cargo fmt --all --check
-
-      - name: Core tests
-        run: cargo test -p neural-boundary-core
-
-      - name: CLI tests
-        run: cargo test -p neural-boundary-cli
-
-      - name: Native web check
-        run: cargo check -p neural-boundary-web
-
-      - name: WASM build
-        run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown
-
-      - name: Validate replay
-        run: python3 tools/validate_replay.py
-
-      - name: Hygiene
-        run: python3 tools/check_hygiene.py
-
-      - name: Release check
-        run: python3 tools/release_check.py
-=======
-      - run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release
-
-  replay-vector:
-    name: 07 replay vector
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 tools/validate_replay.py
-
-  checksum:
-    name: 08 checksum
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 tools/release_check.py
-
-  claim-hygiene:
-    name: 09 claim hygiene
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 tools/check_hygiene.py
-
-  docs:
-    name: 10 docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 tools/check_docs.py
-      - run: python3 tools/check_links.py
-
-  licenses:
-    name: 11 licenses
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 tools/check_license.py
-
-  preview:
-    name: 12 preview asset
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 -m pip install pillow
-      - run: python3 tools/check_preview.py
->>>>>>> origin/main
+          node-version: "22"
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.81.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
+          rustup override set 1.81.0
+      - name: Full compiler and protocol gate
+        run: ./scripts/verify_release.sh --full
+      - name: Inspect artifact
+        run: |
+          test -s dist/index.html
+          test -s dist/web/app.js
+          test -s dist/web/styles.css
+          test -s dist/pkg/neural_boundary_web.wasm
+          test -s dist/build-info.json
+          ! grep -R -nE '<<<<<<<|=======|>>>>>>>' dist

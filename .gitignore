@@ -1,16 +1,8 @@
-/target
-/dist
-/pkg
-/.trunk
-*.wasm
-*.rlib
-*.rmeta
+/target/
+/dist/
+/web/pkg/*.wasm
 .DS_Store
-.idea/
-.vscode/
 *.log
-<<<<<<< HEAD
-=======
-.env
-LOCAL_CHECK_REPORT.txt
->>>>>>> origin/main
+*.tmp
+__pycache__/
+.pytest_cache/

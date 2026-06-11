@@ -1,47 +1,11 @@
 # Limitations
 
-This repository is an educational technical demo.
-
-<<<<<<< HEAD
-This repository is, explicitly:
-
-- not a medical device;
-- not a clinical system;
-- not a safety-certified system;
-- not a real neural decoder;
-- not a stimulation controller;
-- not a security audit;
-- not a regulatory review;
-- not a production firmware system.
-=======
-It is not:
-
-- a medical device;
-- a clinical system;
-- a safety-certified system;
-- a neural decoder;
-- a stimulation controller;
-- a security audit;
-- a regulatory review;
-- a production firmware system.
->>>>>>> origin/main
-
-It does not process real signal data.
-
-It does not control stimulation hardware.
-<<<<<<< HEAD
-
-It demonstrates software boundary concepts through a deterministic game.
-
-Scope notes:
-
-- determinism is guaranteed for the simulation core and the replay vectors;
-  wall-clock frame pacing in a browser is best-effort (fixed-step with a
-  bounded catch-up of 6 steps per frame);
-- the difficulty model is a teaching curve, not a model of any real
-  signal-processing workload;
-- the boundary rule shown here is one architectural pattern, presented as a
-  game — adopting it in a real system requires the engineering work this
-  demo deliberately does not claim to replace.
-=======
->>>>>>> origin/main
+- Educational simulation only; not a medical device or clinical tool.
+- No real neural signal acquisition, decoding, classification, or stimulation.
+- Game metrics are symbolic and are not calibrated safety, privacy, or performance measures.
+- The deterministic core is bounded and allocation-free, but has no certified WCET analysis.
+- FNV-1a state hashes detect accidental divergence; they are not cryptographic.
+- Content Security Policy in HTML should be reinforced by deployment response headers.
+- Browser timing and rendering remain subject to platform scheduling; only core tick/state behavior is deterministic.
+- Accessibility has automated and structural coverage but still requires manual assistive-technology testing before claiming conformance.
+- Commercial or hardware deployment requires separate security, safety, legal, privacy, and regulatory assessment.

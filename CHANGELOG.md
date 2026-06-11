@@ -1,96 +1,42 @@
 # Changelog
 
-<<<<<<< HEAD
-## [2.1.2] — 2026-06-11
+All notable changes are documented here. This project follows semantic versioning for the public product surface and replay protocol compatibility.
 
-Foundation Grande AxonOS Standard Edition.
+## [3.0.0] — 2026-06-11
 
 ### Added
 
-- full review-conveyor mechanic in `neural-boundary-core`: 14 entity kinds,
-  six actions, five review gates, evidence levels L0–L3, consent windows,
-  warm-up wave, weighted spawn tables per difficulty, exact win/lose
-  conditions (`docs/GAME_SPEC.md`);
-- claims travel faster than evidence: `CLAIM_SPEED_BONUS` (+2) on
-  `Overclaim`, `NoTrace`, `RoadmapFact`;
-- 64-bit FNV-1a state hash over the entire simulation, pinned in vectors;
-- CLI toolkit: `verify` (strict field-by-field replay check), `record`
-  (clean/idle policies), `search` (seed search by target finals), `trace`;
-- canonical vectors on seed 58 (standard): clean run sealing at tick 1862
-  with trust 92 / risk 12 / integrity 88, and the same seed idle breaching
-  at tick 948 (`raw_leaks`); integration tests verify both through the
-  binary;
-- Foundation Grande web stage: fixed 1280×720 console, status rail, canvas
-  playfield with membrane and gate window, boundary-principle panel, action
-  bar, menu/help/pause/end overlays, difficulty select, DPR-aware rendering,
-  scale-to-fit;
-- `tools/generate_preview.py`: supersampled 1280×720 `preview.png` renderer;
-- release gates: rewritten `validate_replay.py` (schema + checksums),
-  negation-aware `check_hygiene.py`, full-tree `release_check.py`.
+- Clean-room `no_std` deterministic Rust simulation core.
+- Five run modes: Guided, Standard, Audit, Grand, and UTC Daily Seed.
+- Fixed-rate 60 Hz simulation, seeded RNG, integer-only authoritative state, bounded entity storage, and canonical FNV-1a state hashing.
+- Explicit consent, evidence, privacy, type-safety, and determinism review gates.
+- Fail-closed terminal handling for raw leaks, stimulation crossing, integrity collapse, risk overflow, expiry, and invariant failure.
+- Plain numeric WebAssembly ABI with no JavaScript policy fallback.
+- Responsive digital-luxury browser interface for desktop and mobile.
+- Keyboard, pointer, touch, reduced-motion, high-contrast, semantic and live-region accessibility paths.
+- Canonical replay schema `neural-boundary-replay-v3.0.0` and eight conformance vectors.
+- CLI replay verifier, trace, record, seed-search, and schema commands.
+- Version consistency, repository hygiene, link, structure, and replay validation gates.
+- GitHub Actions workflows for CI, Pages deployment, and tagged source release.
+- Termux-safe release helper and deterministic build scripts.
+- Exact 41-function WASM ABI handshake with runtime metadata validation.
+- Strict replay parser limits, unknown-field rejection, and independent reference validation.
+- Reproducible ZIP/TAR.GZ packaging and annotated-tag provenance checks.
+- Deep source audit covering text encoding, HTML/ARIA references, workflows, images, scripts, and ABI parity.
+- Bytecode-free Python validation so successful gates cannot contaminate the reviewed source tree.
 
 ### Changed
 
-- replay schema bumped to `neural-boundary-replay-v2.1.2`;
-- CI and Pages workflows use `Swatinem/rust-cache@v2`; Pages installs Trunk
-  via `jetli/trunk-action@v0.5.0`;
-- README, release notes and all `docs/` rewritten for v2.1.2; security
-  contact is now `security@axonos.org`.
+- Rebuilt the product surface as one coherent `v3.0.0` release rather than preserving conflicted legacy UI and metadata.
+- Consolidated release identity in `release.toml`.
+- Reframed product claims as an educational boundary simulation with explicit limitations.
+- Required separate conversion/release consent scopes and an empty authoritative entity pool before sealing.
+- Hardened dialog lifecycle, keyboard mode navigation, repeated live-region feedback, and numeric ABI conversions.
 
 ### Removed
 
-- v1.0.3 placeholder replay vector and the stray root cleanup script.
-
-## [1.0.3]
-
-Foundation Grande AxonOS Standard Edition.
-
-### Added
-
-- complete GitHub repository setup guide;
-- corrected Termux push script for `https://github.com/AxonOS-BCI/neural-boundary-game.git`;
-- issue templates;
-- pull request template;
-- roadmap;
-- release checklist;
-- refined preview image;
-- `rust-toolchain.toml`;
-- stricter README positioning;
-- replay schema `neural-boundary-replay-v1.0.3`.
-
-### Changed
-
-- Termux push now runs `cargo fmt --all` before checks, avoiding rustfmt diff failures.
-- Git push flow now handles existing remote history more safely.
-- UI language tightened to AxonOS Standard Foundation Grande style.
-
-### Safety / claim hygiene
-
-- no medical, regulatory, certification, or production-firmware claims;
-- limitations documented in `docs/LIMITATIONS.md`.
-=======
-## v2.0.0
-
-Playable game release.
-
-### Added
-
-- real animated canvas game loop;
-- moving boundary packets;
-- touch lane controls;
-- keyboard controls;
-- collision logic;
-- release blocked and victory states;
-- score/risk/trust/evidence dynamics;
-- root and `/docs` pages now use the same playable game.
-
-### Fixed
-
-- RUN DEMO no longer opens a static screenshot-like canvas;
-- removed the misleading static WASM fallback status from the public page;
-- the demo works even if the WASM artifact is not present in GitHub Pages.
-
-### Safety
-
-- educational technical demo only;
-- no clinical, regulatory, certification, or production-firmware claims.
->>>>>>> origin/main
+- Conflicting active-version metadata.
+- Merge-conflict residue.
+- Image-only or video-only demo behavior.
+- Any browser-side substitute for the authoritative Rust core.
+- Remote runtime dependencies, analytics, telemetry, and third-party fonts.

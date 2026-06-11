@@ -1,0 +1,29 @@
+{
+  "schema": "neural-boundary-replay-v3.0.0",
+  "product_version": "3.0.0",
+  "core_version": "3.0.0",
+  "hash_algorithm": "fnv1a64-v1",
+  "seed": 58,
+  "mode": "standard",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "initial_config": {
+    "max_ticks": 5400,
+    "raw_leak_limit": 3
+  },
+  "events": [],
+  "expected": {
+    "terminal_tick": 1127,
+    "status": "unsafe",
+    "reason": "risk-overflow",
+    "state_hash": "77359e63b6bd5aea",
+    "trust": 60,
+    "risk": 100,
+    "integrity": 59,
+    "evidence": 0,
+    "review_gates": 0,
+    "raw_leaks": 1,
+    "score": 0
+  },
+  "summary": "No operator input: unsafe packets cross until a deterministic terminal boundary failure."
+}

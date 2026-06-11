@@ -2,10 +2,15 @@
 name = "neural-boundary-core"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "no_std deterministic core for Neural Boundary Game."
+homepage.workspace = true
+description = "No-std deterministic simulation core for Neural Boundary Game."
 
 [lib]
 path = "src/lib.rs"
+
+[lints]
+workspace = true

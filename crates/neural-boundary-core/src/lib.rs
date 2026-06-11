@@ -1,2117 +1,1673 @@
-<<<<<<< HEAD
-//! neural-boundary-core — deterministic `no_std` simulation core for the
-//! Neural Boundary Game (v2.1.2, Foundation Grande AxonOS Standard Edition).
-//!
-//! The core owns game state, a deterministic RNG, the player action model,
-//! the entity model, review gates, scoring, win/failure conditions and a
-//! replay-compatible state progression. It contains no browser APIs, no heap
-//! allocation, no rendering logic, no wall-clock randomness and no JavaScript
-//! bindings.
-//!
-//! One rule is being demonstrated: raw signal stays inside the device;
-//! applications receive typed intent only.
-=======
->>>>>>> origin/main
-
 #![no_std]
 #![forbid(unsafe_code)]
+//! Deterministic, allocation-free simulation core for Neural Boundary Game.
+//!
+//! The browser is a presentation adapter. This crate owns authoritative game
+//! state, seeded randomness, tick progression, policy decisions, terminal
+//! conditions, and canonical state hashing.
 
-<<<<<<< HEAD
-// ---------------------------------------------------------------------------
-// Field geometry and tuning constants (fixed-point, integer-only)
-// ---------------------------------------------------------------------------
+#[cfg(test)]
+extern crate std;
 
-/// Number of horizontal lanes in the playfield.
-pub const LANES: u8 = 5;
-/// Maximum simultaneously active entities (fixed slot pool, zero alloc).
-pub const MAX_ENTITIES: usize = 24;
-/// Maximum events recorded per tick.
-pub const MAX_EVENTS: usize = 8;
-/// Entities spawn at this x position (milli-field units).
-pub const SPAWN_X: i32 = 0;
-/// The boundary membrane. Hazards that reach it breach; typed intent passes.
-pub const BOUNDARY_X: i32 = 680;
-/// The application threshold. Typed intent delivered here scores trust.
-pub const FIELD_END_X: i32 = 1000;
-/// Player actions reach entities inside `[BOUNDARY_X - GATE_WINDOW, BOUNDARY_X)`.
-pub const GATE_WINDOW: i32 = 320;
-/// Ticks of cooldown after a successful player action.
-pub const ACTION_COOLDOWN: u16 = 18;
-/// Ticks of cooldown after an action that found no valid target.
-pub const WHIFF_COOLDOWN: u16 = 6;
-/// Ticks a consent grant stays active after a consent token is gated.
-pub const CONSENT_DURATION: u32 = 1500;
-/// Unsupported claims travel faster than evidence: extra speed for
-/// `Overclaim`, `NoTrace` and `RoadmapFact`.
-pub const CLAIM_SPEED_BONUS: i32 = 2;
-/// Nominal simulation rate used by front-ends (the core itself is tick-based).
-pub const TICKS_PER_SECOND: u32 = 60;
-/// Number of review gates that must pass before release.
-pub const GATE_COUNT: u8 = 5;
+use core::cmp::{max, min};
 
-const ALL_GATES_MASK: u8 = (1 << GATE_COUNT) - 1;
+/// Product version represented by this core.
+pub const CORE_VERSION: &str = "3.0.0";
+/// Replay schema accepted by this core.
+pub const REPLAY_SCHEMA: &str = "neural-boundary-replay-v3.0.0";
+/// Canonical state-hash identifier.
+pub const HASH_ALGORITHM: &str = "fnv1a64-v1";
+/// Fixed simulation rate.
+pub const TICK_RATE: u16 = 60;
+/// Number of logical lanes.
+pub const LANE_COUNT: usize = 5;
+/// Maximum number of simultaneously active entities.
+pub const ENTITY_CAPACITY: usize = 32;
+/// Logical boundary position in fixed integer field coordinates.
+pub const BOUNDARY_X: u16 = 840;
+/// Initial entity position.
+pub const SPAWN_X: u16 = 16;
 
-// Starting metrics.
-const START_TRUST: i32 = 50;
-const START_RISK: i32 = 0;
-const START_INTEGRITY: i32 = 100;
+/// Review gate: at least one intent was validated and converted.
+pub const GATE_TYPE_SAFETY: u8 = 1 << 0;
+/// Review gate: scoped consent is currently valid.
+pub const GATE_CONSENT: u8 = 1 << 1;
+/// Review gate: evidence level is at least L2.
+pub const GATE_EVIDENCE: u8 = 1 << 2;
+/// Review gate: private signal was contained without a leak.
+pub const GATE_PRIVACY: u8 = 1 << 3;
+/// Review gate: checksum/CI evidence established deterministic review.
+pub const GATE_DETERMINISM: u8 = 1 << 4;
+/// All mandatory review gates.
+pub const ALL_REVIEW_GATES: u8 = GATE_TYPE_SAFETY
+    | GATE_CONSENT
+    | GATE_EVIDENCE
+    | GATE_PRIVACY
+    | GATE_DETERMINISM;
 
-// Scoring deltas.
-const TRUST_PER_DELIVERY: i32 = 6;
-const TRUST_LOST_PER_MISS: i32 = 1;
-const TRUST_LOST_FALSE_POSITIVE: i32 = 3;
-const RISK_PER_REVEAL: i32 = 4;
-const RISK_PER_MAJOR_BREACH: i32 = 6;
-const RISK_PER_REJECTED_RELEASE: i32 = 6;
-const INTEGRITY_LOST_MINOR: i32 = 6;
-const INTEGRITY_LOST_MAJOR: i32 = 8;
-const INTEGRITY_LOST_RAW_LEAK: i32 = 10;
+/// Consent scope allowing validated intent conversion.
+pub const CONSENT_SCOPE_CONVERT: u8 = 1 << 0;
+/// Consent scope allowing final boundary release.
+pub const CONSENT_SCOPE_RELEASE: u8 = 1 << 1;
+/// Complete scope required by the canonical boundary policy.
+pub const CONSENT_SCOPE_REQUIRED: u8 = CONSENT_SCOPE_CONVERT | CONSENT_SCOPE_RELEASE;
 
-// Win thresholds (see docs/GAME_SPEC.md).
-pub const WIN_TRUST: u8 = 90;
-pub const WIN_MAX_RISK: u8 = 20;
-pub const WIN_INTEGRITY: u8 = 80;
-pub const WIN_EVIDENCE_POINTS: u8 = 4; // == EvidenceLevel::L2
-pub const LOSE_RAW_LEAKS: u8 = 3;
-
-// Gate milestones.
-const GATE_SCHEMA_VALIDATIONS: u8 = 3;
-const GATE_CONTAINMENT_QUARANTINES: u8 = 3;
-const GATE_DELIVERY_INTENTS: u8 = 5;
-
-// ---------------------------------------------------------------------------
-// Deterministic RNG (xorshift64*)
-// ---------------------------------------------------------------------------
-
-/// Deterministic xorshift64* generator. Identical sequences on every target.
+/// Stable run-mode identifiers.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Rng64 {
-    state: u64,
+#[repr(u8)]
+pub enum RunMode {
+    /// Scripted onboarding run.
+    Guided = 1,
+    /// Canonical public run.
+    Standard = 2,
+    /// Higher-density adversarial review.
+    Audit = 3,
+    /// Multi-phase extended run.
+    Grand = 4,
+    /// Deterministic calendar-derived run.
+    Daily = 5,
 }
 
-impl Rng64 {
-    pub const fn new(seed: u64) -> Self {
-        Self {
-            state: if seed == 0 {
-                0xA50F_2112_D00D_FEED
-            } else {
-                seed
-            },
+impl RunMode {
+    /// Parse a stable numeric identifier.
+    #[must_use]
+    pub const fn from_u8(value: u8) -> Self {
+        match value {
+            1 => Self::Guided,
+            3 => Self::Audit,
+            4 => Self::Grand,
+            5 => Self::Daily,
+            _ => Self::Standard,
         }
-    }
-
-    pub fn next_u64(&mut self) -> u64 {
-        let mut x = self.state;
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        self.state = x;
-        x.wrapping_mul(0x2545_F491_4F6C_DD1D)
-    }
-
-    pub fn range(&mut self, max_exclusive: u32) -> u32 {
-        if max_exclusive == 0 {
-            0
-        } else {
-            (self.next_u64() % max_exclusive as u64) as u32
-        }
-    }
-
-    pub const fn state(&self) -> u64 {
-        self.state
     }
 }
 
-// ---------------------------------------------------------------------------
-// FNV-1a 64 state hashing (replay conformance)
-// ---------------------------------------------------------------------------
-
-/// Incremental FNV-1a 64-bit hasher used for replay state checksums.
-#[derive(Clone, Copy, Debug)]
-pub struct Fnv64(u64);
-
-impl Fnv64 {
-    pub const fn new() -> Self {
-        Self(0xcbf2_9ce4_8422_2325)
-    }
-
-    pub fn write_u8(&mut self, value: u8) {
-        self.0 ^= value as u64;
-        self.0 = self.0.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-
-    pub fn write_u32(&mut self, value: u32) {
-        for byte in value.to_le_bytes() {
-            self.write_u8(byte);
-        }
-    }
-
-    pub fn write_u64(&mut self, value: u64) {
-        for byte in value.to_le_bytes() {
-            self.write_u8(byte);
-        }
-    }
-
-    pub fn write_i32(&mut self, value: i32) {
-        self.write_u32(value as u32);
-    }
-
-    pub const fn finish(&self) -> u64 {
-        self.0
-    }
-}
-
-impl Default for Fnv64 {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Difficulty
-// ---------------------------------------------------------------------------
-
+/// Stable difficulty identifiers.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
 pub enum Difficulty {
-    Calm,
-    Standard,
-    Intense,
-}
-
-struct SpawnParams {
-    base_interval: u32,
-    interval_jitter: u32,
-    min_interval: u32,
-    interval_shrink_every: u32,
-    base_speed: i32,
-    speed_jitter: u32,
+    /// Wider decision windows and lower packet density.
+    Assisted = 1,
+    /// Canonical balance.
+    Standard = 2,
+    /// Higher speed and density.
+    Expert = 3,
 }
 
 impl Difficulty {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Calm => "calm",
-            Self::Standard => "standard",
-            Self::Intense => "intense",
-        }
-    }
-
-    pub fn from_name(name: &str) -> Option<Self> {
-        match name {
-            "calm" => Some(Self::Calm),
-            "standard" => Some(Self::Standard),
-            "intense" => Some(Self::Intense),
-            _ => None,
-        }
-    }
-
-    const fn params(self) -> SpawnParams {
-        match self {
-            Self::Calm => SpawnParams {
-                base_interval: 68,
-                interval_jitter: 20,
-                min_interval: 44,
-                interval_shrink_every: 700,
-                base_speed: 2,
-                speed_jitter: 1,
-            },
-            Self::Standard => SpawnParams {
-                base_interval: 52,
-                interval_jitter: 18,
-                min_interval: 30,
-                interval_shrink_every: 600,
-                base_speed: 2,
-                speed_jitter: 2,
-            },
-            Self::Intense => SpawnParams {
-                base_interval: 40,
-                interval_jitter: 14,
-                min_interval: 22,
-                interval_shrink_every: 480,
-                base_speed: 2,
-                speed_jitter: 3,
-            },
+    /// Parse a stable numeric identifier.
+    #[must_use]
+    pub const fn from_u8(value: u8) -> Self {
+        match value {
+            1 => Self::Assisted,
+            3 => Self::Expert,
+            _ => Self::Standard,
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Entities
-// ---------------------------------------------------------------------------
-
+/// Stable entity identifiers used in replay schemas and the WASM ABI.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
 pub enum EntityKind {
-    // Good entities.
-    IntentCandidate,
-    ConsentToken,
-    Evidence,
-    Checksum,
-    CiTest,
-    TypedIntent,
-    // Hazards.
-    RawLeak,
-    DirectStim,
-    UnsafeBlock,
-    Unbounded,
-    Overclaim,
-    NoTrace,
-    RoadmapFact,
-    /// Concealed traffic. Must be validated (classified) before it can be
-    /// quarantined or converted.
-    UnknownPacket,
+    /// Private raw signal frame. Must be quarantined.
+    RawFrame = 1,
+    /// Signal artifact. Must be quarantined.
+    Artifact = 2,
+    /// Intent that has passed classification.
+    ValidatedIntent = 3,
+    /// Packet whose type is not yet known.
+    UnknownPacket = 4,
+    /// Application-safe typed intent.
+    TypedIntent = 5,
+    /// Scoped consent capability.
+    ConsentToken = 6,
+    /// Immediate revocation event.
+    RevokedConsent = 7,
+    /// Basic trace or proof.
+    Evidence = 8,
+    /// Deterministic file/state checksum proof.
+    Checksum = 9,
+    /// CI-confirmed evidence.
+    CiTest = 10,
+    /// Claim lacking support.
+    UnsupportedClaim = 11,
+    /// Claim without traceability.
+    UntraceableClaim = 12,
+    /// Roadmap statement presented as implemented fact.
+    RoadmapAsFactClaim = 13,
+    /// Unsafe stimulation command. Crossing is terminal.
+    StimulationCommand = 14,
 }
 
 impl EntityKind {
-    /// Short, readable on-card label (<= 8 characters).
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::IntentCandidate => "INTENT",
-            Self::ConsentToken => "CONSENT",
-            Self::Evidence => "EVIDENCE",
-            Self::Checksum => "CHECKSUM",
-            Self::CiTest => "CI TEST",
-            Self::TypedIntent => "TYPED",
-            Self::RawLeak => "RAW",
-            Self::DirectStim => "STIM",
-            Self::UnsafeBlock => "UNSAFE",
-            Self::Unbounded => "UNBOUND",
-            Self::Overclaim => "CLAIM",
-            Self::NoTrace => "NO TRACE",
-            Self::RoadmapFact => "ROADMAP",
-            Self::UnknownPacket => "?PKT",
+    /// Parse a stable numeric identifier.
+    #[must_use]
+    pub const fn from_u8(value: u8) -> Self {
+        match value {
+            1 => Self::RawFrame,
+            2 => Self::Artifact,
+            3 => Self::ValidatedIntent,
+            4 => Self::UnknownPacket,
+            5 => Self::TypedIntent,
+            6 => Self::ConsentToken,
+            7 => Self::RevokedConsent,
+            8 => Self::Evidence,
+            9 => Self::Checksum,
+            10 => Self::CiTest,
+            11 => Self::UnsupportedClaim,
+            12 => Self::UntraceableClaim,
+            13 => Self::RoadmapAsFactClaim,
+            14 => Self::StimulationCommand,
+            _ => Self::UnknownPacket,
         }
     }
 
-    pub const fn is_hazard(self) -> bool {
+    /// Action expected by the boundary policy.
+    #[must_use]
+    pub const fn required_action(self) -> BoundaryAction {
+        match self {
+            Self::UnknownPacket => BoundaryAction::Validate,
+            Self::ValidatedIntent => BoundaryAction::Convert,
+            Self::ConsentToken | Self::RevokedConsent => BoundaryAction::Consent,
+            Self::Evidence | Self::Checksum | Self::CiTest => BoundaryAction::Evidence,
+            Self::TypedIntent => BoundaryAction::None,
+            Self::RawFrame
+            | Self::Artifact
+            | Self::UnsupportedClaim
+            | Self::UntraceableClaim
+            | Self::RoadmapAsFactClaim
+            | Self::StimulationCommand => BoundaryAction::Quarantine,
+        }
+    }
+
+    /// Whether the entity is private signal or an unsafe boundary object.
+    #[must_use]
+    pub const fn is_quarantine_target(self) -> bool {
         matches!(
             self,
-            Self::RawLeak
-                | Self::DirectStim
-                | Self::UnsafeBlock
-                | Self::Unbounded
-                | Self::Overclaim
-                | Self::NoTrace
-                | Self::RoadmapFact
+            Self::RawFrame
+                | Self::Artifact
+                | Self::UnsupportedClaim
+                | Self::UntraceableClaim
+                | Self::RoadmapAsFactClaim
+                | Self::StimulationCommand
         )
     }
-
-    /// Evidence artifacts consumable through the evidence gate.
-    pub const fn evidence_points(self) -> u8 {
-        match self {
-            Self::Evidence => 2,
-            Self::Checksum | Self::CiTest => 1,
-            _ => 0,
-        }
-    }
-
-    pub const fn code(self) -> u8 {
-        match self {
-            Self::IntentCandidate => 1,
-            Self::ConsentToken => 2,
-            Self::Evidence => 3,
-            Self::Checksum => 4,
-            Self::CiTest => 5,
-            Self::TypedIntent => 6,
-            Self::RawLeak => 7,
-            Self::DirectStim => 8,
-            Self::UnsafeBlock => 9,
-            Self::Unbounded => 10,
-            Self::Overclaim => 11,
-            Self::NoTrace => 12,
-            Self::RoadmapFact => 13,
-            Self::UnknownPacket => 14,
-        }
-    }
 }
 
+/// Stable action identifiers.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Entity {
-    pub id: u16,
-    pub kind: EntityKind,
-    pub lane: u8,
-    /// Position in milli-field units (`SPAWN_X..=FIELD_END_X`).
-    pub x: i32,
-    /// Milli-field units advanced per tick.
-    pub speed: i32,
-    /// Set on intent candidates after a successful Validate.
-    pub validated: bool,
-    /// For `UnknownPacket`: the concealed kind revealed by Validate.
-    pub concealed: Option<EntityKind>,
+#[repr(u8)]
+pub enum BoundaryAction {
+    /// No action.
+    None = 0,
+    /// Classify an unknown packet.
+    Validate = 1,
+    /// Convert a validated intent to typed intent.
+    Convert = 2,
+    /// Contain private or unsafe objects.
+    Quarantine = 3,
+    /// Establish or revoke scoped consent.
+    Consent = 4,
+    /// Register evidence.
+    Evidence = 5,
+    /// Attempt to seal the boundary.
+    Release = 6,
 }
 
-// ---------------------------------------------------------------------------
-// Player input
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Action {
-=======
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PlayerAction {
-    Idle,
-    MoveUp,
-    MoveDown,
->>>>>>> origin/main
-    Validate,
-    Convert,
-    Quarantine,
-    ConsentGate,
-    EvidenceGate,
-    Release,
-<<<<<<< HEAD
-}
-
-impl Action {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Validate => "Validate",
-            Self::Convert => "Convert",
-            Self::Quarantine => "Quarantine",
-            Self::ConsentGate => "ConsentGate",
-            Self::EvidenceGate => "EvidenceGate",
-            Self::Release => "Release",
-        }
-    }
-
-    pub fn from_name(name: &str) -> Option<Self> {
-        match name {
-            "Validate" => Some(Self::Validate),
-            "Convert" => Some(Self::Convert),
-            "Quarantine" => Some(Self::Quarantine),
-            "ConsentGate" => Some(Self::ConsentGate),
-            "EvidenceGate" => Some(Self::EvidenceGate),
-            "Release" => Some(Self::Release),
-            _ => None,
+impl BoundaryAction {
+    /// Parse a stable numeric identifier.
+    #[must_use]
+    pub const fn from_u8(value: u8) -> Self {
+        match value {
+            1 => Self::Validate,
+            2 => Self::Convert,
+            3 => Self::Quarantine,
+            4 => Self::Consent,
+            5 => Self::Evidence,
+            6 => Self::Release,
+            _ => Self::None,
         }
     }
 }
 
-/// One tick of player input. Lane selection and an action may be combined.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct Input {
-    pub select_lane: Option<u8>,
-    pub action: Option<Action>,
-}
-
-impl Input {
-    pub const IDLE: Input = Input {
-        select_lane: None,
-        action: None,
-    };
-}
-
-// ---------------------------------------------------------------------------
-// Evidence levels, gates, status
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
-=======
-    Restart,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
->>>>>>> origin/main
+/// Evidence maturity.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[repr(u8)]
 pub enum EvidenceLevel {
-    L0,
-    L1,
-    L2,
-    L3,
+    /// No evidence.
+    L0 = 0,
+    /// Trace/basic proof.
+    L1 = 1,
+    /// Checksum and deterministic validation.
+    L2 = 2,
+    /// Full CI-confirmed review set.
+    L3 = 3,
 }
 
 impl EvidenceLevel {
-<<<<<<< HEAD
-    pub const fn from_points(points: u8) -> Self {
-        match points {
-            0..=1 => Self::L0,
-            2..=3 => Self::L1,
-            4..=6 => Self::L2,
-=======
-    pub fn from_points(points: u8) -> Self {
-        match points {
-            0..=2 => Self::L0,
-            3..=5 => Self::L1,
-            6..=9 => Self::L2,
->>>>>>> origin/main
-            _ => Self::L3,
+    /// Parse a stable numeric identifier.
+    #[must_use]
+    pub const fn from_u8(value: u8) -> Self {
+        match value {
+            1 => Self::L1,
+            2 => Self::L2,
+            3 => Self::L3,
+            _ => Self::L0,
         }
-    }
-
-<<<<<<< HEAD
-    pub const fn as_str(self) -> &'static str {
-=======
-    pub fn as_str(self) -> &'static str {
->>>>>>> origin/main
-        match self {
-            Self::L0 => "L0",
-            Self::L1 => "L1",
-            Self::L2 => "L2",
-            Self::L3 => "L3",
-        }
-    }
-<<<<<<< HEAD
-}
-
-/// The five review gates. All must pass before release.
-pub const fn gate_name(index: u8) -> &'static str {
-    match index {
-        0 => "SCHEMA",
-        1 => "CONSENT",
-        2 => "EVIDENCE",
-        3 => "CONTAIN",
-        _ => "DELIVERY",
     }
 }
 
+/// Boundary status.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DefeatCause {
-    IntegrityCollapse,
-    RiskOverflow,
-    RawLeaks,
-    DirectStim,
-}
-
-impl DefeatCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::IntegrityCollapse => "integrity_collapse",
-            Self::RiskOverflow => "risk_overflow",
-            Self::RawLeaks => "raw_leaks",
-            Self::DirectStim => "direct_stim",
-=======
-
-    pub fn is_release_sufficient(self) -> bool {
-        match self {
-            Self::L2 | Self::L3 => true,
-            Self::L0 | Self::L1 => false,
->>>>>>> origin/main
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-<<<<<<< HEAD
-pub enum Status {
-    Running,
-    Victory,
-    Defeat(DefeatCause),
-}
-
-impl Status {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Running => "running",
-            Self::Victory => "victory",
-            Self::Defeat(_) => "defeat",
-        }
-    }
-
-    /// SEALED on victory, BREACHED on defeat, HOLDING while running.
-    pub const fn boundary(self) -> &'static str {
-        match self {
-            Self::Running => "HOLDING",
-            Self::Victory => "SEALED",
-            Self::Defeat(_) => "BREACHED",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ReleaseBlocker {
-    RawLeaks,
-    Gates,
-    Evidence,
-    Integrity,
-    Risk,
-    Trust,
-}
-
-impl ReleaseBlocker {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::RawLeaks => "RAW LEAKS ON RECORD",
-            Self::Gates => "REVIEW GATES OPEN",
-            Self::Evidence => "EVIDENCE BELOW L2",
-            Self::Integrity => "INTEGRITY BELOW 80",
-            Self::Risk => "RISK ABOVE 20",
-            Self::Trust => "TRUST BELOW 90",
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Events (per-tick, for front-end feedback; not part of the state hash)
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Event {
-    Validated(EntityKind),
-    Revealed(EntityKind),
-    Converted,
-    ConvertBlockedConsent,
-    ConvertBlockedEvidence,
-    QuarantineBlockedUnknown,
-    Quarantined(EntityKind),
-    FalsePositive(EntityKind),
-    ConsentOn,
-    ConsentExpired,
-    EvidenceUp(EvidenceLevel, u8),
-    GatePassed(u8),
-    Delivered,
-    MissedIntent,
-    LostArtifact(EntityKind),
-    MinorBreach(EntityKind),
-    MajorBreach(EntityKind),
-    RawLeakBreach,
-    StimBreach,
-    ReleaseRejected(ReleaseBlocker),
-    ReleaseSealed,
-    NoTarget(Action),
-    Defeated(DefeatCause),
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct EventBuf {
-    items: [Option<Event>; MAX_EVENTS],
-    len: u8,
-}
-
-impl EventBuf {
-    pub const fn new() -> Self {
-        Self {
-            items: [None; MAX_EVENTS],
-            len: 0,
-        }
-    }
-
-    fn clear(&mut self) {
-        self.items = [None; MAX_EVENTS];
-        self.len = 0;
-    }
-
-    fn push(&mut self, event: Event) {
-        if (self.len as usize) < MAX_EVENTS {
-            self.items[self.len as usize] = Some(event);
-            self.len += 1;
-        }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = Event> + '_ {
-        self.items.iter().take(self.len as usize).flatten().copied()
-    }
-
-    pub const fn len(&self) -> u8 {
-        self.len
-    }
-
-    pub const fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-}
-
-impl Default for EventBuf {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Configuration and snapshot
-// ---------------------------------------------------------------------------
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct GameConfig {
-    pub seed: u64,
-    pub difficulty: Difficulty,
-=======
-pub enum GamePhase {
-    Menu,
-    Running,
-    Victory,
-    Failure,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
 pub enum BoundaryStatus {
-    Sealed,
-    AtRisk,
-    Breached,
+    /// Run is active.
+    Open = 0,
+    /// Release was sealed successfully.
+    Sealed = 1,
+    /// Run ended without a seal but without a catastrophic breach.
+    Degraded = 2,
+    /// Raw/privacy boundary failed.
+    Breached = 3,
+    /// A fail-closed unsafe condition occurred.
+    Unsafe = 4,
 }
 
+/// Stable terminal reasons.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RiskBand {
-    Low,
-    Elevated,
-    Critical,
+#[repr(u8)]
+pub enum TerminalReason {
+    /// Run remains active.
+    None = 0,
+    /// All release invariants passed.
+    Released = 1,
+    /// Raw signal leak threshold reached.
+    RawLeakLimit = 2,
+    /// A stimulation command crossed the boundary.
+    StimulationCrossed = 3,
+    /// Integrity reached zero.
+    IntegrityCollapse = 4,
+    /// Risk reached its hard limit.
+    RiskOverflow = 5,
+    /// Run duration elapsed before sealing.
+    TimeExpired = 6,
+    /// Internal invariant failed closed.
+    InvariantViolation = 7,
 }
 
+/// Stable feedback/event identifiers for presentation adapters.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HealthGrade {
-    A,
-    B,
-    C,
-    D,
-    F,
+#[repr(u8)]
+pub enum FeedbackCode {
+    /// No event yet.
+    None = 0,
+    /// Unknown packet validated as intent.
+    IntentValidated = 1,
+    /// Unknown packet resolved as artifact.
+    FalseIntentDetected = 2,
+    /// Validated intent converted to typed intent.
+    IntentConverted = 3,
+    /// Conversion blocked by consent/evidence policy.
+    ConversionBlocked = 4,
+    /// Private or unsafe entity quarantined.
+    Quarantined = 5,
+    /// Consent activated.
+    ConsentGranted = 6,
+    /// Consent revoked.
+    ConsentRevoked = 7,
+    /// Evidence level increased.
+    EvidenceRegistered = 8,
+    /// Release sealed.
+    ReleaseSealed = 9,
+    /// Release attempt blocked by open invariants.
+    ReleaseBlocked = 10,
+    /// Incorrect action for selected entity.
+    IncorrectAction = 11,
+    /// No target exists in selected lane.
+    NoTarget = 12,
+    /// Raw signal crossed the boundary.
+    RawLeak = 13,
+    /// Stimulation command crossed and failed closed.
+    StimulationBreach = 14,
+    /// Safe typed intent reached the application layer.
+    TypedIntentReleased = 15,
+    /// Consent expired by tick.
+    ConsentExpired = 16,
+    /// Run expired.
+    TimeExpired = 17,
 }
 
+/// Scoped consent state.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct GameConfig {
-    pub seed: u32,
-    pub difficulty: u8,
->>>>>>> origin/main
+pub struct ConsentState {
+    /// Whether consent is active at the current tick.
+    pub active: bool,
+    /// Capability scope bit mask.
+    pub scope: u8,
+    /// Tick at which the capability became active.
+    pub activation_tick: u32,
+    /// Tick at which it expires (exclusive).
+    pub expiry_tick: u32,
 }
 
-impl Default for GameConfig {
-    fn default() -> Self {
+impl ConsentState {
+    const fn none() -> Self {
         Self {
-<<<<<<< HEAD
-            seed: 0x2112,
-            difficulty: Difficulty::Standard,
-=======
-            seed: 1707,
-            difficulty: 1,
->>>>>>> origin/main
+            active: false,
+            scope: 0,
+            activation_tick: 0,
+            expiry_tick: 0,
         }
     }
-}
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Snapshot {
-    pub tick: u32,
-<<<<<<< HEAD
-    pub status: Status,
-    pub selected_lane: u8,
-    pub trust: u8,
-    pub risk: u8,
-    pub integrity: u8,
-    pub evidence_points: u8,
-    pub evidence_level: EvidenceLevel,
-    pub consent_active: bool,
-    pub consent_remaining: u32,
-    pub gates_mask: u8,
-    pub gates_passed: u8,
-    pub raw_leaks: u8,
-    pub delivered: u8,
-    pub quarantined: u8,
-    pub validated: u8,
-    pub reveals: u8,
-    pub cooldown: u16,
-    pub active_entities: u8,
-    pub last_release_blocker: Option<ReleaseBlocker>,
-}
-
-impl Snapshot {
-    /// True when every release condition currently holds.
-    pub fn release_ready(&self) -> bool {
-        self.trust >= WIN_TRUST
-            && self.risk <= WIN_MAX_RISK
-            && self.integrity >= WIN_INTEGRITY
-            && self.evidence_points >= WIN_EVIDENCE_POINTS
-            && self.gates_mask == ALL_GATES_MASK
-            && self.raw_leaks == 0
+    /// Whether every requested capability bit is currently granted.
+    #[must_use]
+    pub const fn allows(self, requested_scope: u8) -> bool {
+        self.active && self.scope & requested_scope == requested_scope
     }
 }
 
-// ---------------------------------------------------------------------------
-// Game state
-// ---------------------------------------------------------------------------
-
-pub struct GameState {
-    config: GameConfig,
-    rng: Rng64,
-    tick: u32,
-    status: Status,
-    selected_lane: u8,
-    trust: i32,
-    risk: i32,
-    integrity: i32,
-    evidence_points: u8,
-    consent_until: u32,
-    gates: u8,
-    raw_leaks: u8,
-    validated_candidates: u8,
-    quarantined_hazards: u8,
-    delivered: u8,
-    reveals: u8,
-    misses: u8,
-    false_positives: u8,
-    minor_breaches: u8,
-    major_breaches: u8,
-    cooldown: u16,
-    spawn_timer: u32,
-    spawned: u16,
-    next_id: u16,
-    entities: [Option<Entity>; MAX_ENTITIES],
-    events: EventBuf,
-    last_release_blocker: Option<ReleaseBlocker>,
-=======
-    pub phase: GamePhase,
+/// Fixed-capacity entity representation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Entity {
+    /// Slot is active.
+    pub active: bool,
+    /// Stable per-run entity sequence ID.
+    pub id: u32,
+    /// Entity type.
+    pub kind: EntityKind,
+    /// Logical lane index from 0 to 4.
     pub lane: u8,
+    /// Integer fixed-coordinate position.
+    pub position: u16,
+    /// Integer fixed-coordinate velocity per tick.
+    pub speed: u16,
+    /// Entity flags; bit 0 marks an unknown packet as a true intent candidate.
+    pub flags: u8,
+    /// Spawn tick.
+    pub spawn_tick: u32,
+}
+
+impl Entity {
+    const EMPTY: Self = Self {
+        active: false,
+        id: 0,
+        kind: EntityKind::UnknownPacket,
+        lane: 0,
+        position: 0,
+        speed: 0,
+        flags: 0,
+        spawn_tick: 0,
+    };
+}
+
+/// Configuration captured in replay headers.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SimulationConfig {
+    /// Run seed. Zero is normalized to a nonzero deterministic constant.
+    pub seed: u64,
+    /// Run mode.
+    pub mode: RunMode,
+    /// Difficulty.
+    pub difficulty: Difficulty,
+    /// Maximum run duration in ticks. Zero selects the mode default.
+    pub max_ticks: u32,
+    /// Raw leak limit. Zero selects the default of three.
+    pub raw_leak_limit: u8,
+}
+
+impl SimulationConfig {
+    /// Create a canonical configuration.
+    #[must_use]
+    pub const fn canonical(seed: u64, mode: RunMode, difficulty: Difficulty) -> Self {
+        Self {
+            seed,
+            mode,
+            difficulty,
+            max_ticks: 0,
+            raw_leak_limit: 0,
+        }
+    }
+}
+
+/// Compact authoritative snapshot.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StateSnapshot {
+    /// Current tick.
+    pub tick: u32,
+    /// Selected lane.
+    pub selected_lane: u8,
+    /// Trust score, 0-100.
     pub trust: u8,
+    /// Risk score, 0-100.
     pub risk: u8,
+    /// Integrity score, 0-100.
     pub integrity: u8,
-    pub evidence_level: EvidenceLevel,
-    pub evidence_points: u8,
-    pub gates_passed: u8,
+    /// Current evidence level.
+    pub evidence: EvidenceLevel,
+    /// Mandatory review gate bitmask.
+    pub review_gates: u8,
+    /// Raw leak count.
     pub raw_leaks: u8,
-    pub consent_active: bool,
-    pub boundary_status: BoundaryStatus,
-    pub risk_band: RiskBand,
-    pub release_ready: bool,
-    pub health_grade: HealthGrade,
-    pub progress_percent: u8,
-    pub release_blocker_count: u8,
+    /// Score.
+    pub score: u32,
+    /// Current correct-action streak.
+    pub streak: u16,
+    /// Best streak in this run.
+    pub best_streak: u16,
+    /// Boundary status.
+    pub status: BoundaryStatus,
+    /// Terminal reason.
+    pub terminal_reason: TerminalReason,
+    /// Consent state.
+    pub consent: ConsentState,
+    /// Last presentation feedback code.
+    pub feedback: FeedbackCode,
+    /// Release blocker bit mask.
+    pub release_blockers: u16,
+    /// Canonical deterministic state hash.
+    pub state_hash: u64,
 }
 
+/// Release blocker: trust below 90.
+pub const BLOCK_TRUST: u16 = 1 << 0;
+/// Release blocker: risk above 20.
+pub const BLOCK_RISK: u16 = 1 << 1;
+/// Release blocker: integrity below 80.
+pub const BLOCK_INTEGRITY: u16 = 1 << 2;
+/// Release blocker: evidence below L2.
+pub const BLOCK_EVIDENCE: u16 = 1 << 3;
+/// Release blocker: one or more review gates open.
+pub const BLOCK_REVIEW_GATES: u16 = 1 << 4;
+/// Release blocker: consent inactive.
+pub const BLOCK_CONSENT: u16 = 1 << 5;
+/// Release blocker: raw leak occurred.
+pub const BLOCK_RAW_LEAK: u16 = 1 << 6;
+/// Release blocker: run already terminal.
+pub const BLOCK_TERMINAL: u16 = 1 << 7;
+/// Release blocker: the mode-specific review window is not complete.
+pub const BLOCK_REVIEW_WINDOW: u16 = 1 << 8;
+/// Release blocker: unresolved entities remain inside the field.
+pub const BLOCK_ACTIVE_ENTITIES: u16 = 1 << 9;
+
+/// Deterministic input event.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ReviewSummary {
-    pub gates_passed: u8,
-    pub gates_remaining: u8,
-    pub release_ready: bool,
-    pub boundary_status: BoundaryStatus,
-    pub risk_band: RiskBand,
-    pub health_grade: HealthGrade,
-    pub progress_percent: u8,
-    pub release_blocker_count: u8,
+pub struct InputEvent {
+    /// Tick at which the event applies.
+    pub tick: u32,
+    /// Lane selected before applying the action.
+    pub lane: u8,
+    /// Action.
+    pub action: BoundaryAction,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct XorShift32 {
-    state: u32,
-}
-
-impl XorShift32 {
-    pub const fn new(seed: u32) -> Self {
-        Self {
-            state: if seed == 0 { 0xA50F_1707 } else { seed },
-        }
-    }
-
-    pub fn next_u32(&mut self) -> u32 {
-        let mut x = self.state;
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.state = x;
-        x
-    }
-}
-
-pub struct GameState {
-    config: GameConfig,
-    rng: XorShift32,
+/// Allocation-free deterministic simulation.
+#[derive(Clone, Debug)]
+pub struct Simulation {
+    config: SimulationConfig,
+    seed: u64,
+    rng_state: u64,
     tick: u32,
-    phase: GamePhase,
-    lane: u8,
-    trust: i16,
-    risk: i16,
-    integrity: i16,
-    evidence_points: u8,
-    gates_passed: u8,
+    next_spawn_tick: u32,
+    spawn_index: u32,
+    next_entity_id: u32,
+    selected_lane: u8,
+    trust: u8,
+    risk: u8,
+    integrity: u8,
+    evidence: EvidenceLevel,
+    review_gates: u8,
+    consent: ConsentState,
     raw_leaks: u8,
-    consent_ticks: u8,
->>>>>>> origin/main
+    privacy_containments: u16,
+    score: u32,
+    streak: u16,
+    best_streak: u16,
+    status: BoundaryStatus,
+    terminal_reason: TerminalReason,
+    feedback: FeedbackCode,
+    entities: [Entity; ENTITY_CAPACITY],
 }
 
-impl GameState {
-    pub fn new(config: GameConfig) -> Self {
+impl Simulation {
+    /// Create an authoritative simulation.
+    #[must_use]
+    pub fn new(mut config: SimulationConfig) -> Self {
+        if config.seed == 0 {
+            config.seed = 0xA30D_5EED_5AFE_0001;
+        }
+        if config.max_ticks == 0 {
+            config.max_ticks = default_max_ticks(config.mode);
+        }
+        if config.raw_leak_limit == 0 {
+            config.raw_leak_limit = 3;
+        }
+
+        let first_spawn = if config.mode == RunMode::Guided { 60 } else { 45 };
         Self {
-<<<<<<< HEAD
-            rng: Rng64::new(config.seed),
             config,
+            seed: config.seed,
+            rng_state: config.seed,
             tick: 0,
-            status: Status::Running,
+            next_spawn_tick: first_spawn,
+            spawn_index: 0,
+            next_entity_id: 1,
             selected_lane: 2,
-            trust: START_TRUST,
-            risk: START_RISK,
-            integrity: START_INTEGRITY,
-            evidence_points: 0,
-            consent_until: 0,
-            gates: 0,
+            trust: 60,
+            risk: 18,
+            integrity: 100,
+            evidence: EvidenceLevel::L0,
+            review_gates: 0,
+            consent: ConsentState::none(),
             raw_leaks: 0,
-            validated_candidates: 0,
-            quarantined_hazards: 0,
-            delivered: 0,
-            reveals: 0,
-            misses: 0,
-            false_positives: 0,
-            minor_breaches: 0,
-            major_breaches: 0,
-            cooldown: 0,
-            spawn_timer: 40,
-            spawned: 0,
-            next_id: 1,
-            entities: [None; MAX_ENTITIES],
-            events: EventBuf::new(),
-            last_release_blocker: None,
+            privacy_containments: 0,
+            score: 0,
+            streak: 0,
+            best_streak: 0,
+            status: BoundaryStatus::Open,
+            terminal_reason: TerminalReason::None,
+            feedback: FeedbackCode::None,
+            entities: [Entity::EMPTY; ENTITY_CAPACITY],
         }
     }
 
-    pub const fn config(&self) -> GameConfig {
+    /// Return the immutable configuration.
+    #[must_use]
+    pub const fn config(&self) -> SimulationConfig {
         self.config
     }
 
-    pub const fn status(&self) -> Status {
-        self.status
-    }
-
-    pub fn entities(&self) -> &[Option<Entity>; MAX_ENTITIES] {
-        &self.entities
-    }
-
-    pub const fn events(&self) -> &EventBuf {
-        &self.events
-    }
-
-    /// Advance the simulation by exactly one tick.
-    pub fn step(&mut self, input: Input) {
-        self.events.clear();
-
-        if self.status != Status::Running {
+    /// Advance exactly one fixed simulation tick.
+    pub fn tick(&mut self) {
+        if self.is_terminal() {
             return;
         }
 
-        self.tick = self.tick.wrapping_add(1);
-        if self.cooldown > 0 {
-            self.cooldown -= 1;
+        self.tick = self.tick.saturating_add(1);
+        self.feedback = FeedbackCode::None;
+
+        if self.consent.active && self.tick >= self.consent.expiry_tick {
+            self.consent = ConsentState::none();
+            self.review_gates &= !GATE_CONSENT;
+            self.feedback = FeedbackCode::ConsentExpired;
         }
 
-        if let Some(lane) = input.select_lane {
-            self.selected_lane = if lane >= LANES { LANES - 1 } else { lane };
+        if self.tick >= self.next_spawn_tick {
+            self.spawn_next();
+            self.next_spawn_tick = self
+                .next_spawn_tick
+                .saturating_add(spawn_interval(self.config.mode, self.config.difficulty));
         }
 
-        if let Some(action) = input.action {
-            if self.cooldown == 0 {
-                self.apply_action(action);
-            }
-        }
+        self.advance_entities();
+        self.refresh_dynamic_gates();
+        self.enforce_terminal_invariants();
 
-        if self.status == Status::Running {
-            self.spawn();
-            self.advance_entities();
-            self.expire_consent();
-            self.clamp_metrics();
-            self.check_defeat();
-        }
-    }
-
-    pub fn snapshot(&self) -> Snapshot {
-        Snapshot {
-            tick: self.tick,
-            status: self.status,
-            selected_lane: self.selected_lane,
-            trust: clamp_u8(self.trust),
-            risk: clamp_u8(self.risk),
-            integrity: clamp_u8(self.integrity),
-            evidence_points: self.evidence_points,
-            evidence_level: EvidenceLevel::from_points(self.evidence_points),
-            consent_active: self.consent_active(),
-            consent_remaining: self.consent_until.saturating_sub(self.tick),
-            gates_mask: self.gates,
-            gates_passed: self.gates.count_ones() as u8,
-            raw_leaks: self.raw_leaks,
-            delivered: self.delivered,
-            quarantined: self.quarantined_hazards,
-            validated: self.validated_candidates,
-            reveals: self.reveals,
-            cooldown: self.cooldown,
-            active_entities: self.entities.iter().filter(|slot| slot.is_some()).count() as u8,
-            last_release_blocker: self.last_release_blocker,
+        if !self.is_terminal() && self.tick >= self.config.max_ticks {
+            self.status = BoundaryStatus::Degraded;
+            self.terminal_reason = TerminalReason::TimeExpired;
+            self.feedback = FeedbackCode::TimeExpired;
         }
     }
 
-    /// FNV-1a 64 hash over the complete deterministic state. Two replays of
-    /// the same seed, difficulty and input script always produce the same
-    /// hash at the same tick, on every platform.
-    pub fn state_hash(&self) -> u64 {
-        let mut hash = Fnv64::new();
-        hash.write_u64(self.config.seed);
-        hash.write_u8(match self.config.difficulty {
-            Difficulty::Calm => 0,
-            Difficulty::Standard => 1,
-            Difficulty::Intense => 2,
-        });
-        hash.write_u64(self.rng.state());
-        hash.write_u32(self.tick);
-        hash.write_u8(match self.status {
-            Status::Running => 0,
-            Status::Victory => 1,
-            Status::Defeat(cause) => 0x10 | cause as u8,
-        });
-        hash.write_u8(self.selected_lane);
-        hash.write_i32(self.trust);
-        hash.write_i32(self.risk);
-        hash.write_i32(self.integrity);
-        hash.write_u8(self.evidence_points);
-        hash.write_u32(self.consent_until);
-        hash.write_u8(self.gates);
-        hash.write_u8(self.raw_leaks);
-        hash.write_u8(self.validated_candidates);
-        hash.write_u8(self.quarantined_hazards);
-        hash.write_u8(self.delivered);
-        hash.write_u8(self.reveals);
-        hash.write_u8(self.misses);
-        hash.write_u8(self.false_positives);
-        hash.write_u8(self.minor_breaches);
-        hash.write_u8(self.major_breaches);
-        hash.write_u8(self.cooldown as u8);
-        hash.write_u32(self.spawn_timer);
-        hash.write_u32(self.spawned as u32);
-        hash.write_u32(self.next_id as u32);
-        for slot in &self.entities {
-            match slot {
-                None => hash.write_u8(0),
-                Some(entity) => {
-                    hash.write_u8(1);
-                    hash.write_u32(entity.id as u32);
-                    hash.write_u8(entity.kind.code());
-                    hash.write_u8(entity.lane);
-                    hash.write_i32(entity.x);
-                    hash.write_i32(entity.speed);
-                    hash.write_u8(entity.validated as u8);
-                    hash.write_u8(entity.concealed.map_or(0, EntityKind::code));
-                }
-            }
+    /// Advance a bounded number of fixed ticks.
+    pub fn tick_many(&mut self, count: u32) {
+        let mut remaining = count;
+        while remaining > 0 && !self.is_terminal() {
+            self.tick();
+            remaining -= 1;
         }
-        hash.finish()
     }
 
-    const fn consent_active(&self) -> bool {
-        self.consent_until > self.tick
-    }
-
-    // -- actions ------------------------------------------------------------
-
-    fn apply_action(&mut self, action: Action) {
-        if action == Action::Release {
-            self.try_release();
-            self.cooldown = ACTION_COOLDOWN;
+    /// Apply an input event at the current tick.
+    pub fn apply_action(&mut self, action: BoundaryAction) {
+        if self.is_terminal() || action == BoundaryAction::None {
+            return;
+        }
+        if action == BoundaryAction::Release {
+            self.attempt_release();
             return;
         }
 
-        let Some(index) = self.frontmost_in_window(self.selected_lane) else {
-            self.events.push(Event::NoTarget(action));
-            self.cooldown = WHIFF_COOLDOWN;
+        let Some(index) = self.target_index(self.selected_lane) else {
+            self.feedback = FeedbackCode::NoTarget;
+            self.penalize_incorrect(1, 0);
             return;
         };
 
-        let entity = self.entities[index].expect("slot checked above");
-        let mut consumed_cooldown = ACTION_COOLDOWN;
-
+        let kind = self.entities[index].kind;
         match action {
-            Action::Validate => match entity.kind {
-                EntityKind::IntentCandidate if !entity.validated => {
-                    if let Some(slot) = self.entities[index].as_mut() {
-                        slot.validated = true;
-                    }
-                    self.validated_candidates = self.validated_candidates.saturating_add(1);
-                    self.events.push(Event::Validated(entity.kind));
-                    if self.validated_candidates >= GATE_SCHEMA_VALIDATIONS {
-                        self.pass_gate(0);
-                    }
-                }
-                EntityKind::UnknownPacket => {
-                    let revealed = entity.concealed.unwrap_or(EntityKind::Overclaim);
-                    if let Some(slot) = self.entities[index].as_mut() {
-                        slot.kind = revealed;
-                        slot.concealed = None;
-                    }
-                    self.reveals = self.reveals.saturating_add(1);
-                    self.risk += RISK_PER_REVEAL;
-                    self.events.push(Event::Revealed(revealed));
-                }
-                _ => {
-                    self.events.push(Event::NoTarget(action));
-                    consumed_cooldown = WHIFF_COOLDOWN;
-                }
-            },
-            Action::Convert => match entity.kind {
-                EntityKind::IntentCandidate if entity.validated => {
-                    if !self.consent_active() {
-                        self.events.push(Event::ConvertBlockedConsent);
-                        consumed_cooldown = WHIFF_COOLDOWN;
-                    } else if EvidenceLevel::from_points(self.evidence_points) < EvidenceLevel::L1 {
-                        self.events.push(Event::ConvertBlockedEvidence);
-                        consumed_cooldown = WHIFF_COOLDOWN;
-                    } else {
-                        if let Some(slot) = self.entities[index].as_mut() {
-                            slot.kind = EntityKind::TypedIntent;
-                        }
-                        self.events.push(Event::Converted);
-                    }
-                }
-                _ => {
-                    self.events.push(Event::NoTarget(action));
-                    consumed_cooldown = WHIFF_COOLDOWN;
-                }
-            },
-            Action::Quarantine => {
-                if entity.kind == EntityKind::UnknownPacket {
-                    self.events.push(Event::QuarantineBlockedUnknown);
-                    consumed_cooldown = WHIFF_COOLDOWN;
-                } else if entity.kind.is_hazard() {
-                    self.entities[index] = None;
-                    self.quarantined_hazards = self.quarantined_hazards.saturating_add(1);
-                    self.events.push(Event::Quarantined(entity.kind));
-                    if self.quarantined_hazards >= GATE_CONTAINMENT_QUARANTINES {
-                        self.pass_gate(3);
-                    }
-                } else {
-                    self.entities[index] = None;
-                    self.false_positives = self.false_positives.saturating_add(1);
-                    self.trust -= TRUST_LOST_FALSE_POSITIVE;
-                    self.events.push(Event::FalsePositive(entity.kind));
-                }
-            }
-            Action::ConsentGate => {
-                if entity.kind == EntityKind::ConsentToken {
-                    self.entities[index] = None;
-                    self.consent_until = self.tick + CONSENT_DURATION;
-                    self.events.push(Event::ConsentOn);
-                    self.pass_gate(1);
-                } else {
-                    self.events.push(Event::NoTarget(action));
-                    consumed_cooldown = WHIFF_COOLDOWN;
-                }
-            }
-            Action::EvidenceGate => {
-                let points = entity.kind.evidence_points();
-                if points > 0 {
-                    self.entities[index] = None;
-                    self.evidence_points = self.evidence_points.saturating_add(points);
-                    let level = EvidenceLevel::from_points(self.evidence_points);
-                    self.events
-                        .push(Event::EvidenceUp(level, self.evidence_points));
-                    if level >= EvidenceLevel::L2 {
-                        self.pass_gate(2);
-                    }
-                } else {
-                    self.events.push(Event::NoTarget(action));
-                    consumed_cooldown = WHIFF_COOLDOWN;
-                }
-            }
-            Action::Release => unreachable!("handled above"),
+            BoundaryAction::Validate => self.action_validate(index, kind),
+            BoundaryAction::Convert => self.action_convert(index, kind),
+            BoundaryAction::Quarantine => self.action_quarantine(index, kind),
+            BoundaryAction::Consent => self.action_consent(index, kind),
+            BoundaryAction::Evidence => self.action_evidence(index, kind),
+            BoundaryAction::Release | BoundaryAction::None => {}
         }
-
-        self.cooldown = consumed_cooldown;
+        self.refresh_dynamic_gates();
+        self.enforce_terminal_invariants();
     }
 
-    fn try_release(&mut self) {
-        let snapshot = self.snapshot();
-        let blocker = if snapshot.raw_leaks > 0 {
-            Some(ReleaseBlocker::RawLeaks)
-        } else if snapshot.gates_mask != ALL_GATES_MASK {
-            Some(ReleaseBlocker::Gates)
-        } else if snapshot.evidence_points < WIN_EVIDENCE_POINTS {
-            Some(ReleaseBlocker::Evidence)
-        } else if snapshot.integrity < WIN_INTEGRITY {
-            Some(ReleaseBlocker::Integrity)
-        } else if snapshot.risk > WIN_MAX_RISK {
-            Some(ReleaseBlocker::Risk)
-        } else if snapshot.trust < WIN_TRUST {
-            Some(ReleaseBlocker::Trust)
+    /// Apply a ticked replay event, advancing first when necessary.
+    pub fn apply_event(&mut self, event: InputEvent) {
+        if event.tick < self.tick || self.is_terminal() {
+            return;
+        }
+        self.tick_many(event.tick - self.tick);
+        self.select_lane(event.lane);
+        self.apply_action(event.action);
+    }
+
+    /// Select a lane. Values outside the field are clamped.
+    pub fn select_lane(&mut self, lane: u8) {
+        self.selected_lane = min(lane as usize, LANE_COUNT - 1) as u8;
+    }
+
+    /// Move selection by a signed delta with wraparound.
+    pub fn move_lane(&mut self, delta: i8) {
+        let current = self.selected_lane as i8;
+        let lanes = LANE_COUNT as i8;
+        let next = (current + delta).rem_euclid(lanes);
+        self.selected_lane = next as u8;
+    }
+
+    /// Current state snapshot including canonical hash.
+    #[must_use]
+    pub fn snapshot(&self) -> StateSnapshot {
+        StateSnapshot {
+            tick: self.tick,
+            selected_lane: self.selected_lane,
+            trust: self.trust,
+            risk: self.risk,
+            integrity: self.integrity,
+            evidence: self.evidence,
+            review_gates: self.review_gates,
+            raw_leaks: self.raw_leaks,
+            score: self.score,
+            streak: self.streak,
+            best_streak: self.best_streak,
+            status: self.status,
+            terminal_reason: self.terminal_reason,
+            consent: self.consent,
+            feedback: self.feedback,
+            release_blockers: self.release_blockers(),
+            state_hash: self.state_hash(),
+        }
+    }
+
+    /// Entity slot by index.
+    #[must_use]
+    pub fn entity(&self, index: usize) -> Option<Entity> {
+        self.entities.get(index).copied().filter(|entity| entity.active)
+    }
+
+    /// Number of active entities.
+    #[must_use]
+    pub fn active_entity_count(&self) -> usize {
+        self.entities.iter().filter(|entity| entity.active).count()
+    }
+
+    /// Whether the run has reached a terminal state.
+    #[must_use]
+    pub const fn is_terminal(&self) -> bool {
+        self.terminal_reason as u8 != TerminalReason::None as u8
+    }
+
+    /// Whether every release invariant currently passes.
+    #[must_use]
+    pub fn release_ready(&self) -> bool {
+        self.release_blockers() == 0
+    }
+
+    /// Current release blocker mask.
+    #[must_use]
+    pub fn release_blockers(&self) -> u16 {
+        let mut mask = 0_u16;
+        if self.trust < 90 {
+            mask |= BLOCK_TRUST;
+        }
+        if self.risk > 20 {
+            mask |= BLOCK_RISK;
+        }
+        if self.integrity < 80 {
+            mask |= BLOCK_INTEGRITY;
+        }
+        if self.evidence < EvidenceLevel::L2 {
+            mask |= BLOCK_EVIDENCE;
+        }
+        if self.review_gates & ALL_REVIEW_GATES != ALL_REVIEW_GATES {
+            mask |= BLOCK_REVIEW_GATES;
+        }
+        if !self.consent.allows(CONSENT_SCOPE_RELEASE) {
+            mask |= BLOCK_CONSENT;
+        }
+        if self.raw_leaks > 0 {
+            mask |= BLOCK_RAW_LEAK;
+        }
+        if self.is_terminal() {
+            mask |= BLOCK_TERMINAL;
+        }
+        if self.tick < minimum_release_tick(self.config.mode) {
+            mask |= BLOCK_REVIEW_WINDOW;
+        }
+        if self.active_entity_count() != 0 {
+            mask |= BLOCK_ACTIVE_ENTITIES;
+        }
+        mask
+    }
+
+    /// Deterministic FNV-1a hash over the canonical state encoding.
+    #[must_use]
+    pub fn state_hash(&self) -> u64 {
+        let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+        hash_u8(&mut hash, 1); // canonical encoding version
+        hash_u64(&mut hash, self.seed);
+        hash_u8(&mut hash, self.config.mode as u8);
+        hash_u8(&mut hash, self.config.difficulty as u8);
+        hash_u32(&mut hash, self.config.max_ticks);
+        hash_u8(&mut hash, self.config.raw_leak_limit);
+        hash_u32(&mut hash, self.tick);
+        hash_u32(&mut hash, self.next_spawn_tick);
+        hash_u32(&mut hash, self.spawn_index);
+        hash_u32(&mut hash, self.next_entity_id);
+        hash_u64(&mut hash, self.rng_state);
+        hash_u8(&mut hash, self.selected_lane);
+        hash_u8(&mut hash, self.trust);
+        hash_u8(&mut hash, self.risk);
+        hash_u8(&mut hash, self.integrity);
+        hash_u8(&mut hash, self.evidence as u8);
+        hash_u8(&mut hash, self.review_gates);
+        hash_bool(&mut hash, self.consent.active);
+        hash_u8(&mut hash, self.consent.scope);
+        hash_u32(&mut hash, self.consent.activation_tick);
+        hash_u32(&mut hash, self.consent.expiry_tick);
+        hash_u8(&mut hash, self.raw_leaks);
+        hash_u16(&mut hash, self.privacy_containments);
+        hash_u32(&mut hash, self.score);
+        hash_u16(&mut hash, self.streak);
+        hash_u16(&mut hash, self.best_streak);
+        hash_u8(&mut hash, self.status as u8);
+        hash_u8(&mut hash, self.terminal_reason as u8);
+        hash_u8(&mut hash, self.feedback as u8);
+        for entity in &self.entities {
+            hash_bool(&mut hash, entity.active);
+            hash_u32(&mut hash, entity.id);
+            hash_u8(&mut hash, entity.kind as u8);
+            hash_u8(&mut hash, entity.lane);
+            hash_u16(&mut hash, entity.position);
+            hash_u16(&mut hash, entity.speed);
+            hash_u8(&mut hash, entity.flags);
+            hash_u32(&mut hash, entity.spawn_tick);
+        }
+        hash
+    }
+
+    fn action_validate(&mut self, index: usize, kind: EntityKind) {
+        if kind != EntityKind::UnknownPacket {
+            self.feedback = FeedbackCode::IncorrectAction;
+            self.penalize_incorrect(2, 1);
+            return;
+        }
+        if self.entities[index].flags & 1 == 1 {
+            self.entities[index].kind = EntityKind::ValidatedIntent;
+            self.feedback = FeedbackCode::IntentValidated;
+            self.reward(4, 0, 70);
         } else {
-            None
+            self.entities[index].kind = EntityKind::Artifact;
+            self.feedback = FeedbackCode::FalseIntentDetected;
+            self.reward(3, 0, 60);
+        }
+    }
+
+    fn action_convert(&mut self, index: usize, kind: EntityKind) {
+        if kind != EntityKind::ValidatedIntent {
+            self.feedback = FeedbackCode::IncorrectAction;
+            self.penalize_incorrect(2, 1);
+            return;
+        }
+        if !self.consent.allows(CONSENT_SCOPE_CONVERT) || self.evidence < EvidenceLevel::L1 {
+            self.feedback = FeedbackCode::ConversionBlocked;
+            self.penalize_incorrect(4, 1);
+            return;
+        }
+        self.entities[index].kind = EntityKind::TypedIntent;
+        self.review_gates |= GATE_TYPE_SAFETY;
+        self.feedback = FeedbackCode::IntentConverted;
+        self.reward(6, 2, 130);
+    }
+
+    fn action_quarantine(&mut self, index: usize, kind: EntityKind) {
+        if !kind.is_quarantine_target() {
+            self.feedback = FeedbackCode::IncorrectAction;
+            self.penalize_incorrect(2, 1);
+            return;
+        }
+        self.entities[index].active = false;
+        if matches!(kind, EntityKind::RawFrame | EntityKind::Artifact) {
+            self.privacy_containments = self.privacy_containments.saturating_add(1);
+        }
+        self.feedback = FeedbackCode::Quarantined;
+        let score = if kind == EntityKind::StimulationCommand { 180 } else { 100 };
+        self.reward(5, 3, score);
+    }
+
+    fn action_consent(&mut self, index: usize, kind: EntityKind) {
+        match kind {
+            EntityKind::ConsentToken => {
+                self.entities[index].active = false;
+                self.consent = ConsentState {
+                    active: true,
+                    scope: CONSENT_SCOPE_REQUIRED,
+                    activation_tick: self.tick,
+                    expiry_tick: self.tick.saturating_add(1_500),
+                };
+                self.feedback = FeedbackCode::ConsentGranted;
+                self.reward(4, 2, 90);
+            }
+            EntityKind::RevokedConsent => {
+                self.entities[index].active = false;
+                self.consent = ConsentState::none();
+                self.review_gates &= !GATE_CONSENT;
+                self.feedback = FeedbackCode::ConsentRevoked;
+                self.reward(3, 2, 100);
+            }
+            _ => {
+                self.feedback = FeedbackCode::IncorrectAction;
+                self.penalize_incorrect(2, 1);
+            }
+        }
+    }
+
+    fn action_evidence(&mut self, index: usize, kind: EntityKind) {
+        let next = match kind {
+            EntityKind::Evidence => max(self.evidence, EvidenceLevel::L1),
+            EntityKind::Checksum => max(self.evidence, EvidenceLevel::L2),
+            EntityKind::CiTest => EvidenceLevel::L3,
+            _ => {
+                self.feedback = FeedbackCode::IncorrectAction;
+                self.penalize_incorrect(2, 1);
+                return;
+            }
         };
+        self.entities[index].active = false;
+        self.evidence = next;
+        self.feedback = FeedbackCode::EvidenceRegistered;
+        let score = match kind {
+            EntityKind::Evidence => 80,
+            EntityKind::Checksum => 110,
+            EntityKind::CiTest => 140,
+            _ => 0,
+        };
+        self.reward(4, 2, score);
+    }
 
-        match blocker {
-            None => {
-                self.status = Status::Victory;
-                self.events.push(Event::ReleaseSealed);
-            }
-            Some(blocker) => {
-                self.risk += RISK_PER_REJECTED_RELEASE;
-                self.last_release_blocker = Some(blocker);
-                self.events.push(Event::ReleaseRejected(blocker));
-            }
+    fn attempt_release(&mut self) {
+        self.refresh_dynamic_gates();
+        let blockers = self.release_blockers();
+        if blockers == 0 {
+            self.status = BoundaryStatus::Sealed;
+            self.terminal_reason = TerminalReason::Released;
+            self.feedback = FeedbackCode::ReleaseSealed;
+            self.score = self.score.saturating_add(1_000);
+        } else {
+            self.feedback = FeedbackCode::ReleaseBlocked;
+            self.risk = min(100, self.risk.saturating_add(1));
+            self.streak = 0;
         }
     }
 
-    fn pass_gate(&mut self, index: u8) {
-        let bit = 1u8 << index;
-        if self.gates & bit == 0 {
-            self.gates |= bit;
-            self.events.push(Event::GatePassed(index));
+    fn reward(&mut self, trust_gain: u8, risk_reduction: u8, score: u32) {
+        self.trust = min(100, self.trust.saturating_add(trust_gain));
+        self.risk = self.risk.saturating_sub(risk_reduction);
+        self.score = self.score.saturating_add(score);
+        self.streak = self.streak.saturating_add(1);
+        self.best_streak = max(self.best_streak, self.streak);
+    }
+
+    fn penalize_incorrect(&mut self, risk_gain: u8, integrity_loss: u8) {
+        self.risk = min(100, self.risk.saturating_add(risk_gain));
+        self.integrity = self.integrity.saturating_sub(integrity_loss);
+        self.streak = 0;
+    }
+
+    fn refresh_dynamic_gates(&mut self) {
+        if self.consent.allows(CONSENT_SCOPE_REQUIRED) {
+            self.review_gates |= GATE_CONSENT;
+        } else {
+            self.review_gates &= !GATE_CONSENT;
+        }
+        if self.evidence >= EvidenceLevel::L2 {
+            self.review_gates |= GATE_EVIDENCE;
+        }
+        if self.evidence >= EvidenceLevel::L3 {
+            self.review_gates |= GATE_DETERMINISM;
+        }
+        if self.privacy_containments > 0 && self.raw_leaks == 0 {
+            self.review_gates |= GATE_PRIVACY;
+        } else if self.raw_leaks > 0 {
+            self.review_gates &= !GATE_PRIVACY;
         }
     }
 
-    fn frontmost_in_window(&self, lane: u8) -> Option<usize> {
-        let mut best: Option<(usize, i32)> = None;
-        for (index, slot) in self.entities.iter().enumerate() {
-            if let Some(entity) = slot {
-                if entity.lane == lane
-                    && entity.x >= BOUNDARY_X - GATE_WINDOW
-                    && entity.x < BOUNDARY_X
-                {
-                    match best {
-                        Some((_, x)) if entity.x <= x => {}
-                        _ => best = Some((index, entity.x)),
-                    }
-                }
+    fn enforce_terminal_invariants(&mut self) {
+        if self.is_terminal() {
+            return;
+        }
+        if self.raw_leaks >= self.config.raw_leak_limit {
+            self.status = BoundaryStatus::Breached;
+            self.terminal_reason = TerminalReason::RawLeakLimit;
+        } else if self.integrity == 0 {
+            self.status = BoundaryStatus::Unsafe;
+            self.terminal_reason = TerminalReason::IntegrityCollapse;
+        } else if self.risk >= 100 {
+            self.status = BoundaryStatus::Unsafe;
+            self.terminal_reason = TerminalReason::RiskOverflow;
+        }
+    }
+
+    fn target_index(&self, lane: u8) -> Option<usize> {
+        let mut best: Option<(usize, u16)> = None;
+        for (index, entity) in self.entities.iter().enumerate() {
+            if !entity.active || entity.lane != lane || entity.kind == EntityKind::TypedIntent {
+                continue;
+            }
+            match best {
+                Some((_, position)) if position >= entity.position => {}
+                _ => best = Some((index, entity.position)),
             }
         }
         best.map(|(index, _)| index)
     }
 
-    // -- world --------------------------------------------------------------
-
-    fn spawn(&mut self) {
-        if self.spawn_timer > 0 {
-            self.spawn_timer -= 1;
-            return;
-        }
-
-        let params = self.config.difficulty.params();
-
-        // Deterministic warm-up wave teaching the core loop, then weighted RNG.
-        let (kind, lane, speed, concealed) = if (self.spawned as usize) < WARMUP.len() {
-            let (kind, lane) = WARMUP[self.spawned as usize];
-            let concealed = if kind == EntityKind::UnknownPacket {
-                Some(EntityKind::RawLeak)
-            } else {
-                None
-            };
-            (kind, lane, params.base_speed, concealed)
+    fn spawn_next(&mut self) {
+        let kind = kind_for_spawn(self.config.mode, self.spawn_index, self.seed);
+        let lane = if self.config.mode == RunMode::Guided {
+            guided_lane(self.spawn_index)
         } else {
-            let kind = self.roll_kind();
-            let lane = self.rng.range(LANES as u32) as u8;
-            let mut speed = params.base_speed + self.rng.range(params.speed_jitter + 1) as i32;
-            if matches!(
-                kind,
-                EntityKind::Overclaim | EntityKind::NoTrace | EntityKind::RoadmapFact
-            ) {
-                speed += CLAIM_SPEED_BONUS;
-            }
-            let concealed = if kind == EntityKind::UnknownPacket {
-                Some(self.roll_concealed())
+            (self.next_random() % LANE_COUNT as u64) as u8
+        };
+        let mut flags = 0_u8;
+        if kind == EntityKind::UnknownPacket {
+            let candidate = if self.config.mode == RunMode::Guided {
+                guided_unknown_is_intent(self.spawn_index)
             } else {
-                None
+                self.spawn_index % 3 != 1
             };
-            (kind, lane, speed, concealed)
-        };
-
-        let entity = Entity {
-            id: self.next_id,
-            kind,
-            lane,
-            x: SPAWN_X,
-            speed,
-            validated: false,
-            concealed,
-        };
-        self.next_id = self.next_id.wrapping_add(1);
-        self.spawned = self.spawned.saturating_add(1);
-
-        for slot in self.entities.iter_mut() {
-            if slot.is_none() {
-                *slot = Some(entity);
-                break;
+            if candidate {
+                flags |= 1;
             }
         }
-
-        // Schedule the next spawn.
-        let shrink = (self.tick / params.interval_shrink_every) * 3;
-        let base = params
-            .base_interval
-            .saturating_sub(shrink)
-            .max(params.min_interval);
-        let jitter = self.rng.range(params.interval_jitter * 2 + 1);
-        self.spawn_timer = base + jitter - params.interval_jitter.min(base + jitter);
-    }
-
-    fn roll_kind(&mut self) -> EntityKind {
-        // Weighted table (per mille).
-        const TABLE: [(EntityKind, u32); 13] = [
-            (EntityKind::IntentCandidate, 230),
-            (EntityKind::ConsentToken, 90),
-            (EntityKind::Evidence, 80),
-            (EntityKind::Checksum, 60),
-            (EntityKind::CiTest, 60),
-            (EntityKind::RawLeak, 90),
-            (EntityKind::DirectStim, 40),
-            (EntityKind::UnsafeBlock, 60),
-            (EntityKind::Unbounded, 50),
-            (EntityKind::Overclaim, 80),
-            (EntityKind::NoTrace, 50),
-            (EntityKind::RoadmapFact, 50),
-            (EntityKind::UnknownPacket, 60),
-        ];
-        let total: u32 = 1000;
-        let mut roll = self.rng.range(total);
-        for (kind, weight) in TABLE {
-            if roll < weight {
-                return kind;
-            }
-            roll -= weight;
+        let speed = entity_speed(kind, self.config.mode, self.config.difficulty);
+        if let Some(slot) = self.entities.iter_mut().find(|entity| !entity.active) {
+            *slot = Entity {
+                active: true,
+                id: self.next_entity_id,
+                kind,
+                lane,
+                position: SPAWN_X,
+                speed,
+                flags,
+                spawn_tick: self.tick,
+            };
+            self.next_entity_id = self.next_entity_id.saturating_add(1);
+            self.spawn_index = self.spawn_index.saturating_add(1);
+        } else {
+            self.risk = min(100, self.risk.saturating_add(5));
+            self.integrity = self.integrity.saturating_sub(2);
         }
-        EntityKind::IntentCandidate
-    }
-
-    fn roll_concealed(&mut self) -> EntityKind {
-        const TABLE: [(EntityKind, u32); 5] = [
-            (EntityKind::RawLeak, 25),
-            (EntityKind::Overclaim, 20),
-            (EntityKind::NoTrace, 15),
-            (EntityKind::IntentCandidate, 25),
-            (EntityKind::UnsafeBlock, 15),
-        ];
-        let mut roll = self.rng.range(100);
-        for (kind, weight) in TABLE {
-            if roll < weight {
-                return kind;
-            }
-            roll -= weight;
-        }
-        EntityKind::Overclaim
     }
 
     fn advance_entities(&mut self) {
-        for index in 0..MAX_ENTITIES {
-            let Some(mut entity) = self.entities[index] else {
-                continue;
-            };
-            let before = entity.x;
-            entity.x += entity.speed;
-
-            if before < BOUNDARY_X && entity.x >= BOUNDARY_X {
-                // The membrane.
-                let kind = if entity.kind == EntityKind::UnknownPacket {
-                    entity.concealed.unwrap_or(EntityKind::Overclaim)
-                } else {
-                    entity.kind
-                };
-
-                if kind == EntityKind::TypedIntent {
-                    // Typed intent passes the boundary by design.
-                    entity.kind = EntityKind::TypedIntent;
-                    self.entities[index] = Some(entity);
-                    continue;
-                }
-
-                self.entities[index] = None;
-                match kind {
-                    EntityKind::RawLeak => {
-                        self.raw_leaks = self.raw_leaks.saturating_add(1);
-                        self.integrity -= INTEGRITY_LOST_RAW_LEAK;
-                        self.events.push(Event::RawLeakBreach);
-                    }
-                    EntityKind::DirectStim => {
-                        self.status = Status::Defeat(DefeatCause::DirectStim);
-                        self.events.push(Event::StimBreach);
-                        self.events.push(Event::Defeated(DefeatCause::DirectStim));
-                        return;
-                    }
-                    EntityKind::UnsafeBlock | EntityKind::Unbounded => {
-                        self.integrity -= INTEGRITY_LOST_MAJOR;
-                        self.risk += RISK_PER_MAJOR_BREACH;
-                        self.major_breaches = self.major_breaches.saturating_add(1);
-                        self.events.push(Event::MajorBreach(kind));
-                    }
-                    EntityKind::Overclaim | EntityKind::NoTrace | EntityKind::RoadmapFact => {
-                        self.integrity -= INTEGRITY_LOST_MINOR;
-                        self.minor_breaches = self.minor_breaches.saturating_add(1);
-                        self.events.push(Event::MinorBreach(kind));
-                    }
-                    EntityKind::IntentCandidate => {
-                        self.trust -= TRUST_LOST_PER_MISS;
-                        self.misses = self.misses.saturating_add(1);
-                        self.events.push(Event::MissedIntent);
-                    }
-                    EntityKind::ConsentToken
-                    | EntityKind::Evidence
-                    | EntityKind::Checksum
-                    | EntityKind::CiTest => {
-                        self.events.push(Event::LostArtifact(kind));
-                    }
-                    EntityKind::TypedIntent | EntityKind::UnknownPacket => {}
-                }
+        let mut crossed = [Entity::EMPTY; ENTITY_CAPACITY];
+        let mut crossed_count = 0_usize;
+        for entity in &mut self.entities {
+            if !entity.active {
                 continue;
             }
-
-            if entity.x >= FIELD_END_X {
-                self.entities[index] = None;
-                if entity.kind == EntityKind::TypedIntent {
-                    self.delivered = self.delivered.saturating_add(1);
-                    self.trust += TRUST_PER_DELIVERY;
-                    self.events.push(Event::Delivered);
-                    if self.delivered >= GATE_DELIVERY_INTENTS {
-                        self.pass_gate(4);
-                    }
-                }
-                continue;
+            entity.position = entity.position.saturating_add(entity.speed);
+            if entity.position >= BOUNDARY_X {
+                crossed[crossed_count] = *entity;
+                crossed_count += 1;
+                entity.active = false;
             }
-
-            self.entities[index] = Some(entity);
         }
-    }
-
-    fn expire_consent(&mut self) {
-        if self.consent_until != 0 && self.consent_until == self.tick {
-            self.events.push(Event::ConsentExpired);
-        }
-    }
-
-    fn clamp_metrics(&mut self) {
-        self.trust = self.trust.clamp(0, 100);
-        self.risk = self.risk.clamp(0, 100);
-        self.integrity = self.integrity.clamp(0, 100);
-    }
-
-    fn check_defeat(&mut self) {
-        let cause = if self.integrity <= 0 {
-            Some(DefeatCause::IntegrityCollapse)
-        } else if self.risk >= 100 {
-            Some(DefeatCause::RiskOverflow)
-        } else if self.raw_leaks >= LOSE_RAW_LEAKS {
-            Some(DefeatCause::RawLeaks)
-        } else {
-            None
-        };
-        if let Some(cause) = cause {
-            self.status = Status::Defeat(cause);
-            self.events.push(Event::Defeated(cause));
-        }
-    }
-
-    #[cfg(test)]
-    fn inject(&mut self, kind: EntityKind, lane: u8, x: i32, speed: i32) {
-        for slot in self.entities.iter_mut() {
-            if slot.is_none() {
-                *slot = Some(Entity {
-                    id: self.next_id,
-                    kind,
-                    lane,
-                    x,
-                    speed,
-                    validated: false,
-                    concealed: None,
-                });
-                self.next_id = self.next_id.wrapping_add(1);
-                return;
+        for entity in crossed.iter().take(crossed_count) {
+            self.handle_crossing(*entity);
+            if self.is_terminal() {
+                break;
             }
-=======
-            rng: XorShift32::new(config.seed),
-            config,
-            tick: 0,
-            phase: GamePhase::Menu,
-            lane: 2,
-            trust: 42,
-            risk: 22,
-            integrity: 100,
-            evidence_points: 0,
-            gates_passed: 0,
-            raw_leaks: 0,
-            consent_ticks: 0,
         }
     }
 
-    pub fn restart(&mut self) {
-        *self = Self::new(self.config);
-        self.phase = GamePhase::Running;
-    }
-
-    pub fn step(&mut self, action: PlayerAction) -> Snapshot {
-        if action == PlayerAction::Restart {
-            self.restart();
-            return self.snapshot();
-        }
-
-        if self.phase == GamePhase::Menu && action != PlayerAction::Idle {
-            self.phase = GamePhase::Running;
-        }
-
-        if self.phase != GamePhase::Running {
-            return self.snapshot();
-        }
-
-        self.tick = self.tick.saturating_add(1);
-        self.consent_ticks = self.consent_ticks.saturating_sub(1);
-
-        match action {
-            PlayerAction::Idle => self.drift(),
-            PlayerAction::MoveUp => {
-                if self.lane > 0 {
-                    self.lane -= 1;
-                }
+    fn handle_crossing(&mut self, entity: Entity) {
+        match entity.kind {
+            EntityKind::TypedIntent => {
+                self.feedback = FeedbackCode::TypedIntentReleased;
+                self.reward(3, 1, 120);
             }
-            PlayerAction::MoveDown => {
-                if self.lane < 4 {
-                    self.lane += 1;
-                }
+            EntityKind::RawFrame => {
+                self.raw_leaks = self.raw_leaks.saturating_add(1);
+                self.risk = min(100, self.risk.saturating_add(24));
+                self.integrity = self.integrity.saturating_sub(14);
+                self.streak = 0;
+                self.feedback = FeedbackCode::RawLeak;
             }
-            PlayerAction::Validate => {
-                self.trust += 2;
-                self.evidence_points = self.evidence_points.saturating_add(1);
+            EntityKind::StimulationCommand => {
+                self.status = BoundaryStatus::Unsafe;
+                self.terminal_reason = TerminalReason::StimulationCrossed;
+                self.feedback = FeedbackCode::StimulationBreach;
             }
-            PlayerAction::Convert => {
-                if self.consent_ticks > 0 {
-                    self.trust += 4;
-                    self.risk -= 1;
-                } else {
-                    self.risk += 5;
-                    self.integrity -= 2;
-                }
+            EntityKind::Artifact | EntityKind::UnknownPacket | EntityKind::ValidatedIntent => {
+                self.risk = min(100, self.risk.saturating_add(12));
+                self.integrity = self.integrity.saturating_sub(7);
+                self.streak = 0;
             }
-            PlayerAction::Quarantine => {
-                self.risk -= 4;
-                self.trust += 1;
+            EntityKind::UnsupportedClaim
+            | EntityKind::UntraceableClaim
+            | EntityKind::RoadmapAsFactClaim => {
+                self.risk = min(100, self.risk.saturating_add(15));
+                self.integrity = self.integrity.saturating_sub(6);
+                self.streak = 0;
             }
-            PlayerAction::ConsentGate => {
-                self.consent_ticks = 24;
-                self.trust += 1;
+            EntityKind::RevokedConsent => {
+                self.consent = ConsentState::none();
+                self.review_gates &= !GATE_CONSENT;
+                self.risk = min(100, self.risk.saturating_add(10));
+                self.integrity = self.integrity.saturating_sub(3);
+                self.streak = 0;
+                self.feedback = FeedbackCode::ConsentRevoked;
             }
-            PlayerAction::EvidenceGate => {
-                self.apply_evidence_gate();
+            EntityKind::ConsentToken => {
+                self.risk = min(100, self.risk.saturating_add(5));
+                self.streak = 0;
             }
-            PlayerAction::Release => self.try_release(),
-            PlayerAction::Restart => {}
-        }
-
-        self.check_terminal();
-        self.snapshot()
-    }
-
-    pub fn apply_script(&mut self, actions: &[PlayerAction]) -> Snapshot {
-        let mut snapshot = self.snapshot();
-
-        for action in actions {
-            snapshot = self.step(*action);
-        }
-
-        snapshot
-    }
-
-    pub fn snapshot(&self) -> Snapshot {
-        let trust = clamp(self.trust);
-        let risk = clamp(self.risk);
-        let integrity = clamp(self.integrity);
-        let evidence_level = EvidenceLevel::from_points(self.evidence_points);
-        let boundary_status = self.boundary_status_from_values(risk, integrity);
-        let risk_band = risk_band_from_value(risk);
-        let release_ready = self.release_ready_from_values(trust, risk, integrity, evidence_level);
-        let health_grade = health_grade_from_values(trust, risk, integrity);
-        let progress_percent = self.progress_percent_from_values(trust, risk, integrity);
-        let release_blocker_count =
-            self.release_blocker_count_from_values(trust, risk, integrity, evidence_level);
-
-        Snapshot {
-            tick: self.tick,
-            phase: self.phase,
-            lane: self.lane,
-            trust,
-            risk,
-            integrity,
-            evidence_level,
-            evidence_points: self.evidence_points,
-            gates_passed: self.gates_passed,
-            raw_leaks: self.raw_leaks,
-            consent_active: self.consent_ticks > 0,
-            boundary_status,
-            risk_band,
-            release_ready,
-            health_grade,
-            progress_percent,
-            release_blocker_count,
+            EntityKind::Evidence | EntityKind::Checksum | EntityKind::CiTest => {
+                self.risk = min(100, self.risk.saturating_add(4));
+                self.streak = 0;
+            }
         }
     }
 
-    pub fn review_summary(&self) -> ReviewSummary {
-        let snapshot = self.snapshot();
-
-        ReviewSummary {
-            gates_passed: snapshot.gates_passed,
-            gates_remaining: 5_u8.saturating_sub(snapshot.gates_passed),
-            release_ready: snapshot.release_ready,
-            boundary_status: snapshot.boundary_status,
-            risk_band: snapshot.risk_band,
-            health_grade: snapshot.health_grade,
-            progress_percent: snapshot.progress_percent,
-            release_blocker_count: snapshot.release_blocker_count,
-        }
+    fn next_random(&mut self) -> u64 {
+        // xorshift64* with a fixed algorithm and nonzero state.
+        let mut x = self.rng_state;
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+        self.rng_state = x;
+        x.wrapping_mul(0x2545_F491_4F6C_DD1D)
     }
+}
 
-    pub fn release_ready(&self) -> bool {
-        self.snapshot().release_ready
+/// Deterministically derive a Daily Seed from a UTC date represented as YYYYMMDD.
+#[must_use]
+pub fn daily_seed(yyyymmdd: u32) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    for byte in b"neural-boundary-replay-v3.0.0" {
+        hash_byte(&mut hash, *byte);
     }
+    hash_u32(&mut hash, yyyymmdd);
+    if hash == 0 { 1 } else { hash }
+}
 
-    pub fn boundary_status(&self) -> BoundaryStatus {
-        self.snapshot().boundary_status
+fn minimum_release_tick(mode: RunMode) -> u32 {
+    match mode {
+        RunMode::Guided => 3_250,
+        RunMode::Standard | RunMode::Daily => 1_500,
+        RunMode::Audit => 1_800,
+        RunMode::Grand => 2_400,
     }
+}
 
-    pub fn risk_budget_remaining(&self) -> u8 {
-        20_u8.saturating_sub(self.snapshot().risk)
+fn default_max_ticks(mode: RunMode) -> u32 {
+    match mode {
+        RunMode::Guided => 3_600,
+        RunMode::Standard | RunMode::Daily => 5_400,
+        RunMode::Audit => 6_000,
+        RunMode::Grand => 7_200,
     }
+}
 
-    pub fn evidence_gap(&self) -> u8 {
-        let evidence_points = self.snapshot().evidence_points;
-        6_u8.saturating_sub(evidence_points)
+fn spawn_interval(mode: RunMode, difficulty: Difficulty) -> u32 {
+    if mode == RunMode::Guided {
+        return 210;
     }
-
-    fn apply_evidence_gate(&mut self) {
-        let gate_threshold = (self.gates_passed + 1) * 2;
-        let evidence_ready = self.evidence_points >= gate_threshold;
-        let gate_available = self.gates_passed < 5;
-
-        if evidence_ready && gate_available {
-            self.gates_passed += 1;
-            self.trust += 6;
-            self.risk -= 2;
-        } else {
-            self.risk += 1;
-        }
+    let base: u32 = match mode {
+        RunMode::Audit => 105,
+        RunMode::Grand => 120,
+        RunMode::Standard | RunMode::Daily => 135,
+        RunMode::Guided => 210,
+    };
+    match difficulty {
+        Difficulty::Assisted => base.saturating_add(35),
+        Difficulty::Standard => base,
+        Difficulty::Expert => base.saturating_sub(25),
     }
+}
 
-    fn drift(&mut self) {
-        let roll = self.rng.next_u32() % 11;
-        match roll {
-            0 => self.risk += self.config.difficulty as i16,
-            1 => self.trust += 1,
-            2 => self.evidence_points = self.evidence_points.saturating_add(1),
-            _ => {}
-        }
+fn entity_speed(kind: EntityKind, mode: RunMode, difficulty: Difficulty) -> u16 {
+    let mut speed: u16 = match kind {
+        EntityKind::StimulationCommand => 7,
+        EntityKind::UnsupportedClaim
+        | EntityKind::UntraceableClaim
+        | EntityKind::RoadmapAsFactClaim => 6,
+        EntityKind::RawFrame | EntityKind::Artifact => 5,
+        _ => 4,
+    };
+    if matches!(mode, RunMode::Audit | RunMode::Grand) {
+        speed = speed.saturating_add(1);
     }
-
-    fn try_release(&mut self) {
-        if self.release_ready() {
-            self.phase = GamePhase::Victory;
-        } else {
-            self.risk += 12;
-            self.trust -= 5;
-        }
+    match difficulty {
+        Difficulty::Assisted => speed.saturating_sub(1).max(2),
+        Difficulty::Standard => speed,
+        Difficulty::Expert => speed.saturating_add(1),
     }
+}
 
-    fn check_terminal(&mut self) {
-        if self.integrity <= 0 || self.risk >= 100 || self.raw_leaks >= 3 {
-            self.phase = GamePhase::Failure;
-        }
-    }
+fn guided_lane(index: u32) -> u8 {
+    const LANES: [u8; 16] = [2, 1, 3, 2, 4, 0, 1, 3, 2, 1, 4, 0, 2, 4, 1, 3];
+    LANES[index as usize % LANES.len()]
+}
 
-    fn release_ready_from_values(
-        &self,
-        trust: u8,
-        risk: u8,
-        integrity: u8,
-        evidence_level: EvidenceLevel,
-    ) -> bool {
-        let evidence_ready = evidence_level.is_release_sufficient();
-        let core_ready = trust >= 90 && risk <= 20 && integrity >= 80;
-        let gates_ready = self.gates_passed == 5;
-        let no_leaks = self.raw_leaks == 0;
+fn guided_unknown_is_intent(index: u32) -> bool {
+    !matches!(index, 8)
+}
 
-        core_ready && evidence_ready && gates_ready && no_leaks
-    }
+fn kind_for_spawn(mode: RunMode, index: u32, seed: u64) -> EntityKind {
+    const GUIDED: [EntityKind; 16] = [
+        EntityKind::RawFrame,
+        EntityKind::ConsentToken,
+        EntityKind::Evidence,
+        EntityKind::UnknownPacket,
+        EntityKind::Checksum,
+        EntityKind::CiTest,
+        EntityKind::UnsupportedClaim,
+        EntityKind::RevokedConsent,
+        EntityKind::UnknownPacket,
+        EntityKind::ConsentToken,
+        EntityKind::Evidence,
+        EntityKind::RoadmapAsFactClaim,
+        EntityKind::UnknownPacket,
+        EntityKind::StimulationCommand,
+        EntityKind::Checksum,
+        EntityKind::UntraceableClaim,
+    ];
+    const STANDARD: [EntityKind; 16] = [
+        EntityKind::RawFrame,
+        EntityKind::ConsentToken,
+        EntityKind::Evidence,
+        EntityKind::UnknownPacket,
+        EntityKind::Artifact,
+        EntityKind::Checksum,
+        EntityKind::UnknownPacket,
+        EntityKind::UnsupportedClaim,
+        EntityKind::CiTest,
+        EntityKind::ConsentToken,
+        EntityKind::RawFrame,
+        EntityKind::UnknownPacket,
+        EntityKind::Evidence,
+        EntityKind::UntraceableClaim,
+        EntityKind::Checksum,
+        EntityKind::UnknownPacket,
+    ];
+    const AUDIT: [EntityKind; 18] = [
+        EntityKind::RawFrame,
+        EntityKind::UnknownPacket,
+        EntityKind::ConsentToken,
+        EntityKind::Evidence,
+        EntityKind::RevokedConsent,
+        EntityKind::UnsupportedClaim,
+        EntityKind::Checksum,
+        EntityKind::UnknownPacket,
+        EntityKind::StimulationCommand,
+        EntityKind::ConsentToken,
+        EntityKind::CiTest,
+        EntityKind::RoadmapAsFactClaim,
+        EntityKind::UnknownPacket,
+        EntityKind::RawFrame,
+        EntityKind::UntraceableClaim,
+        EntityKind::Evidence,
+        EntityKind::Artifact,
+        EntityKind::UnknownPacket,
+    ];
+    const GRAND: [EntityKind; 20] = [
+        EntityKind::RawFrame,
+        EntityKind::Artifact,
+        EntityKind::UnknownPacket,
+        EntityKind::ConsentToken,
+        EntityKind::Evidence,
+        EntityKind::Checksum,
+        EntityKind::UnknownPacket,
+        EntityKind::RevokedConsent,
+        EntityKind::UnsupportedClaim,
+        EntityKind::ConsentToken,
+        EntityKind::CiTest,
+        EntityKind::UnknownPacket,
+        EntityKind::StimulationCommand,
+        EntityKind::RoadmapAsFactClaim,
+        EntityKind::RawFrame,
+        EntityKind::Evidence,
+        EntityKind::UnknownPacket,
+        EntityKind::UntraceableClaim,
+        EntityKind::Checksum,
+        EntityKind::UnknownPacket,
+    ];
 
-    fn release_blocker_count_from_values(
-        &self,
-        trust: u8,
-        risk: u8,
-        integrity: u8,
-        evidence_level: EvidenceLevel,
-    ) -> u8 {
-        let mut blockers = 0;
-
-        if trust < 90 {
-            blockers += 1;
-        }
-        if risk > 20 {
-            blockers += 1;
-        }
-        if integrity < 80 {
-            blockers += 1;
-        }
-        if !evidence_level.is_release_sufficient() {
-            blockers += 1;
-        }
-        if self.gates_passed < 5 {
-            blockers += 1;
-        }
-        if self.raw_leaks > 0 {
-            blockers += 1;
-        }
-
-        blockers
-    }
-
-    fn progress_percent_from_values(&self, trust: u8, risk: u8, integrity: u8) -> u8 {
-        let trust_component = trust / 4;
-        let risk_component = 25_u8.saturating_sub(risk / 4);
-        let integrity_component = integrity / 4;
-        let gate_component = self.gates_passed.saturating_mul(5);
-        let total = trust_component + risk_component + integrity_component + gate_component;
-
-        if total > 100 {
-            100
-        } else {
-            total
-        }
-    }
-
-    fn boundary_status_from_values(&self, risk: u8, integrity: u8) -> BoundaryStatus {
-        if self.raw_leaks > 0 || integrity == 0 {
-            BoundaryStatus::Breached
-        } else if risk > 20 || integrity < 70 {
-            BoundaryStatus::AtRisk
-        } else {
-            BoundaryStatus::Sealed
->>>>>>> origin/main
+    match mode {
+        RunMode::Guided => GUIDED[index as usize % GUIDED.len()],
+        RunMode::Standard => STANDARD[index as usize % STANDARD.len()],
+        RunMode::Audit => AUDIT[index as usize % AUDIT.len()],
+        RunMode::Grand => GRAND[index as usize % GRAND.len()],
+        RunMode::Daily => {
+            let offset = (seed % STANDARD.len() as u64) as usize;
+            STANDARD[(index as usize + offset) % STANDARD.len()]
         }
     }
 }
 
-<<<<<<< HEAD
-const WARMUP: [(EntityKind, u8); 6] = [
-    (EntityKind::ConsentToken, 2),
-    (EntityKind::IntentCandidate, 2),
-    (EntityKind::Evidence, 1),
-    (EntityKind::IntentCandidate, 3),
-    (EntityKind::Checksum, 1),
-    (EntityKind::UnknownPacket, 0),
-];
+fn hash_byte(hash: &mut u64, byte: u8) {
+    *hash ^= u64::from(byte);
+    *hash = (*hash).wrapping_mul(0x0000_0100_0000_01B3);
+}
 
-const fn clamp_u8(value: i32) -> u8 {
-=======
-fn risk_band_from_value(risk: u8) -> RiskBand {
-    match risk {
-        0..=20 => RiskBand::Low,
-        21..=69 => RiskBand::Elevated,
-        _ => RiskBand::Critical,
+fn hash_bool(hash: &mut u64, value: bool) {
+    hash_byte(hash, u8::from(value));
+}
+
+fn hash_u8(hash: &mut u64, value: u8) {
+    hash_byte(hash, value);
+}
+
+fn hash_u16(hash: &mut u64, value: u16) {
+    for byte in value.to_le_bytes() {
+        hash_byte(hash, byte);
     }
 }
 
-fn health_grade_from_values(trust: u8, risk: u8, integrity: u8) -> HealthGrade {
-    if trust >= 90 && risk <= 20 && integrity >= 90 {
-        HealthGrade::A
-    } else if trust >= 75 && risk <= 35 && integrity >= 80 {
-        HealthGrade::B
-    } else if trust >= 60 && risk <= 55 && integrity >= 65 {
-        HealthGrade::C
-    } else if integrity > 0 && risk < 90 {
-        HealthGrade::D
-    } else {
-        HealthGrade::F
+fn hash_u32(hash: &mut u64, value: u32) {
+    for byte in value.to_le_bytes() {
+        hash_byte(hash, byte);
     }
 }
 
-fn clamp(value: i16) -> u8 {
->>>>>>> origin/main
-    if value < 0 {
-        0
-    } else if value > 100 {
-        100
-    } else {
-        value as u8
+fn hash_u64(hash: &mut u64, value: u64) {
+    for byte in value.to_le_bytes() {
+        hash_byte(hash, byte);
     }
 }
 
-<<<<<<< HEAD
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-=======
->>>>>>> origin/main
 #[cfg(test)]
 mod tests {
     use super::*;
 
-<<<<<<< HEAD
-    fn act(state: &mut GameState, lane: u8, action: Action) {
-        state.step(Input {
-            select_lane: Some(lane),
-            action: Some(action),
-        });
+    fn guided_event(tick: u32, lane: u8, action: BoundaryAction) -> InputEvent {
+        InputEvent { tick, lane, action }
     }
 
-    fn idle(state: &mut GameState, ticks: u32) {
-        for _ in 0..ticks {
-            state.step(Input::IDLE);
+    #[test]
+    fn same_seed_and_inputs_produce_same_hash() {
+        let config = SimulationConfig::canonical(58, RunMode::Guided, Difficulty::Standard);
+        let events = [
+            guided_event(70, 2, BoundaryAction::Quarantine),
+            guided_event(280, 1, BoundaryAction::Consent),
+            guided_event(490, 3, BoundaryAction::Evidence),
+            guided_event(700, 2, BoundaryAction::Validate),
+            guided_event(701, 2, BoundaryAction::Convert),
+        ];
+        let mut left = Simulation::new(config);
+        let mut right = Simulation::new(config);
+        for event in events {
+            left.apply_event(event);
+            right.apply_event(event);
         }
+        left.tick_many(100);
+        right.tick_many(100);
+        assert_eq!(left.snapshot(), right.snapshot());
+        assert_eq!(left.state_hash(), right.state_hash());
     }
 
-    fn isolate(state: &mut GameState) {
-        // Hermetic tests: suspend natural spawning.
-        state.spawn_timer = u32::MAX;
+    #[test]
+    fn stimulation_crossing_fails_closed() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            9,
+            RunMode::Guided,
+            Difficulty::Standard,
+        ));
+        simulation.tick_many(3_100);
+        assert_eq!(simulation.snapshot().status, BoundaryStatus::Unsafe);
+        assert_eq!(
+            simulation.snapshot().terminal_reason,
+            TerminalReason::StimulationCrossed
+        );
     }
 
-    fn cool(state: &mut GameState) {
-        while state.snapshot().cooldown > 0 {
-            state.step(Input::IDLE);
+    #[test]
+    fn raw_leak_limit_is_terminal() {
+        let mut config = SimulationConfig::canonical(58, RunMode::Guided, Difficulty::Standard);
+        config.raw_leak_limit = 1;
+        let mut simulation = Simulation::new(config);
+        simulation.tick_many(400);
+        assert_eq!(simulation.snapshot().status, BoundaryStatus::Breached);
+        assert_eq!(
+            simulation.snapshot().terminal_reason,
+            TerminalReason::RawLeakLimit
+        );
+    }
+
+    #[test]
+    fn daily_seed_is_stable_and_date_specific() {
+        assert_eq!(daily_seed(20260611), daily_seed(20260611));
+        assert_ne!(daily_seed(20260611), daily_seed(20260612));
+    }
+
+    fn test_entity(kind: EntityKind, lane: u8, position: u16) -> Entity {
+        Entity {
+            active: true,
+            id: 1,
+            kind,
+            lane,
+            position,
+            speed: 1,
+            flags: 1,
+            spawn_tick: 0,
         }
     }
 
     #[test]
-    fn rng_sequence_is_locked() {
-        // Lock the algorithm: xorshift64* with the documented multiplier.
-        let mut reference = 42u64;
-        reference ^= reference << 13;
-        reference ^= reference >> 7;
-        reference ^= reference << 17;
-        let expected = reference.wrapping_mul(0x2545_F491_4F6C_DD1D);
-        let mut rng = Rng64::new(42);
-        assert_eq!(rng.next_u64(), expected);
+    fn raw_frame_cannot_be_converted_to_typed_intent() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            3,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.entities[0] = test_entity(EntityKind::RawFrame, 0, 100);
+        simulation.select_lane(0);
+        simulation.apply_action(BoundaryAction::Convert);
+
+        assert_eq!(simulation.entities[0].kind, EntityKind::RawFrame);
+        assert_eq!(simulation.feedback, FeedbackCode::IncorrectAction);
     }
 
     #[test]
-    fn deterministic_replay_hashes_match() {
-        let config = GameConfig {
-            seed: 777,
-            difficulty: Difficulty::Standard,
+    fn conversion_requires_active_consent_and_evidence() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            4,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.entities[0] = test_entity(EntityKind::ValidatedIntent, 1, 100);
+        simulation.select_lane(1);
+        simulation.apply_action(BoundaryAction::Convert);
+        assert_eq!(simulation.entities[0].kind, EntityKind::ValidatedIntent);
+        assert_eq!(simulation.feedback, FeedbackCode::ConversionBlocked);
+
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_REQUIRED,
+            activation_tick: 0,
+            expiry_tick: 1_000,
         };
-        let mut a = GameState::new(config);
-        let mut b = GameState::new(config);
-        for tick in 1..=900u32 {
-            let input = if tick % 37 == 0 {
-                Input {
-                    select_lane: Some((tick % LANES as u32) as u8),
-                    action: Some(Action::Validate),
-                }
-            } else if tick % 191 == 0 {
-                Input {
-                    select_lane: None,
-                    action: Some(Action::Quarantine),
-                }
-            } else {
-                Input::IDLE
-            };
-            a.step(input);
-            b.step(input);
-            assert_eq!(a.state_hash(), b.state_hash(), "hash diverged at {tick}");
+        simulation.evidence = EvidenceLevel::L1;
+        simulation.apply_action(BoundaryAction::Convert);
+        assert_eq!(simulation.entities[0].kind, EntityKind::TypedIntent);
+        assert_eq!(simulation.feedback, FeedbackCode::IntentConverted);
+    }
+
+    #[test]
+    fn revocation_blocks_subsequent_conversion() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            5,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_REQUIRED,
+            activation_tick: 0,
+            expiry_tick: 1_000,
+        };
+        simulation.evidence = EvidenceLevel::L1;
+        simulation.entities[0] = test_entity(EntityKind::RevokedConsent, 2, 200);
+        simulation.select_lane(2);
+        simulation.apply_action(BoundaryAction::Consent);
+        assert!(!simulation.consent.active);
+
+        simulation.entities[0] = test_entity(EntityKind::ValidatedIntent, 2, 200);
+        simulation.apply_action(BoundaryAction::Convert);
+        assert_eq!(simulation.entities[0].kind, EntityKind::ValidatedIntent);
+        assert_eq!(simulation.feedback, FeedbackCode::ConversionBlocked);
+    }
+
+    #[test]
+    fn unsupported_claim_cannot_raise_evidence() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            6,
+            RunMode::Audit,
+            Difficulty::Standard,
+        ));
+        simulation.entities[0] = test_entity(EntityKind::UnsupportedClaim, 3, 100);
+        simulation.select_lane(3);
+        simulation.apply_action(BoundaryAction::Evidence);
+
+        assert_eq!(simulation.evidence, EvidenceLevel::L0);
+        assert!(simulation.entities[0].active);
+        assert_eq!(simulation.feedback, FeedbackCode::IncorrectAction);
+    }
+
+    #[test]
+    fn raw_leak_is_an_absolute_release_blocker() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            7,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.tick = minimum_release_tick(RunMode::Standard);
+        simulation.trust = 100;
+        simulation.risk = 0;
+        simulation.integrity = 100;
+        simulation.evidence = EvidenceLevel::L3;
+        simulation.review_gates = ALL_REVIEW_GATES;
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_REQUIRED,
+            activation_tick: 0,
+            expiry_tick: simulation.tick + 100,
+        };
+        simulation.raw_leaks = 1;
+
+        assert_eq!(simulation.release_blockers(), BLOCK_RAW_LEAK);
+        simulation.apply_action(BoundaryAction::Release);
+        assert_eq!(simulation.status, BoundaryStatus::Open);
+        assert_eq!(simulation.feedback, FeedbackCode::ReleaseBlocked);
+    }
+
+    #[test]
+    fn exact_release_invariants_seal_the_run() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            8,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.tick = minimum_release_tick(RunMode::Standard);
+        simulation.trust = 90;
+        simulation.risk = 20;
+        simulation.integrity = 80;
+        simulation.evidence = EvidenceLevel::L3;
+        simulation.review_gates = ALL_REVIEW_GATES;
+        simulation.privacy_containments = 1;
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_REQUIRED,
+            activation_tick: 0,
+            expiry_tick: simulation.tick + 100,
+        };
+
+        simulation.apply_action(BoundaryAction::Release);
+        assert_eq!(simulation.status, BoundaryStatus::Sealed);
+        assert_eq!(simulation.terminal_reason, TerminalReason::Released);
+        assert_eq!(simulation.feedback, FeedbackCode::ReleaseSealed);
+    }
+
+    #[test]
+    fn conversion_requires_the_conversion_scope_bit() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            9,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.entities[0] = test_entity(EntityKind::ValidatedIntent, 1, 100);
+        simulation.selected_lane = 1;
+        simulation.evidence = EvidenceLevel::L1;
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_RELEASE,
+            activation_tick: 0,
+            expiry_tick: 1_000,
+        };
+
+        simulation.apply_action(BoundaryAction::Convert);
+        assert_eq!(simulation.entities[0].kind, EntityKind::ValidatedIntent);
+        assert_eq!(simulation.feedback, FeedbackCode::ConversionBlocked);
+    }
+
+    #[test]
+    fn release_requires_the_release_scope_bit() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            9,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.tick = minimum_release_tick(RunMode::Standard);
+        simulation.trust = 100;
+        simulation.risk = 0;
+        simulation.integrity = 100;
+        simulation.evidence = EvidenceLevel::L3;
+        simulation.review_gates = ALL_REVIEW_GATES;
+        simulation.privacy_containments = 1;
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_CONVERT,
+            activation_tick: 0,
+            expiry_tick: simulation.tick + 100,
+        };
+
+        assert_eq!(simulation.release_blockers(), BLOCK_CONSENT);
+        simulation.apply_action(BoundaryAction::Release);
+        assert_eq!(simulation.status, BoundaryStatus::Open);
+        assert_eq!(simulation.feedback, FeedbackCode::ReleaseBlocked);
+    }
+
+    #[test]
+    fn consent_expiry_clears_scope_and_gate() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            9,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_REQUIRED,
+            activation_tick: 0,
+            expiry_tick: 1,
+        };
+        simulation.review_gates |= GATE_CONSENT;
+
+        simulation.tick();
+        assert!(!simulation.consent.active);
+        assert_eq!(simulation.consent.scope, 0);
+        assert_eq!(simulation.review_gates & GATE_CONSENT, 0);
+        assert_eq!(simulation.feedback, FeedbackCode::ConsentExpired);
+    }
+
+    #[test]
+    fn unresolved_entities_block_release() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            9,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.tick = minimum_release_tick(RunMode::Standard);
+        simulation.trust = 100;
+        simulation.risk = 0;
+        simulation.integrity = 100;
+        simulation.evidence = EvidenceLevel::L3;
+        simulation.review_gates = ALL_REVIEW_GATES;
+        simulation.privacy_containments = 1;
+        simulation.consent = ConsentState {
+            active: true,
+            scope: CONSENT_SCOPE_REQUIRED,
+            activation_tick: 0,
+            expiry_tick: simulation.tick + 100,
+        };
+        simulation.entities[0] = test_entity(EntityKind::TypedIntent, 1, 100);
+
+        assert_eq!(simulation.release_blockers(), BLOCK_ACTIVE_ENTITIES);
+        simulation.apply_action(BoundaryAction::Release);
+        assert_eq!(simulation.status, BoundaryStatus::Open);
+        assert_eq!(simulation.feedback, FeedbackCode::ReleaseBlocked);
+    }
+
+    #[test]
+    fn terminal_state_is_immutable() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            10,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.status = BoundaryStatus::Unsafe;
+        simulation.terminal_reason = TerminalReason::InvariantViolation;
+        let before = simulation.state_hash();
+
+        simulation.tick();
+        simulation.apply_action(BoundaryAction::Quarantine);
+        assert_eq!(simulation.state_hash(), before);
+    }
+
+    #[test]
+    fn fixed_entity_pool_never_exceeds_capacity() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            11,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        for (index, slot) in simulation.entities.iter_mut().enumerate() {
+            *slot = test_entity(EntityKind::Artifact, (index % LANE_COUNT) as u8, 10);
+            slot.id = index as u32 + 1;
         }
-        assert_eq!(a.snapshot(), b.snapshot());
+        let risk_before = simulation.risk;
+        let integrity_before = simulation.integrity;
+        simulation.spawn_next();
+
+        assert_eq!(simulation.active_entity_count(), ENTITY_CAPACITY);
+        assert_eq!(simulation.risk, risk_before + 5);
+        assert_eq!(simulation.integrity, integrity_before - 2);
     }
 
     #[test]
-    fn warmup_wave_is_fixed() {
-        let mut state = GameState::new(GameConfig::default());
-        idle(&mut state, 60);
-        let first = state
-            .entities()
-            .iter()
-            .flatten()
-            .min_by_key(|entity| entity.id)
-            .copied()
-            .expect("first warm-up entity spawned");
-        assert_eq!(first.kind, EntityKind::ConsentToken);
-        assert_eq!(first.lane, 2);
+    fn different_seeds_produce_different_canonical_states() {
+        let left = Simulation::new(SimulationConfig::canonical(
+            12,
+            RunMode::Daily,
+            Difficulty::Standard,
+        ));
+        let right = Simulation::new(SimulationConfig::canonical(
+            13,
+            RunMode::Daily,
+            Difficulty::Standard,
+        ));
+        assert_ne!(left.state_hash(), right.state_hash());
     }
 
     #[test]
-    fn validate_then_convert_requires_consent_and_evidence() {
-        let mut state = GameState::new(GameConfig {
-            seed: 9,
-            difficulty: Difficulty::Standard,
-        });
-        isolate(&mut state);
-        state.inject(EntityKind::IntentCandidate, 1, BOUNDARY_X - 200, 0);
-        act(&mut state, 1, Action::Validate);
-        assert!(state
-            .events()
-            .iter()
-            .any(|e| matches!(e, Event::Validated(_))));
-        cool(&mut state);
-
-        act(&mut state, 1, Action::Convert);
-        assert!(state
-            .events()
-            .iter()
-            .any(|e| e == Event::ConvertBlockedConsent));
-        cool(&mut state);
-
-        state.inject(EntityKind::ConsentToken, 0, BOUNDARY_X - 150, 0);
-        act(&mut state, 0, Action::ConsentGate);
-        assert!(state.snapshot().consent_active);
-        cool(&mut state);
-
-        act(&mut state, 1, Action::Convert);
-        assert!(state
-            .events()
-            .iter()
-            .any(|e| e == Event::ConvertBlockedEvidence));
-        cool(&mut state);
-
-        state.inject(EntityKind::Evidence, 0, BOUNDARY_X - 150, 0);
-        act(&mut state, 0, Action::EvidenceGate);
-        cool(&mut state);
-
-        act(&mut state, 1, Action::Convert);
-        assert!(state.events().iter().any(|e| e == Event::Converted));
-    }
-
-    #[test]
-    fn unknown_packet_must_be_classified_first() {
-        let mut state = GameState::new(GameConfig::default());
-        isolate(&mut state);
-        state.inject(EntityKind::UnknownPacket, 2, BOUNDARY_X - 100, 0);
-        if let Some(slot) = state.entities[0].as_mut() {
-            slot.concealed = Some(EntityKind::RawLeak);
-        }
-
-        act(&mut state, 2, Action::Quarantine);
-        assert!(state
-            .events()
-            .iter()
-            .any(|e| e == Event::QuarantineBlockedUnknown));
-        cool(&mut state);
-
-        let risk_before = state.snapshot().risk;
-        act(&mut state, 2, Action::Validate);
-        assert!(state
-            .events()
-            .iter()
-            .any(|e| e == Event::Revealed(EntityKind::RawLeak)));
-        assert_eq!(state.snapshot().risk, risk_before + RISK_PER_REVEAL as u8);
-        cool(&mut state);
-
-        act(&mut state, 2, Action::Quarantine);
-        assert!(state
-            .events()
-            .iter()
-            .any(|e| matches!(e, Event::Quarantined(EntityKind::RawLeak))));
-    }
-
-    #[test]
-    fn direct_stim_crossing_is_an_instant_breach() {
-        let mut state = GameState::new(GameConfig::default());
-        state.inject(EntityKind::DirectStim, 3, BOUNDARY_X - 1, 4);
-        state.step(Input::IDLE);
-        assert_eq!(state.status(), Status::Defeat(DefeatCause::DirectStim));
-        assert_eq!(state.status().boundary(), "BREACHED");
-    }
-
-    #[test]
-    fn three_raw_leaks_end_the_run() {
-        let mut state = GameState::new(GameConfig::default());
-        isolate(&mut state);
-        for _ in 0..3 {
-            state.inject(EntityKind::RawLeak, 4, BOUNDARY_X - 1, 4);
-            state.step(Input::IDLE);
-        }
-        assert_eq!(state.status(), Status::Defeat(DefeatCause::RawLeaks));
-        assert_eq!(state.snapshot().raw_leaks, 3);
-    }
-
-    #[test]
-    fn premature_release_is_rejected_and_adds_risk() {
-        let mut state = GameState::new(GameConfig::default());
-        let risk_before = state.snapshot().risk;
-        act(&mut state, 2, Action::Release);
-        let snapshot = state.snapshot();
-        assert_eq!(snapshot.status, Status::Running);
-        assert_eq!(snapshot.risk, risk_before + RISK_PER_REJECTED_RELEASE as u8);
-        assert!(state
-            .events()
-            .iter()
-            .any(|e| matches!(e, Event::ReleaseRejected(_))));
-    }
-
-    #[test]
-    fn full_clean_run_reaches_victory_and_seals_the_boundary() {
-        let mut state = GameState::new(GameConfig {
-            seed: 31,
-            difficulty: Difficulty::Calm,
-        });
-        isolate(&mut state);
-
-        // Consent.
-        state.inject(EntityKind::ConsentToken, 0, BOUNDARY_X - 60, 0);
-        act(&mut state, 0, Action::ConsentGate);
-        cool(&mut state);
-
-        // Evidence to L2 (2 + 2 points).
-        for _ in 0..2 {
-            state.inject(EntityKind::Evidence, 0, BOUNDARY_X - 60, 0);
-            act(&mut state, 0, Action::EvidenceGate);
-            cool(&mut state);
-        }
-        assert!(state.snapshot().evidence_level >= EvidenceLevel::L2);
-
-        // Quarantine three hazards.
-        for _ in 0..3 {
-            state.inject(EntityKind::Overclaim, 1, BOUNDARY_X - 60, 0);
-            act(&mut state, 1, Action::Quarantine);
-            cool(&mut state);
-        }
-
-        // Validate + convert + deliver seven typed intents (trust 50 -> 92).
-        for _ in 0..7 {
-            state.inject(EntityKind::IntentCandidate, 2, BOUNDARY_X - 120, 0);
-            act(&mut state, 2, Action::Validate);
-            cool(&mut state);
-            act(&mut state, 2, Action::Convert);
-            cool(&mut state);
-            if let Some(slot) = state
-                .entities
-                .iter_mut()
-                .flatten()
-                .find(|entity| entity.kind == EntityKind::TypedIntent)
-            {
-                slot.speed = 40;
-            }
-            idle(&mut state, 40);
-        }
-
-        let snapshot = state.snapshot();
-        assert_eq!(snapshot.trust, 92, "trust after seven deliveries");
-        assert_eq!(snapshot.gates_passed, GATE_COUNT);
-        assert!(snapshot.release_ready(), "blocker: {:?}", snapshot);
-
-        act(&mut state, 2, Action::Release);
-        assert_eq!(state.status(), Status::Victory);
-        assert_eq!(state.status().boundary(), "SEALED");
-    }
-
-    #[test]
-    fn cooldown_blocks_rapid_actions() {
-        let mut state = GameState::new(GameConfig::default());
-        isolate(&mut state);
-        state.inject(EntityKind::Overclaim, 2, BOUNDARY_X - 60, 0);
-        state.inject(EntityKind::Overclaim, 2, BOUNDARY_X - 90, 0);
-        act(&mut state, 2, Action::Quarantine);
-        assert_eq!(state.snapshot().quarantined, 1);
-        act(&mut state, 2, Action::Quarantine);
-        assert_eq!(state.snapshot().quarantined, 1, "cooldown must gate input");
-        cool(&mut state);
-        act(&mut state, 2, Action::Quarantine);
-        assert_eq!(state.snapshot().quarantined, 2);
-    }
-
-    #[test]
-    fn metric_clamps_hold() {
-        let mut state = GameState::new(GameConfig::default());
-        state.trust = 250;
-        state.risk = -40;
-        state.integrity = 180;
-        state.clamp_metrics();
-        let snapshot = state.snapshot();
-        assert_eq!(snapshot.trust, 100);
-        assert_eq!(snapshot.risk, 0);
-        assert_eq!(snapshot.integrity, 100);
-    }
-
-    #[test]
-    fn names_round_trip() {
-        for action in [
-            Action::Validate,
-            Action::Convert,
-            Action::Quarantine,
-            Action::ConsentGate,
-            Action::EvidenceGate,
-            Action::Release,
-        ] {
-            assert_eq!(Action::from_name(action.name()), Some(action));
-        }
-        for difficulty in [Difficulty::Calm, Difficulty::Standard, Difficulty::Intense] {
-            assert_eq!(Difficulty::from_name(difficulty.name()), Some(difficulty));
-        }
-        assert_eq!(Action::from_name("Yolo"), None);
-    }
-
-    #[test]
-    fn labels_stay_short_for_cards() {
-        let kinds = [
-            EntityKind::IntentCandidate,
-            EntityKind::ConsentToken,
-            EntityKind::Evidence,
-            EntityKind::Checksum,
-            EntityKind::CiTest,
-            EntityKind::TypedIntent,
-            EntityKind::RawLeak,
-            EntityKind::DirectStim,
-            EntityKind::UnsafeBlock,
-            EntityKind::Unbounded,
-            EntityKind::Overclaim,
-            EntityKind::NoTrace,
-            EntityKind::RoadmapFact,
-            EntityKind::UnknownPacket,
-        ];
-        for kind in kinds {
-            assert!(kind.label().len() <= 8, "{} label too long", kind.label());
-        }
-=======
-    #[test]
-    fn initial_state_is_stable() {
-        let game = GameState::new(GameConfig::default());
-        let snapshot = game.snapshot();
-
-        assert_eq!(snapshot.tick, 0);
-        assert_eq!(snapshot.phase, GamePhase::Menu);
-        assert_eq!(snapshot.trust, 42);
-        assert_eq!(snapshot.risk, 22);
-        assert_eq!(snapshot.integrity, 100);
-        assert_eq!(snapshot.boundary_status, BoundaryStatus::AtRisk);
-        assert_eq!(snapshot.risk_band, RiskBand::Elevated);
-        assert_eq!(snapshot.health_grade, HealthGrade::D);
-        assert!(!snapshot.release_ready);
-    }
-
-    #[test]
-    fn restart_does_not_add_tick() {
-        let mut game = GameState::new(GameConfig::default());
-        game.step(PlayerAction::Validate);
-        assert_eq!(game.snapshot().tick, 1);
-
-        let snapshot = game.step(PlayerAction::Restart);
-        assert_eq!(snapshot.tick, 0);
-        assert_eq!(snapshot.phase, GamePhase::Running);
-    }
-
-    #[test]
-    fn movement_is_bounded() {
-        let mut game = GameState::new(GameConfig::default());
-
-        for _ in 0..10 {
-            game.step(PlayerAction::MoveUp);
-        }
-        assert_eq!(game.snapshot().lane, 0);
-
-        for _ in 0..10 {
-            game.step(PlayerAction::MoveDown);
-        }
-        assert_eq!(game.snapshot().lane, 4);
-    }
-
-    #[test]
-    fn deterministic_runs_match() {
-        let actions = [
-            PlayerAction::Validate,
-            PlayerAction::ConsentGate,
-            PlayerAction::MoveUp,
-            PlayerAction::Validate,
-            PlayerAction::MoveDown,
-            PlayerAction::Quarantine,
-            PlayerAction::EvidenceGate,
-            PlayerAction::Idle,
-            PlayerAction::Idle,
-        ];
-
-        let mut first = GameState::new(GameConfig::default());
-        let mut second = GameState::new(GameConfig::default());
-
-        first.apply_script(&actions);
-        second.apply_script(&actions);
-
-        assert_eq!(first.snapshot(), second.snapshot());
-    }
-
-    #[test]
-    fn review_summary_reports_remaining_gates() {
-        let game = GameState::new(GameConfig::default());
-        let summary = game.review_summary();
-
-        assert_eq!(summary.gates_passed, 0);
-        assert_eq!(summary.gates_remaining, 5);
-        assert_eq!(summary.boundary_status, BoundaryStatus::AtRisk);
-        assert_eq!(summary.risk_band, RiskBand::Elevated);
-        assert_eq!(summary.health_grade, HealthGrade::D);
-        assert!(!summary.release_ready);
-    }
-
-    #[test]
-    fn reviewer_helpers_are_stable() {
-        let game = GameState::new(GameConfig::default());
-
-        assert_eq!(game.risk_budget_remaining(), 0);
-        assert_eq!(game.evidence_gap(), 6);
-        assert_eq!(game.review_summary().release_blocker_count, 4);
->>>>>>> origin/main
+    fn invalid_lane_is_clamped() {
+        let mut simulation = Simulation::new(SimulationConfig::canonical(
+            1,
+            RunMode::Standard,
+            Difficulty::Standard,
+        ));
+        simulation.select_lane(99);
+        assert_eq!(simulation.snapshot().selected_lane, 4);
     }
 }

@@ -1,0 +1,120 @@
+{
+  "schema": "neural-boundary-replay-v3.0.0",
+  "product_version": "3.0.0",
+  "core_version": "3.0.0",
+  "hash_algorithm": "fnv1a64-v1",
+  "seed": 77,
+  "mode": "guided",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "initial_config": {
+    "max_ticks": 3350,
+    "raw_leak_limit": 3
+  },
+  "events": [
+    {
+      "tick": 60,
+      "lane": 2,
+      "action": "quarantine"
+    },
+    {
+      "tick": 270,
+      "lane": 1,
+      "action": "consent"
+    },
+    {
+      "tick": 480,
+      "lane": 3,
+      "action": "evidence"
+    },
+    {
+      "tick": 690,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 691,
+      "lane": 2,
+      "action": "convert"
+    },
+    {
+      "tick": 900,
+      "lane": 4,
+      "action": "evidence"
+    },
+    {
+      "tick": 1110,
+      "lane": 0,
+      "action": "evidence"
+    },
+    {
+      "tick": 1320,
+      "lane": 1,
+      "action": "quarantine"
+    },
+    {
+      "tick": 1530,
+      "lane": 3,
+      "action": "consent"
+    },
+    {
+      "tick": 1740,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 1741,
+      "lane": 2,
+      "action": "quarantine"
+    },
+    {
+      "tick": 2160,
+      "lane": 4,
+      "action": "evidence"
+    },
+    {
+      "tick": 2370,
+      "lane": 0,
+      "action": "quarantine"
+    },
+    {
+      "tick": 2580,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 2790,
+      "lane": 4,
+      "action": "quarantine"
+    },
+    {
+      "tick": 3000,
+      "lane": 1,
+      "action": "evidence"
+    },
+    {
+      "tick": 3210,
+      "lane": 3,
+      "action": "quarantine"
+    },
+    {
+      "tick": 3250,
+      "lane": 3,
+      "action": "release"
+    }
+  ],
+  "expected": {
+    "terminal_tick": 3350,
+    "status": "degraded",
+    "reason": "time-expired",
+    "state_hash": "2a34c087a43cb8d0",
+    "trust": 100,
+    "risk": 5,
+    "integrity": 93,
+    "evidence": 3,
+    "review_gates": 29,
+    "raw_leaks": 0,
+    "score": 1840
+  },
+  "summary": "Consent is revoked and never re-established; release remains fail-closed and the review window expires."
+}

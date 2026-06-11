@@ -9,22 +9,42 @@ permissions:
   contents: write
 
 jobs:
-  github-release:
-    name: publish GitHub release
-    runs-on: ubuntu-latest
+  release:
+    name: Verify and publish v3.0.0
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Prepare source archives
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          mkdir -p release-artifacts
-          git archive --format=zip --prefix="neural-boundary-game-v${VERSION}/" -o "release-artifacts/neural-boundary-game-v${VERSION}.zip" HEAD
-          git archive --format=tar --prefix="neural-boundary-game-v${VERSION}/" HEAD | gzip -9 > "release-artifacts/neural-boundary-game-v${VERSION}.tar.gz"
-
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/checkout@v6
         with:
-          name: Neural Boundary Game ${{ github.ref_name }} — Elite Foundation Grande AxonOS Standard
-          body_path: RELEASE_NOTES.md
-          files: release-artifacts/*
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Verify annotated tag identity and main ancestry
+        run: |
+          test "${GITHUB_REF_NAME}" = "v$(cat VERSION)"
+          test "$(git cat-file -t "${GITHUB_REF_NAME}")" = "tag"
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor "${GITHUB_REF_NAME}^{commit}" origin/main
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.81.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
+          rustup override set 1.81.0
+      - name: Full release gate
+        run: ./scripts/verify_release.sh --full
+      - name: Assemble normalized release assets
+        env:
+          SOURCE_DATE_EPOCH: "946684800"
+        run: python3 tools/package_release.py --include-pages
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            release-assets/* \
+            --verify-tag \
+            --title "Neural Boundary Game v3.0.0 — Sovereign Boundary Edition" \
+            --notes-file RELEASE_NOTES.md

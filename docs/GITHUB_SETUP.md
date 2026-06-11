@@ -1,142 +1,34 @@
-# GitHub Setup
+# GitHub Repository Setup
 
-Repository:
+## Required settings
 
-```text
-https://github.com/AxonOS-BCI/neural-boundary-game
-```
+- Default branch: `main`.
+- Protect `main`: require pull request, passing CI, conversation resolution, and branch freshness.
+- Block force-push and branch deletion.
+- Enable GitHub Pages with **GitHub Actions** as the source.
+- Set Actions workflow permissions to read repository contents by default.
+- Permit `pages: write` and `id-token: write` only in the Pages workflow.
+- Permit `contents: write` only in the tagged release job.
 
-<<<<<<< HEAD
-## About
+## Suggested required checks
 
-Use:
-=======
-About description:
->>>>>>> origin/main
+- `rust-and-protocol`
+- `browser-adapter`
+- `repository-gates`
+- `pages-build`
 
-```text
-Playable Rust/WASM demo of the core BCI safety rule: raw signal stays inside the device; apps receive typed intent only.
-```
+## About and social preview
 
-<<<<<<< HEAD
-## Website
+Description:
 
-After Pages deploy:
-=======
+> Deterministic Rust/WASM boundary simulation: keep raw signal private; release typed intent only.
+
 Website:
->>>>>>> origin/main
 
-```text
-https://axonos-bci.github.io/neural-boundary-game/
-```
+> https://axonos-bci.github.io/neural-boundary-game/
 
-<<<<<<< HEAD
-## Topics
-=======
-Topics:
->>>>>>> origin/main
+Use `preview.png` as the repository social preview. Do not present a static screenshot as the interactive demo target.
 
-```text
-rust
-wasm
-webassembly
-no-std
-bci
-privacy
-embedded
-deterministic-game
-axonos
-neurotechnology
-```
+## Tag protection
 
-<<<<<<< HEAD
-## Social preview
-
-Upload `preview.png`:
-
-```text
-Settings -> General -> Social preview
-```
-
-## Pages
-
-Use:
-
-```text
-Settings -> Pages -> Source: GitHub Actions
-```
-
-Then check:
-
-```text
-Actions -> Pages
-```
-
-## Release
-
-Create release:
-
-```text
-v2.1.2
-Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition
-```
-
-Tag from the command line:
-
-```bash
-git tag -a v2.1.2 -m "Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition" && git push origin v2.1.2
-```
-
-Use `RELEASE_NOTES.md`.
-=======
-Apply About and topics with GitHub CLI:
-
-```bash
-bash scripts/configure_github_about.sh
-```
-
-Enable the live demo URL from the committed `/docs` folder:
-
-```bash
-bash scripts/enable_pages_docs_source.sh
-```
-
-Manual Pages setup:
-
-```text
-Settings -> Pages -> Source: Deploy from a branch
-Branch: main
-Folder: /docs
-```
-
-Workflow links:
-
-```text
-https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml
-https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/pages.yml
-```
-
-Quick launch banner:
-
-```text
-assets/quick-launch-banner.svg
-```
-
-Live demo:
-
-```text
-https://axonos-bci.github.io/neural-boundary-game/
-```
-
-Release link:
-
-```text
-https://github.com/AxonOS-BCI/neural-boundary-game/releases/tag/v2.0.0
-```
-
-Tag link:
-
-```text
-https://github.com/AxonOS-BCI/neural-boundary-game/tags
-```
->>>>>>> origin/main
+Protect `v*` tags where available. Create `v3.0.0` only after the release commit is merged and all acceptance gates pass.

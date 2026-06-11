@@ -1,77 +1,53 @@
-<<<<<<< HEAD
-# Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition
+# Neural Boundary Game v3.0.0 — Sovereign Boundary Edition
 
-**Do not ship raw signal. Ship typed intent.**
+`v3.0.0` is a ground-up product and architecture release. It replaces the fragmented legacy surface with one deterministic Rust/WASM system, one release identity, one replay protocol, and one verified GitHub Pages artifact.
 
-v2.1.2 turns the skeleton into the flagship: a complete deterministic
-review-conveyor game in `no_std` Rust, a strict replay verifier, pinned
-conformance vectors, and the full Foundation Grande stage in the browser.
+## Release identity
 
-**Play:** <https://axonos-bci.github.io/neural-boundary-game/>
+- Product: Neural Boundary Game
+- Version: `v3.0.0`
+- Tag: `v3.0.0`
+- Replay schema: `neural-boundary-replay-v3.0.0`
+- State hash: `fnv1a64-v1`
+- Storage namespace: `axonos_nbg_v300_`
+- License: `MIT OR Apache-2.0`
 
-## Highlights
+## Product result
 
-- **Complete boundary mechanic.** Five lanes, 14 entity kinds, six actions,
-  five review gates, evidence levels, 25-second consent windows, and exact
-  win/lose conditions. Unsupported claims move faster than evidence
-  (`CLAIM_SPEED_BONUS`) — containment is a real-time discipline.
-- **Deterministic to the hash.** The core is `#![no_std]`,
-  `#![forbid(unsafe_code)]`, zero-allocation, fixed-step 60 Hz, with a 64-bit
-  FNV-1a hash over the entire simulation state.
-- **Seed 58, told twice.** The canonical clean run seals the boundary at tick
-  1862 (trust 92, risk 12, integrity 88, 5/5 gates, 0 leaks). The same seed
-  left idle breaches at tick 948 on the third raw leak. Same world — the only
-  difference is boundary discipline.
-- **CLI toolkit.** `verify`, `record` (clean/idle), `search`, `trace`;
-  integration tests run both shipped vectors through the release binary.
-- **Foundation Grande stage.** Fixed 1280×720 review console: status rail,
-  canvas membrane with gate window, boundary-principle panel, action bar,
-  menu/help/pause/end overlays — system fonts, canonical palette,
-  scale-to-fit.
-- **Release gates.** Replay/schema validation, negation-aware claim-hygiene
-  scan, full-tree version consistency check; CI caches via
-  `Swatinem/rust-cache@v2`, Pages builds with `jetli/trunk-action@v0.5.0`.
+The release provides a complete interactive simulation rather than a banner that opens a static asset. A run starts in the browser, advances through the Rust/WASM authority at 60 deterministic ticks per second, accepts six policy actions, exposes five review gates, and produces a terminal state hash.
 
-## Verify it yourself
+The UI includes Guided, Standard, Audit, Grand, and Daily Seed modes; responsive mobile controls; canvas letterboxing that preserves entity geometry; accessible state mirrors; local sound/haptics; protocol guidance; and explicit fail-closed handling when the WASM core cannot load.
 
-```bash
-cargo run -p neural-boundary-cli --release -- verify
-```
+## Technical result
 
-```text
-Replay OK
-Final trust: 92
-Final risk: 12
-Final integrity: 88
-Boundary status: SEALED
-```
+- Allocation-free `no_std` core with bounded arrays and seeded xorshift64* RNG.
+- Plain C-style WASM ABI with no `wasm-bindgen` runtime requirement.
+- CLI verifier for canonical replay vectors.
+- Eight vectors covering successful seal, idle breach, consent revocation, raw leak, stimulation fail-closed, Audit, Grand, and Daily Seed runs.
+- CI gates for formatting, linting, tests, replay equivalence, active-version consistency, claim hygiene, links, Pages artifact structure, and browser adapter tests.
 
-## Documentation
+## Security and claim boundary
 
-`docs/GAME_SPEC.md` · `docs/REPLAY_SPEC.md` · `docs/BCI_BOUNDARY.md` ·
-`docs/AXONOS_STANDARD_STYLE.md` · `docs/LIMITATIONS.md` ·
-`docs/CLAIM_HYGIENE.md` · `docs/COMMERCIAL_SERVICES.md`
+This is an educational technical simulation. It has no BCI sensor path, medical function, neural decoder, stimulation interface, telemetry, or remote account system. Commercial integrations require a separate engineering and assurance scope.
 
-This release is an educational technical demo of a software boundary
-principle; it does not process real signal data and does not control
-hardware.
-=======
-# Neural Boundary Game v2.0.0
+## Release acceptance
 
-Elite AxonOS Standard Foundation Grande Style.
+A tagged release is valid only when:
 
-## Highlights
+1. the tag points to the exact reviewed commit;
+2. CI is green;
+3. all canonical replays match Rust output;
+4. the Pages artifact contains the compiled WASM module;
+5. browser smoke tests confirm that Run starts an interactive session;
+6. active release files contain no stale version or conflict marker;
+7. the public URL is checked on desktop and mobile viewports.
 
-- real playable game, not a static screenshot;
-- animated moving packets;
-- touch and keyboard controls;
-- collision rules;
-- release blocked / victory states;
-- root `index.html` and `docs/index.html` both contain the playable demo;
-- does not require a video asset;
-- does not depend on a missing WASM artifact to animate.
+## Final hardening
 
-## Claim hygiene
-
-This is an educational technical demo. It does not process real signal data or control stimulation hardware. It is not a medical device, clinical system, safety-certified system, security audit, or regulatory review.
->>>>>>> origin/main
+- Exact 41-export Rust/JavaScript/WASM ABI contract with version, tick-rate, lane-count, and boundary metadata handshake.
+- Scoped consent enforcement separates conversion authority from release authority.
+- Release is blocked until the complete fixed-capacity entity pool is empty.
+- Strict replay inputs reject unknown fields, oversized payloads/event streams, malformed hashes, invalid ordering, and out-of-range values.
+- Reproducible source and Pages packaging normalizes paths, timestamps, ownership, modes, and ordering.
+- Deep audit and browser lifecycle tests cover accessibility references, keyboard navigation, help pause/resume, repeat announcements, workflow permissions, and source hygiene.
+- Validation disables Python bytecode generation and fails if any cache artifact appears after a gate.
