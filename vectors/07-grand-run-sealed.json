@@ -1,0 +1,409 @@
+{
+  "schema": "neural-boundary-replay-v3.0.1",
+  "product_version": "3.0.1",
+  "core_version": "3.0.1",
+  "hash_algorithm": "fnv1a64-v1",
+  "title": "Grand Run sealed — four phases survived",
+  "generated_by": "neural-boundary-cli record --policy clean --mode grand --difficulty standard --seed 3",
+  "seed": 3,
+  "mode": "grand",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "inputs": [
+    {
+      "tick": 221,
+      "lane": 2,
+      "action": "ConsentGate"
+    },
+    {
+      "tick": 267,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 313,
+      "lane": 1,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 332,
+      "lane": 2,
+      "action": "Convert"
+    },
+    {
+      "tick": 359,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 378,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 405,
+      "lane": 1,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 481,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 500,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 519,
+      "lane": 0,
+      "action": "Convert"
+    },
+    {
+      "tick": 713,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 834,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 902,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 970,
+      "lane": 2,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 989,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 1008,
+      "lane": 0,
+      "action": "Convert"
+    },
+    {
+      "tick": 1035,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1054,
+      "lane": 0,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 1130,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1210,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 1229,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 1253,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 1272,
+      "lane": 4,
+      "action": "Validate"
+    },
+    {
+      "tick": 1291,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1310,
+      "lane": 0,
+      "action": "Convert"
+    },
+    {
+      "tick": 1392,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1439,
+      "lane": 1,
+      "action": "ConsentGate"
+    },
+    {
+      "tick": 1458,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1541,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1792,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1812,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 2106,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 2186,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 2205,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 2265,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 2284,
+      "lane": 0,
+      "action": "Convert"
+    },
+    {
+      "tick": 2432,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 2520,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 2583,
+      "lane": 4,
+      "action": "ConsentGate"
+    },
+    {
+      "tick": 2659,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 2802,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3021,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 3040,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3059,
+      "lane": 1,
+      "action": "Validate"
+    },
+    {
+      "tick": 3078,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3163,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 3182,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3228,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3247,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3291,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3427,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 3446,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3465,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 3549,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3568,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3605,
+      "lane": 3,
+      "action": "ConsentGate"
+    },
+    {
+      "tick": 3655,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3679,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3701,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3770,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3789,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3894,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3978,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 3998,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4042,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 4061,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4139,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4194,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4213,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 4232,
+      "lane": 2,
+      "action": "Convert"
+    },
+    {
+      "tick": 4304,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4360,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4380,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4431,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 4501,
+      "lane": 4,
+      "action": "Release"
+    }
+  ],
+  "expected": {
+    "terminal_tick": 4501,
+    "status": "sealed",
+    "terminal_reason": "sealed",
+    "boundary": "SEALED",
+    "grade": "Sealed",
+    "trust": 100,
+    "risk": 20,
+    "integrity": 100,
+    "evidence_level": "L2",
+    "evidence_points": 6,
+    "gates_passed": 5,
+    "raw_leaks": 0,
+    "delivered": 9,
+    "score": 8979,
+    "best_streak": 52,
+    "revocations": 0,
+    "state_hash": "0x96b1b666ab2f37cc"
+  },
+  "summary": "Signal Integrity, Consent and Evidence, Release Under Pressure, then sealed in the Sovereign Boundary Review phase."
+}

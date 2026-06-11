@@ -1,0 +1,234 @@
+{
+  "schema": "neural-boundary-replay-v3.0.1",
+  "product_version": "3.0.1",
+  "core_version": "3.0.1",
+  "hash_algorithm": "fnv1a64-v1",
+  "title": "Audit sealed — stricter review thresholds",
+  "generated_by": "neural-boundary-cli record --policy clean --mode audit --difficulty standard --seed 1",
+  "seed": 1,
+  "mode": "audit",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "inputs": [
+    {
+      "tick": 221,
+      "lane": 2,
+      "action": "ConsentGate"
+    },
+    {
+      "tick": 267,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 313,
+      "lane": 1,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 332,
+      "lane": 2,
+      "action": "Convert"
+    },
+    {
+      "tick": 359,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 378,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 405,
+      "lane": 1,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 481,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 500,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 713,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 773,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 827,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 846,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 960,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 991,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 1010,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1029,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 1111,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1141,
+      "lane": 1,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 1204,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1225,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1248,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1292,
+      "lane": 0,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 1429,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 1448,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 1467,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1510,
+      "lane": 4,
+      "action": "Validate"
+    },
+    {
+      "tick": 1529,
+      "lane": 4,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 1548,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1567,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 1586,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1605,
+      "lane": 2,
+      "action": "Convert"
+    },
+    {
+      "tick": 1664,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 1683,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 1756,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1775,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 1794,
+      "lane": 3,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1813,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1843,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1884,
+      "lane": 2,
+      "action": "Release"
+    }
+  ],
+  "expected": {
+    "terminal_tick": 1884,
+    "status": "sealed",
+    "terminal_reason": "sealed",
+    "boundary": "SEALED",
+    "grade": "Sealed",
+    "trust": 92,
+    "risk": 12,
+    "integrity": 94,
+    "evidence_level": "L3",
+    "evidence_points": 8,
+    "gates_passed": 5,
+    "raw_leaks": 0,
+    "delivered": 7,
+    "score": 4989,
+    "best_streak": 32,
+    "revocations": 0,
+    "state_hash": "0xad5ded61d22c149c"
+  },
+  "summary": "Audit mode: L3 evidence, four quarantines, six deliveries, risk ceiling 15."
+}

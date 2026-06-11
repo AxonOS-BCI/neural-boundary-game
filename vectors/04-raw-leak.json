@@ -1,0 +1,33 @@
+{
+  "schema": "neural-boundary-replay-v3.0.1",
+  "product_version": "3.0.1",
+  "core_version": "3.0.1",
+  "hash_algorithm": "fnv1a64-v1",
+  "title": "Raw leak threshold — three frames cross",
+  "generated_by": "neural-boundary-cli record --policy idle --mode standard --difficulty standard --seed 2",
+  "seed": 2,
+  "mode": "standard",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "inputs": [],
+  "expected": {
+    "terminal_tick": 1504,
+    "status": "breached",
+    "terminal_reason": "raw_leak_threshold",
+    "boundary": "BREACHED",
+    "grade": "Breached",
+    "trust": 41,
+    "risk": 0,
+    "integrity": 64,
+    "evidence_level": "L0",
+    "evidence_points": 0,
+    "gates_passed": 0,
+    "raw_leaks": 3,
+    "delivered": 0,
+    "score": 0,
+    "best_streak": 0,
+    "revocations": 0,
+    "state_hash": "0xed320233859be829"
+  },
+  "summary": "Unattended raw frames cross the membrane until the leak threshold breaches the boundary."
+}
