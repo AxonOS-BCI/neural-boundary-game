@@ -1,10 +1,10 @@
 [build]
-target = "index.html"
+target = "web/index.html"
 dist = "dist"
 public_url = "./"
 
 [watch]
-watch = ["crates/neural-boundary-core", "crates/neural-boundary-web", "index.html"]
+watch = ["crates/neural-boundary-core", "crates/neural-boundary-web", "web"]
 
 [serve]
 addresses = ["127.0.0.1"]

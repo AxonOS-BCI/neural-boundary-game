@@ -5,7 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Rust/WASM browser front-end for Neural Boundary Game."
+description = "Rust/WASM browser adapter for Neural Boundary Game."
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -28,10 +28,15 @@ web-sys = { version = "0.3", features = [
   "CssStyleDeclaration",
   "DomTokenList",
   "DomRect",
+  "DomStringMap",
   "EventTarget",
   "Event",
   "KeyboardEvent",
   "MouseEvent",
-  "Performance",
+  "MediaQueryList",
+  "Storage",
+  "VisibilityState",
+  "NodeList",
+  "Node",
   "console",
 ] }
