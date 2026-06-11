@@ -1,0 +1,17 @@
+# Canonical release manifest for Neural Boundary Game.
+# Every consistency check derives its expected values from this file.
+
+product = "Neural Boundary Game"
+version = "3.0.1"
+display_version = "v3.0.1"
+release_title = "Neural Boundary Game v3.0.1 — Sovereign Boundary Edition"
+git_tag = "v3.0.1"
+replay_schema = "neural-boundary-replay-v3.0.1"
+hash_algorithm = "fnv1a64-v1"
+storage_namespace = "axonos_nbg_v301_"
+repository = "https://github.com/AxonOS-BCI/neural-boundary-game"
+homepage = "https://axonos-bci.github.io/neural-boundary-game/"
+license = "MIT OR Apache-2.0"
+author = "Denis Yermakou"
+contact = "connect@axonos.org"
+security_contact = "security@axonos.org"
