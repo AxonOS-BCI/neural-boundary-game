@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    name: publish GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare source archives
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p release-artifacts
+          git archive --format=zip --prefix="neural-boundary-game-v${VERSION}/" -o "release-artifacts/neural-boundary-game-v${VERSION}.zip" HEAD
+          git archive --format=tar --prefix="neural-boundary-game-v${VERSION}/" HEAD | gzip -9 > "release-artifacts/neural-boundary-game-v${VERSION}.tar.gz"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Neural Boundary Game ${{ github.ref_name }} — Elite Foundation Grande AxonOS Standard
+          body_path: RELEASE_NOTES.md
+          files: release-artifacts/*

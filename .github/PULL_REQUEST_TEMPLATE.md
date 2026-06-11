@@ -1,5 +1,6 @@
 ## Summary
 
+<<<<<<< HEAD
 Describe the change.
 
 ## Checks
@@ -11,3 +12,11 @@ Describe the change.
 
 ## Notes
 
+=======
+## Checks
+
+- [ ] `bash scripts/smoke_check.sh`
+- [ ] Claim hygiene preserved
+- [ ] Replay vectors updated if rules changed
+- [ ] No medical, regulatory, certification, or production-firmware claims added
+>>>>>>> origin/main

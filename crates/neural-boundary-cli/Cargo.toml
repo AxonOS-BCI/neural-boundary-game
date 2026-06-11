@@ -5,9 +5,16 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+<<<<<<< HEAD
 description = "Replay verifier for Neural Boundary Game."
 
 [dependencies]
 neural-boundary-core = { path = "../neural-boundary-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+=======
+description = "Dependency-light replay verifier for Neural Boundary Game."
+
+[dependencies]
+neural-boundary-core = { path = "../neural-boundary-core" }
+>>>>>>> origin/main
