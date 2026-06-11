@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+<<<<<<< HEAD
 permissions:
   contents: read
   pages: write
@@ -42,3 +43,31 @@ jobs:
     steps:
       - name: Deploy
         uses: actions/deploy-pages@v4
+=======
+jobs:
+  build-static-site:
+    name: build static site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Build WASM boundary artifact
+        run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release
+
+      - name: Prepare static site bundle
+        run: |
+          mkdir -p dist
+          cp index.html dist/index.html
+          cp preview.png dist/preview.png
+          cp target/wasm32-unknown-unknown/release/neural_boundary_web.wasm dist/neural_boundary_web.wasm
+
+      - name: Upload static site bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: neural-boundary-game-site
+          path: dist
+>>>>>>> origin/main

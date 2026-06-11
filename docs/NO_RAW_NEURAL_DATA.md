@@ -1,5 +1,6 @@
 # No Raw Signal Crossing
 
+<<<<<<< HEAD
 Raw signal data is sensitive. The demo encodes a simple software principle:
 
 - raw signal stays inside the device or trusted processing boundary;
@@ -15,3 +16,8 @@ The rule is not decoration — it is the win condition.
 This repository does not process real signal data. The cards are typed enum
 values in a `no_std` simulation; nothing here reads, stores, or transmits
 physiological measurements of any kind.
+=======
+Raw signal stays inside the device or trusted processing boundary.
+
+This repository demonstrates the boundary concept through a deterministic game.
+>>>>>>> origin/main

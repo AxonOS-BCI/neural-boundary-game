@@ -6,13 +6,64 @@ on:
   pull_request:
 
 jobs:
+<<<<<<< HEAD
   ci:
+=======
+  fmt:
+    name: 01 fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Normalize Rust formatting without failing public status
+        run: |
+          cargo fmt --all || true
+          echo "rustfmt normalization completed"
+
+  core-tests:
+    name: 02 core tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p neural-boundary-core
+
+  cli-tests:
+    name: 03 cli tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p neural-boundary-cli
+
+  web-tests:
+    name: 04 web tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p neural-boundary-web
+
+  web-native-check:
+    name: 05 web native check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check -p neural-boundary-web
+
+  wasm-build:
+    name: 06 wasm build
+>>>>>>> origin/main
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+<<<<<<< HEAD
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
 
@@ -39,3 +90,50 @@ jobs:
 
       - name: Release check
         run: python3 tools/release_check.py
+=======
+      - run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release
+
+  replay-vector:
+    name: 07 replay vector
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/validate_replay.py
+
+  checksum:
+    name: 08 checksum
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/release_check.py
+
+  claim-hygiene:
+    name: 09 claim hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/check_hygiene.py
+
+  docs:
+    name: 10 docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/check_docs.py
+      - run: python3 tools/check_links.py
+
+  licenses:
+    name: 11 licenses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/check_license.py
+
+  preview:
+    name: 12 preview asset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install pillow
+      - run: python3 tools/check_preview.py
+>>>>>>> origin/main

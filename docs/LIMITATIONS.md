@@ -2,6 +2,7 @@
 
 This repository is an educational technical demo.
 
+<<<<<<< HEAD
 This repository is, explicitly:
 
 - not a medical device;
@@ -12,10 +13,23 @@ This repository is, explicitly:
 - not a security audit;
 - not a regulatory review;
 - not a production firmware system.
+=======
+It is not:
+
+- a medical device;
+- a clinical system;
+- a safety-certified system;
+- a neural decoder;
+- a stimulation controller;
+- a security audit;
+- a regulatory review;
+- a production firmware system.
+>>>>>>> origin/main
 
 It does not process real signal data.
 
 It does not control stimulation hardware.
+<<<<<<< HEAD
 
 It demonstrates software boundary concepts through a deterministic game.
 
@@ -29,3 +43,5 @@ Scope notes:
 - the boundary rule shown here is one architectural pattern, presented as a
   game — adopting it in a real system requires the engineering work this
   demo deliberately does not claim to replace.
+=======
+>>>>>>> origin/main
