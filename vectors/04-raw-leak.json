@@ -1,0 +1,29 @@
+{
+  "schema": "neural-boundary-replay-v3.0.0",
+  "product_version": "3.0.0",
+  "core_version": "3.0.0",
+  "hash_algorithm": "fnv1a64-v1",
+  "seed": 91,
+  "mode": "guided",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "initial_config": {
+    "max_ticks": 3600,
+    "raw_leak_limit": 1
+  },
+  "events": [],
+  "expected": {
+    "terminal_tick": 224,
+    "status": "breached",
+    "reason": "raw-leak-limit",
+    "state_hash": "09d641e5944a30ae",
+    "trust": 60,
+    "risk": 42,
+    "integrity": 86,
+    "evidence": 0,
+    "review_gates": 0,
+    "raw_leaks": 1,
+    "score": 0
+  },
+  "summary": "A single raw frame crossing reaches the configured fail-closed leak limit."
+}

@@ -1,581 +1,795 @@
-<<<<<<< HEAD
-//! neural-boundary-cli — replay verifier and vector toolkit for the
-//! Neural Boundary Game (v2.1.2, Foundation Grande AxonOS Standard Edition).
-//!
-//! Subcommands:
-//!   verify [path]   Verify a replay vector (default: vectors/replay-v2.1.2.json)
-//!   record ...      Record a deterministic policy run into a vector file
-//!   search ...      Search seeds for the canonical clean-run finals
-//!   trace ...       Print per-tick events of a clean-policy run (dev tool)
+//! Deterministic replay verifier and vector recorder.
 
-mod bot;
-
-use bot::{RecordedAction, RunSummary};
-use neural_boundary_core::{Action, Difficulty, GameConfig, GameState, Status};
+use neural_boundary_core::{
+    BoundaryAction, BoundaryStatus, Difficulty, EntityKind, EvidenceLevel, FeedbackCode,
+    InputEvent, RunMode, Simulation, SimulationConfig, TerminalReason, CORE_VERSION,
+    HASH_ALGORITHM, REPLAY_SCHEMA, TICK_RATE,
+};
 use serde::{Deserialize, Serialize};
-use std::{env, fs, process};
+use std::collections::BTreeSet;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 
-const SCHEMA: &str = "neural-boundary-replay-v2.1.2";
-const DEFAULT_VECTOR: &str = "vectors/replay-v2.1.2.json";
-const DEFAULT_MAX_TICKS: u32 = 14_000;
+const EXIT_USAGE: u8 = 2;
+const EXIT_SCHEMA: u8 = 3;
+const EXIT_COMPATIBILITY: u8 = 4;
+const EXIT_MISMATCH: u8 = 5;
+const EXIT_INVARIANT: u8 = 7;
+const MAX_REPLAY_BYTES: u64 = 1_048_576;
+const MAX_REPLAY_EVENTS: usize = 10_000;
+const MAX_REPLAY_TICKS: u32 = 100_000;
+const MAX_SUMMARY_BYTES: usize = 4_096;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 struct ReplayFile {
     schema: String,
-    title: String,
-    generated_by: String,
+    product_version: String,
+    core_version: String,
+    hash_algorithm: String,
     seed: u64,
+    mode: String,
     difficulty: String,
-    actions: Vec<ActionEntry>,
-    expected: Expected,
+    tick_rate: u16,
+    initial_config: ReplayConfig,
+    events: Vec<ReplayEvent>,
+    expected: ReplayExpected,
+    summary: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct ActionEntry {
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ReplayConfig {
+    max_ticks: u32,
+    raw_leak_limit: u8,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ReplayEvent {
     tick: u32,
     lane: u8,
     action: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Expected {
-    final_tick: u32,
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct ReplayExpected {
+    terminal_tick: u32,
+    status: String,
+    reason: String,
+    state_hash: String,
     trust: u8,
     risk: u8,
     integrity: u8,
-    evidence_level: String,
+    evidence: u8,
+    review_gates: u8,
     raw_leaks: u8,
-    gates_passed: u8,
-    status: String,
-    boundary: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    cause: Option<String>,
-    state_hash: String,
+    score: u32,
 }
 
-fn main() {
+fn main() -> ExitCode {
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("{error}");
+            ExitCode::from(error.code)
+        }
+    }
+}
+
+#[derive(Debug)]
+struct CliError {
+    code: u8,
+    message: String,
+}
+
+impl std::fmt::Display for CliError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for CliError {}
+
+fn error(code: u8, message: impl Into<String>) -> CliError {
+    CliError {
+        code,
+        message: message.into(),
+    }
+}
+
+fn run() -> Result<(), CliError> {
     let args: Vec<String> = env::args().skip(1).collect();
-    let code = match args.first().map(String::as_str) {
-        None | Some("verify") => cmd_verify(args.get(1).map(String::as_str)),
-        Some("record") => cmd_record(&args[1..]),
-        Some("search") => cmd_search(&args[1..]),
-        Some("trace") => cmd_trace(&args[1..]),
-        Some("--help") | Some("-h") | Some("help") => {
-            print_usage();
-            0
+    let command = args.first().map(String::as_str).unwrap_or("help");
+    match command {
+        "version" => {
+            println!("Neural Boundary Game v{CORE_VERSION}");
+            Ok(())
         }
-        Some(other) => {
-            eprintln!("unknown subcommand: {other}");
-            print_usage();
-            2
+        "schema" => {
+            println!("{REPLAY_SCHEMA}");
+            println!("hash: {HASH_ALGORITHM}");
+            println!("tick-rate: {TICK_RATE}");
+            Ok(())
         }
-    };
-    process::exit(code);
-}
-
-fn print_usage() {
-    println!("neural-boundary-cli {}", env!("CARGO_PKG_VERSION"));
-    println!("Replay verifier for the Neural Boundary Game deterministic core.\n");
-    println!("USAGE:");
-    println!("  neural-boundary-cli verify [path]");
-    println!("      Verify a replay vector (default: {DEFAULT_VECTOR}).");
-    println!("  neural-boundary-cli record --seed N [--difficulty calm|standard|intense]");
-    println!("      [--policy clean|idle] [--max-ticks N] [--title S] --out PATH");
-    println!("      Record a deterministic policy run into a vector file.");
-    println!("  neural-boundary-cli search --from A --to B [--difficulty D]");
-    println!("      [--target trust,risk,integrity] [--max-ticks N]");
-    println!("      Search seeds for the canonical clean-run finals.");
-    println!("  neural-boundary-cli trace --seed N [--difficulty D] [--ticks N]");
-    println!("      Print per-tick events of a clean-policy run.");
-}
-
-// ---------------------------------------------------------------------------
-// verify
-// ---------------------------------------------------------------------------
-
-fn cmd_verify(path: Option<&str>) -> i32 {
-    let path = path.unwrap_or(DEFAULT_VECTOR);
-    let raw = match fs::read_to_string(path) {
-        Ok(raw) => raw,
-        Err(err) => {
-            eprintln!("failed to read {path}: {err}");
-            return 2;
+        "verify" => {
+            let path = args.get(1).map_or("vectors/01-clean-sealed.json", String::as_str);
+            verify_path(Path::new(path), false)
         }
-    };
-    let replay: ReplayFile = match serde_json::from_str(&raw) {
-        Ok(replay) => replay,
-        Err(err) => {
-            eprintln!("failed to parse {path}: {err}");
-            return 2;
+        "trace" => {
+            let path = args
+                .get(1)
+                .ok_or_else(|| error(EXIT_USAGE, "usage: neural-boundary trace <path>"))?;
+            verify_path(Path::new(path), true)
         }
-    };
-
-    if replay.schema != SCHEMA {
-        eprintln!(
-            "unsupported replay schema: {} (expected {SCHEMA})",
-            replay.schema
-        );
-        return 2;
+        "verify-all" => verify_all(Path::new("vectors")),
+        "record" => record_command(&args[1..]),
+        "search" => search_command(&args[1..]),
+        "help" | "--help" | "-h" => {
+            print_help();
+            Ok(())
+        }
+        _ => Err(error(
+            EXIT_USAGE,
+            format!("unknown command: {command}\nRun `neural-boundary help`."),
+        )),
     }
-    let Some(difficulty) = Difficulty::from_name(&replay.difficulty) else {
-        eprintln!("unknown difficulty: {}", replay.difficulty);
-        return 2;
-    };
+}
 
-    // Structural validation of the action script.
-    let mut actions = Vec::with_capacity(replay.actions.len());
-    let mut last_tick = 0u32;
-    for entry in &replay.actions {
-        if entry.tick == 0 || entry.tick <= last_tick {
-            eprintln!(
-                "action ticks must be strictly increasing (at tick {})",
-                entry.tick
-            );
-            return 2;
-        }
-        if entry.tick > replay.expected.final_tick {
-            eprintln!("action at tick {} is past final_tick", entry.tick);
-            return 2;
-        }
-        if entry.lane >= neural_boundary_core::LANES {
-            eprintln!("lane out of range at tick {}", entry.tick);
-            return 2;
-        }
-        let Some(action) = Action::from_name(&entry.action) else {
-            eprintln!("unknown action {:?} at tick {}", entry.action, entry.tick);
-            return 2;
+fn print_help() {
+    println!(
+        "Neural Boundary Game deterministic tooling\n\n\
+         Commands:\n\
+           version                  print product/core version\n\
+           schema                   print replay compatibility identifiers\n\
+           verify [path]            verify one replay vector\n\
+           verify-all               verify every vectors/*.json file\n\
+           trace <path>             verify with event-by-event diagnostics\n\
+           record [mode] [seed]     generate an autopilot replay on stdout\n\
+           search [mode] [start]    find the first autopilot-sealed seed\n\n\
+         Exit codes: 0 success, 2 usage, 3 malformed schema, 4 incompatible,\n\
+         5 deterministic mismatch, 7 invariant failure."
+    );
+}
+
+fn load_replay(path: &Path) -> Result<ReplayFile, CliError> {
+    let metadata = fs::metadata(path).map_err(|source| {
+        error(EXIT_SCHEMA, format!("FAIL: cannot inspect {}: {source}", path.display()))
+    })?;
+    if metadata.len() > MAX_REPLAY_BYTES {
+        return Err(error(
+            EXIT_SCHEMA,
+            format!("FAIL: replay exceeds {MAX_REPLAY_BYTES} bytes: {}", path.display()),
+        ));
+    }
+    let bytes = fs::read(path).map_err(|source| {
+        error(
+            EXIT_SCHEMA,
+            format!("FAIL: cannot read {}: {source}", path.display()),
+        )
+    })?;
+    serde_json::from_slice(&bytes).map_err(|source| {
+        error(
+            EXIT_SCHEMA,
+            format!("FAIL: malformed replay {}: {source}", path.display()),
+        )
+    })
+}
+
+fn verify_path(path: &Path, trace: bool) -> Result<(), CliError> {
+    let replay = load_replay(path)?;
+    validate_header(&replay)?;
+    validate_expected(&replay.expected, &replay.initial_config)?;
+    validate_event_order(
+        &replay.events,
+        replay.initial_config.max_ticks,
+        replay.expected.terminal_tick,
+    )?;
+
+    let mode = parse_mode(&replay.mode)?;
+    let difficulty = parse_difficulty(&replay.difficulty)?;
+    let mut config = SimulationConfig::canonical(replay.seed, mode, difficulty);
+    config.max_ticks = replay.initial_config.max_ticks;
+    config.raw_leak_limit = replay.initial_config.raw_leak_limit;
+    let mut simulation = Simulation::new(config);
+
+    for event in &replay.events {
+        let input = InputEvent {
+            tick: event.tick,
+            lane: event.lane,
+            action: parse_action(&event.action)?,
         };
-        actions.push(RecordedAction {
-            tick: entry.tick,
-            lane: entry.lane,
-            action,
-        });
-        last_tick = entry.tick;
+        simulation.apply_event(input);
+        if trace {
+            let snapshot = simulation.snapshot();
+            println!(
+                concat!(
+                    "tick={:04} lane={} action={:<10} feedback={:?} ",
+                    "trust={} risk={} integrity={} evidence=L{} gates={:05b} hash={:016x}"
+                ),
+                snapshot.tick,
+                snapshot.selected_lane,
+                event.action,
+                snapshot.feedback,
+                snapshot.trust,
+                snapshot.risk,
+                snapshot.integrity,
+                snapshot.evidence as u8,
+                snapshot.review_gates,
+                snapshot.state_hash,
+            );
+        }
     }
 
-    let config = GameConfig {
-        seed: replay.seed,
-        difficulty,
-    };
-    let summary = bot::replay_script(config, &actions, replay.expected.final_tick);
+    if simulation.snapshot().tick < replay.expected.terminal_tick {
+        simulation.tick_many(replay.expected.terminal_tick - simulation.snapshot().tick);
+    }
+    let snapshot = simulation.snapshot();
+    let expected_hash = parse_hash(&replay.expected.state_hash)?;
+    let expected_status = parse_status(&replay.expected.status)?;
+    let expected_reason = parse_reason(&replay.expected.reason)?;
 
     let mut mismatches = Vec::new();
-    let expected = &replay.expected;
-    check(
+    compare(&mut mismatches, "terminal_tick", replay.expected.terminal_tick, snapshot.tick);
+    compare(&mut mismatches, "status", expected_status as u8, snapshot.status as u8);
+    compare(
         &mut mismatches,
-        "final_tick",
-        expected.final_tick,
-        summary.final_tick,
+        "reason",
+        expected_reason as u8,
+        snapshot.terminal_reason as u8,
     );
-    check(&mut mismatches, "trust", expected.trust, summary.trust);
-    check(&mut mismatches, "risk", expected.risk, summary.risk);
-    check(
+    compare(&mut mismatches, "state_hash", expected_hash, snapshot.state_hash);
+    compare(&mut mismatches, "trust", replay.expected.trust, snapshot.trust);
+    compare(&mut mismatches, "risk", replay.expected.risk, snapshot.risk);
+    compare(
         &mut mismatches,
         "integrity",
-        expected.integrity,
-        summary.integrity,
+        replay.expected.integrity,
+        snapshot.integrity,
     );
-    check(
+    compare(
         &mut mismatches,
-        "evidence_level",
-        expected.evidence_level.as_str(),
-        summary.evidence_level.as_str(),
+        "evidence",
+        replay.expected.evidence,
+        snapshot.evidence as u8,
     );
-    check(
+    compare(
+        &mut mismatches,
+        "review_gates",
+        replay.expected.review_gates,
+        snapshot.review_gates,
+    );
+    compare(
         &mut mismatches,
         "raw_leaks",
-        expected.raw_leaks,
-        summary.raw_leaks,
+        replay.expected.raw_leaks,
+        snapshot.raw_leaks,
     );
-    check(
-        &mut mismatches,
-        "gates_passed",
-        expected.gates_passed,
-        summary.gates_passed,
-    );
-    check(
-        &mut mismatches,
-        "status",
-        expected.status.as_str(),
-        summary.status.as_str(),
-    );
-    check(
-        &mut mismatches,
-        "boundary",
-        expected.boundary.as_str(),
-        summary.status.boundary(),
-    );
-    if let Some(cause) = &expected.cause {
-        let actual = match summary.status {
-            Status::Defeat(cause) => cause.as_str(),
-            _ => "none",
-        };
-        check(&mut mismatches, "cause", cause.as_str(), actual);
-    }
-    check(
-        &mut mismatches,
-        "state_hash",
-        expected.state_hash.to_ascii_lowercase().as_str(),
-        format!("0x{:016x}", summary.state_hash).as_str(),
-    );
+    compare(&mut mismatches, "score", replay.expected.score, snapshot.score);
 
-    if mismatches.is_empty() {
-        println!("Replay OK");
-        println!("Final trust: {}", summary.trust);
-        println!("Final risk: {}", summary.risk);
-        println!("Final integrity: {}", summary.integrity);
-        println!("Boundary status: {}", summary.status.boundary());
-        0
-    } else {
-        eprintln!("Replay FAILED ({path})");
-        for line in mismatches {
-            eprintln!("  {line}");
-        }
-        1
+    if !mismatches.is_empty() {
+        return Err(error(
+            EXIT_MISMATCH,
+            format!(
+                "FAIL: deterministic replay mismatch in {}\n{}",
+                path.display(),
+                mismatches.join("\n")
+            ),
+        ));
     }
+
+    println!("PASS: {}", path.display());
+    println!(
+        "  terminal: tick {} · {:?} · {:?}",
+        snapshot.tick, snapshot.status, snapshot.terminal_reason
+    );
+    println!(
+        "  metrics: trust {} · risk {} · integrity {} · evidence L{}",
+        snapshot.trust, snapshot.risk, snapshot.integrity, snapshot.evidence as u8
+    );
+    println!(
+        "  gates: {:05b} · raw leaks {} · score {}",
+        snapshot.review_gates, snapshot.raw_leaks, snapshot.score
+    );
+    println!("  state hash: {:016x}", snapshot.state_hash);
+    Ok(())
 }
 
-fn check<T: PartialEq + std::fmt::Display>(
-    out: &mut Vec<String>,
-    field: &str,
-    expected: T,
-    actual: T,
-) {
+fn compare<T>(mismatches: &mut Vec<String>, field: &str, expected: T, actual: T)
+where
+    T: std::fmt::Debug + PartialEq,
+{
     if expected != actual {
-        out.push(format!("{field}: expected {expected}, got {actual}"));
+        mismatches.push(format!("  {field}: expected {expected:?}, got {actual:?}"));
     }
 }
 
-// ---------------------------------------------------------------------------
-// record
-// ---------------------------------------------------------------------------
-
-fn cmd_record(args: &[String]) -> i32 {
-    let mut seed = 0x2112u64;
-    let mut difficulty = Difficulty::Standard;
-    let mut policy = "clean".to_string();
-    let mut max_ticks = DEFAULT_MAX_TICKS;
-    let mut title = String::new();
-    let mut out_path = String::new();
-
-    let mut iter = args.iter();
-    while let Some(flag) = iter.next() {
-        match flag.as_str() {
-            "--seed" => seed = parse_or_exit(iter.next(), "--seed"),
-            "--difficulty" => difficulty = parse_difficulty(iter.next()),
-            "--policy" => policy = required(iter.next(), "--policy"),
-            "--max-ticks" => max_ticks = parse_or_exit(iter.next(), "--max-ticks"),
-            "--title" => title = required(iter.next(), "--title"),
-            "--out" => out_path = required(iter.next(), "--out"),
-            other => {
-                eprintln!("unknown flag: {other}");
-                process::exit(2);
-            }
-        }
-    }
-    if out_path.is_empty() {
-        eprintln!("record requires --out PATH");
-        return 2;
-    }
-
-    let config = GameConfig { seed, difficulty };
-    let result = match policy.as_str() {
-        "clean" => bot::run_clean_policy(config, max_ticks),
-        "idle" => bot::run_idle_policy(config, max_ticks),
-        other => {
-            eprintln!("unknown policy: {other} (expected clean|idle)");
-            return 2;
-        }
-    };
-    let summary = result.summary;
-    if summary.status == Status::Running {
-        eprintln!(
-            "policy run did not terminate within {max_ticks} ticks (status running); not writing"
-        );
-        return 1;
-    }
-
-    if title.is_empty() {
-        title = match summary.status {
-            Status::Victory => "Canonical clean run — boundary sealed".to_string(),
-            Status::Defeat(_) => "Idle run — boundary breach demonstration".to_string(),
-            Status::Running => unreachable!(),
-        };
-    }
-
-    let file = ReplayFile {
-        schema: SCHEMA.to_string(),
-        title,
-        generated_by: format!(
-            "neural-boundary-cli record --policy {policy} --seed {seed} --difficulty {}",
-            difficulty.name()
-        ),
-        seed,
-        difficulty: difficulty.name().to_string(),
-        actions: result
-            .actions
-            .iter()
-            .map(|action| ActionEntry {
-                tick: action.tick,
-                lane: action.lane,
-                action: action.action.name().to_string(),
-            })
-            .collect(),
-        expected: expected_from(&summary),
-    };
-
-    let mut json = serde_json::to_string_pretty(&file).expect("serialize replay");
-    json.push('\n');
-    if let Err(err) = fs::write(&out_path, json) {
-        eprintln!("failed to write {out_path}: {err}");
-        return 2;
-    }
-
-    println!("Recorded {} actions to {out_path}", file.actions.len());
-    print_summary(&summary);
-    0
-}
-
-fn expected_from(summary: &RunSummary) -> Expected {
-    Expected {
-        final_tick: summary.final_tick,
-        trust: summary.trust,
-        risk: summary.risk,
-        integrity: summary.integrity,
-        evidence_level: summary.evidence_level.as_str().to_string(),
-        raw_leaks: summary.raw_leaks,
-        gates_passed: summary.gates_passed,
-        status: summary.status.as_str().to_string(),
-        boundary: summary.status.boundary().to_string(),
-        cause: match summary.status {
-            Status::Defeat(cause) => Some(cause.as_str().to_string()),
-            _ => None,
-        },
-        state_hash: format!("0x{:016x}", summary.state_hash),
-    }
-}
-
-fn print_summary(summary: &RunSummary) {
-    println!(
-        "Status: {} ({})",
-        summary.status.as_str(),
-        summary.status.boundary()
-    );
-    println!("Final tick: {}", summary.final_tick);
-    println!(
-        "Trust {} | Risk {} | Integrity {} | Evidence {} ({} pts) | Gates {}/5 | Leaks {} | Delivered {}",
-        summary.trust,
-        summary.risk,
-        summary.integrity,
-        summary.evidence_level.as_str(),
-        summary.evidence_points,
-        summary.gates_passed,
-        summary.raw_leaks,
-        summary.delivered
-    );
-    println!("State hash: 0x{:016x}", summary.state_hash);
-}
-
-// ---------------------------------------------------------------------------
-// search
-// ---------------------------------------------------------------------------
-
-fn cmd_search(args: &[String]) -> i32 {
-    let mut from = 1u64;
-    let mut to = 50_000u64;
-    let mut difficulty = Difficulty::Standard;
-    let mut target = (92u8, 12u8, 88u8);
-    let mut max_ticks = DEFAULT_MAX_TICKS;
-
-    let mut iter = args.iter();
-    while let Some(flag) = iter.next() {
-        match flag.as_str() {
-            "--from" => from = parse_or_exit(iter.next(), "--from"),
-            "--to" => to = parse_or_exit(iter.next(), "--to"),
-            "--difficulty" => difficulty = parse_difficulty(iter.next()),
-            "--max-ticks" => max_ticks = parse_or_exit(iter.next(), "--max-ticks"),
-            "--target" => {
-                let value = required(iter.next(), "--target");
-                let parts: Vec<u8> = value
-                    .split(',')
-                    .map(|part| part.trim().parse().expect("target u8"))
-                    .collect();
-                if parts.len() != 3 {
-                    eprintln!("--target expects trust,risk,integrity");
-                    return 2;
-                }
-                target = (parts[0], parts[1], parts[2]);
-            }
-            other => {
-                eprintln!("unknown flag: {other}");
-                process::exit(2);
-            }
-        }
-    }
-
-    eprintln!(
-        "searching seeds {from}..={to} on {} for finals trust={} risk={} integrity={} ...",
-        difficulty.name(),
-        target.0,
-        target.1,
-        target.2
-    );
-    match bot::search_seed(difficulty, from, to, target, max_ticks) {
-        Some((seed, result)) => {
-            println!("Seed found: {seed} (0x{seed:x})");
-            println!("Actions: {}", result.actions.len());
-            print_summary(&result.summary);
-            0
-        }
-        None => {
-            eprintln!("no seed in range produced the target finals");
-            1
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// trace (developer tool)
-// ---------------------------------------------------------------------------
-
-fn cmd_trace(args: &[String]) -> i32 {
-    let mut seed = 0x2112u64;
-    let mut difficulty = Difficulty::Standard;
-    let mut ticks = 3_000u32;
-
-    let mut iter = args.iter();
-    while let Some(flag) = iter.next() {
-        match flag.as_str() {
-            "--seed" => seed = parse_or_exit(iter.next(), "--seed"),
-            "--difficulty" => difficulty = parse_difficulty(iter.next()),
-            "--ticks" => ticks = parse_or_exit(iter.next(), "--ticks"),
-            other => {
-                eprintln!("unknown flag: {other}");
-                process::exit(2);
-            }
-        }
-    }
-
-    let mut state = GameState::new(GameConfig { seed, difficulty });
-    for tick in 1..=ticks {
-        let input = bot::decide(&state);
-        state.step(input);
-        for event in state.events().iter() {
-            println!("{tick:>6}  {event:?}");
-        }
-        if state.status() != Status::Running {
-            break;
-        }
-    }
-    print_summary(&bot::summarize(&state));
-    0
-}
-
-// ---------------------------------------------------------------------------
-// arg helpers
-// ---------------------------------------------------------------------------
-
-fn required(value: Option<&String>, flag: &str) -> String {
-    value.cloned().unwrap_or_else(|| {
-        eprintln!("{flag} requires a value");
-        process::exit(2);
-    })
-}
-
-fn parse_or_exit<T: std::str::FromStr>(value: Option<&String>, flag: &str) -> T {
-    let raw = required(value, flag);
-    raw.parse().unwrap_or_else(|_| {
-        eprintln!("{flag}: invalid value {raw:?}");
-        process::exit(2);
-    })
-}
-
-fn parse_difficulty(value: Option<&String>) -> Difficulty {
-    let raw = required(value, "--difficulty");
-    Difficulty::from_name(&raw).unwrap_or_else(|| {
-        eprintln!("--difficulty: expected calm|standard|intense, got {raw:?}");
-        process::exit(2);
-    })
-=======
-use neural_boundary_core::{GameConfig, GameState, PlayerAction};
-use std::{env, fs, process};
-
-const EXPECTED_SCHEMA: &str = "neural-boundary-replay-v2.0.0";
-
-fn main() {
-    let path = env::args().nth(1).unwrap_or_else(|| {
-        eprintln!("usage: neural-boundary-cli vectors/replay-v2.0.0.json");
-        process::exit(2);
-    });
-
-    let raw = fs::read_to_string(&path).unwrap_or_else(|err| {
-        eprintln!("failed to read {path}: {err}");
-        process::exit(2);
-    });
-
-    if !raw.contains(EXPECTED_SCHEMA) {
-        eprintln!("unsupported replay schema");
-        process::exit(2);
-    }
-
-    let mut game = GameState::new(GameConfig::default());
-
-    for action in extract_actions(&raw) {
-        game.step(action);
-    }
-
-    for _ in 0..32 {
-        game.step(PlayerAction::Idle);
-    }
-
-    let snapshot = game.snapshot();
-    println!("Replay OK");
-    println!("Final trust: {}", snapshot.trust);
-    println!("Final risk: {}", snapshot.risk);
-    println!("Final integrity: {}", snapshot.integrity);
-    let summary = game.review_summary();
-
-    println!(
-        "Boundary status: {}",
-        if snapshot.raw_leaks == 0 {
-            "SEALED"
-        } else {
-            "BREACHED"
-        }
-    );
-    println!("Release ready: {}", summary.release_ready);
-    println!("Gates passed: {}", summary.gates_passed);
-    println!("Gates remaining: {}", summary.gates_remaining);
-    println!("Progress percent: {}", summary.progress_percent);
-    println!("Release blockers: {}", summary.release_blocker_count);
-}
-
-fn extract_actions(raw: &str) -> Vec<PlayerAction> {
-    raw.lines()
-        .filter_map(|line| {
-            let marker = "\"action\":";
-            let idx = line.find(marker)?;
-            let tail = &line[idx + marker.len()..];
-            let first = tail.find('"')?;
-            let rest = &tail[first + 1..];
-            let second = rest.find('"')?;
-            Some(parse_action(&rest[..second]))
+fn verify_all(directory: &Path) -> Result<(), CliError> {
+    let mut paths: Vec<PathBuf> = fs::read_dir(directory)
+        .map_err(|source| {
+            error(
+                EXIT_SCHEMA,
+                format!("cannot read {}: {source}", directory.display()),
+            )
+        })?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension()
+                .map(|extension| extension.to_string_lossy() == "json")
+                .unwrap_or(false)
         })
-        .collect()
+        .collect();
+    paths.sort();
+    if paths.is_empty() {
+        return Err(error(EXIT_SCHEMA, "no replay vectors found"));
+    }
+    for path in &paths {
+        verify_path(path, false)?;
+    }
+    println!("PASS: verified {} canonical replay vectors", paths.len());
+    Ok(())
 }
 
-fn parse_action(value: &str) -> PlayerAction {
-    match value {
-        "move_up" => PlayerAction::MoveUp,
-        "move_down" => PlayerAction::MoveDown,
-        "validate" => PlayerAction::Validate,
-        "convert" => PlayerAction::Convert,
-        "quarantine" => PlayerAction::Quarantine,
-        "consent_gate" => PlayerAction::ConsentGate,
-        "evidence_gate" => PlayerAction::EvidenceGate,
-        "release" => PlayerAction::Release,
-        "restart" => PlayerAction::Restart,
-        _ => PlayerAction::Idle,
+fn record_command(args: &[String]) -> Result<(), CliError> {
+    let mode = args
+        .first()
+        .map_or(Ok(RunMode::Guided), |value| parse_mode(value))?;
+    let seed = args
+        .get(1)
+        .map_or(Ok(58_u64), |value| {
+            value
+                .parse::<u64>()
+                .map_err(|_| error(EXIT_USAGE, "seed must be an unsigned integer"))
+        })?;
+    let (simulation, events) = run_autopilot(seed, mode, Difficulty::Standard);
+    if simulation.snapshot().terminal_reason != TerminalReason::Released {
+        return Err(error(
+            EXIT_INVARIANT,
+            format!("autopilot did not seal seed {seed}: {:?}", simulation.snapshot()),
+        ));
+    }
+    let replay = replay_from_run(seed, mode, Difficulty::Standard, events, &simulation);
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&replay)
+            .map_err(|source| error(EXIT_INVARIANT, format!("serialization failed: {source}")))?
+    );
+    Ok(())
+}
+
+fn search_command(args: &[String]) -> Result<(), CliError> {
+    let mode = args
+        .first()
+        .map_or(Ok(RunMode::Standard), |value| parse_mode(value))?;
+    let start = args
+        .get(1)
+        .map_or(Ok(1_u64), |value| {
+            value
+                .parse::<u64>()
+                .map_err(|_| error(EXIT_USAGE, "start seed must be an unsigned integer"))
+        })?;
+    for seed in start..start.saturating_add(10_000) {
+        let (simulation, events) = run_autopilot(seed, mode, Difficulty::Standard);
+        if simulation.snapshot().terminal_reason == TerminalReason::Released {
+            println!(
+                "PASS: seed {seed} sealed in {} events at tick {} with hash {:016x}",
+                events.len(),
+                simulation.snapshot().tick,
+                simulation.snapshot().state_hash
+            );
+            return Ok(());
+        }
+    }
+    Err(error(EXIT_INVARIANT, "no sealed seed found in search window"))
+}
+
+fn run_autopilot(
+    seed: u64,
+    mode: RunMode,
+    difficulty: Difficulty,
+) -> (Simulation, Vec<ReplayEvent>) {
+    let mut simulation = Simulation::new(SimulationConfig::canonical(seed, mode, difficulty));
+    let mut events = Vec::new();
+    let mut handled: BTreeSet<(u32, u8)> = BTreeSet::new();
+
+    while !simulation.is_terminal() {
+        simulation.tick();
+        let mut visible = Vec::new();
+        for index in 0..neural_boundary_core::ENTITY_CAPACITY {
+            if let Some(entity) = simulation.entity(index) {
+                visible.push(entity);
+            }
+        }
+        visible.sort_by(|left, right| right.position.cmp(&left.position));
+
+        for entity in visible {
+            let action = match entity.kind {
+                EntityKind::TypedIntent => continue,
+                EntityKind::ValidatedIntent => {
+                    let snapshot = simulation.snapshot();
+                    if snapshot.consent.active && snapshot.evidence >= EvidenceLevel::L1 {
+                        BoundaryAction::Convert
+                    } else {
+                        continue;
+                    }
+                }
+                kind => kind.required_action(),
+            };
+            let key = (entity.id, action as u8);
+            if handled.contains(&key) {
+                continue;
+            }
+            simulation.select_lane(entity.lane);
+            simulation.apply_action(action);
+            events.push(ReplayEvent {
+                tick: simulation.snapshot().tick,
+                lane: entity.lane,
+                action: action_name(action).to_owned(),
+            });
+            handled.insert(key);
+
+            if action == BoundaryAction::Validate {
+                if let Some(updated) = (0..neural_boundary_core::ENTITY_CAPACITY)
+                    .filter_map(|index| simulation.entity(index))
+                    .find(|candidate| candidate.id == entity.id)
+                {
+                    if updated.kind == EntityKind::ValidatedIntent {
+                        let snapshot = simulation.snapshot();
+                        if snapshot.consent.active && snapshot.evidence >= EvidenceLevel::L1 {
+                            simulation.select_lane(updated.lane);
+                            simulation.apply_action(BoundaryAction::Convert);
+                            events.push(ReplayEvent {
+                                tick: simulation.snapshot().tick,
+                                lane: updated.lane,
+                                action: "convert".to_owned(),
+                            });
+                            handled.insert((updated.id, BoundaryAction::Convert as u8));
+                        }
+                    }
+                }
+            }
+        }
+
+        if simulation.snapshot().tick > 900 && simulation.release_ready() {
+            simulation.apply_action(BoundaryAction::Release);
+            events.push(ReplayEvent {
+                tick: simulation.snapshot().tick,
+                lane: simulation.snapshot().selected_lane,
+                action: "release".to_owned(),
+            });
+        }
+    }
+    (simulation, events)
+}
+
+fn replay_from_run(
+    seed: u64,
+    mode: RunMode,
+    difficulty: Difficulty,
+    events: Vec<ReplayEvent>,
+    simulation: &Simulation,
+) -> ReplayFile {
+    let snapshot = simulation.snapshot();
+    ReplayFile {
+        schema: REPLAY_SCHEMA.to_owned(),
+        product_version: CORE_VERSION.to_owned(),
+        core_version: CORE_VERSION.to_owned(),
+        hash_algorithm: HASH_ALGORITHM.to_owned(),
+        seed,
+        mode: mode_name(mode).to_owned(),
+        difficulty: difficulty_name(difficulty).to_owned(),
+        tick_rate: TICK_RATE,
+        initial_config: ReplayConfig {
+            max_ticks: simulation.config().max_ticks,
+            raw_leak_limit: simulation.config().raw_leak_limit,
+        },
+        events,
+        expected: ReplayExpected {
+            terminal_tick: snapshot.tick,
+            status: status_name(snapshot.status).to_owned(),
+            reason: reason_name(snapshot.terminal_reason).to_owned(),
+            state_hash: format!("{:016x}", snapshot.state_hash),
+            trust: snapshot.trust,
+            risk: snapshot.risk,
+            integrity: snapshot.integrity,
+            evidence: snapshot.evidence as u8,
+            review_gates: snapshot.review_gates,
+            raw_leaks: snapshot.raw_leaks,
+            score: snapshot.score,
+        },
+        summary: "Generated by the deterministic v3.0.0 autopilot recorder.".to_owned(),
+    }
+}
+
+fn validate_header(replay: &ReplayFile) -> Result<(), CliError> {
+    if replay.schema != REPLAY_SCHEMA {
+        return Err(error(
+            EXIT_COMPATIBILITY,
+            format!("incompatible replay schema: {}", replay.schema),
+        ));
+    }
+    if replay.product_version != CORE_VERSION || replay.core_version != CORE_VERSION {
+        return Err(error(
+            EXIT_COMPATIBILITY,
+            format!(
+                "version mismatch: product={} core={} expected={CORE_VERSION}",
+                replay.product_version, replay.core_version
+            ),
+        ));
+    }
+    if replay.hash_algorithm != HASH_ALGORITHM {
+        return Err(error(
+            EXIT_COMPATIBILITY,
+            format!("unsupported hash algorithm: {}", replay.hash_algorithm),
+        ));
+    }
+    if replay.tick_rate != TICK_RATE {
+        return Err(error(
+            EXIT_COMPATIBILITY,
+            format!("tick-rate mismatch: {}", replay.tick_rate),
+        ));
+    }
+    if replay.initial_config.max_ticks == 0 || replay.initial_config.max_ticks > MAX_REPLAY_TICKS {
+        return Err(error(
+            EXIT_SCHEMA,
+            format!(
+                "max_ticks must be within 1..={MAX_REPLAY_TICKS}, got {}",
+                replay.initial_config.max_ticks
+            ),
+        ));
+    }
+    if replay.initial_config.raw_leak_limit == 0 {
+        return Err(error(EXIT_SCHEMA, "raw_leak_limit must be at least 1"));
+    }
+    if replay.summary.trim().is_empty() || replay.summary.len() > MAX_SUMMARY_BYTES {
+        return Err(error(
+            EXIT_SCHEMA,
+            format!("summary must contain 1..={MAX_SUMMARY_BYTES} UTF-8 bytes"),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_event_order(
+    events: &[ReplayEvent],
+    max_ticks: u32,
+    terminal_tick: u32,
+) -> Result<(), CliError> {
+    if events.len() > MAX_REPLAY_EVENTS {
+        return Err(error(
+            EXIT_SCHEMA,
+            format!("replay has {} events; maximum is {MAX_REPLAY_EVENTS}", events.len()),
+        ));
+    }
+    let mut previous = 0_u32;
+    for (index, event) in events.iter().enumerate() {
+        if event.tick > max_ticks {
+            return Err(error(
+                EXIT_SCHEMA,
+                format!("event {index} tick {} exceeds max_ticks {max_ticks}", event.tick),
+            ));
+        }
+        if event.tick > terminal_tick {
+            return Err(error(
+                EXIT_SCHEMA,
+                format!(
+                    "event {index} tick {} exceeds expected terminal_tick {terminal_tick}",
+                    event.tick
+                ),
+            ));
+        }
+        if event.lane >= neural_boundary_core::LANE_COUNT as u8 {
+            return Err(error(
+                EXIT_SCHEMA,
+                format!("event {index} has invalid lane {}", event.lane),
+            ));
+        }
+        if index > 0 && event.tick < previous {
+            return Err(error(
+                EXIT_SCHEMA,
+                format!("event {index} is out of order"),
+            ));
+        }
+        previous = event.tick;
+        parse_action(&event.action)?;
+    }
+    Ok(())
+}
+
+fn parse_mode(value: &str) -> Result<RunMode, CliError> {
+    match value.to_ascii_lowercase().as_str() {
+        "guided" => Ok(RunMode::Guided),
+        "standard" => Ok(RunMode::Standard),
+        "audit" => Ok(RunMode::Audit),
+        "grand" => Ok(RunMode::Grand),
+        "daily" => Ok(RunMode::Daily),
+        _ => Err(error(EXIT_SCHEMA, format!("unknown run mode: {value}"))),
+    }
+}
+
+fn parse_difficulty(value: &str) -> Result<Difficulty, CliError> {
+    match value.to_ascii_lowercase().as_str() {
+        "assisted" => Ok(Difficulty::Assisted),
+        "standard" => Ok(Difficulty::Standard),
+        "expert" => Ok(Difficulty::Expert),
+        _ => Err(error(EXIT_SCHEMA, format!("unknown difficulty: {value}"))),
+    }
+}
+
+fn parse_action(value: &str) -> Result<BoundaryAction, CliError> {
+    match value.to_ascii_lowercase().as_str() {
+        "validate" => Ok(BoundaryAction::Validate),
+        "convert" => Ok(BoundaryAction::Convert),
+        "quarantine" => Ok(BoundaryAction::Quarantine),
+        "consent" => Ok(BoundaryAction::Consent),
+        "evidence" => Ok(BoundaryAction::Evidence),
+        "release" => Ok(BoundaryAction::Release),
+        _ => Err(error(EXIT_SCHEMA, format!("unknown action: {value}"))),
+    }
+}
+
+fn parse_status(value: &str) -> Result<BoundaryStatus, CliError> {
+    match value.to_ascii_lowercase().as_str() {
+        "open" => Ok(BoundaryStatus::Open),
+        "sealed" => Ok(BoundaryStatus::Sealed),
+        "degraded" => Ok(BoundaryStatus::Degraded),
+        "breached" => Ok(BoundaryStatus::Breached),
+        "unsafe" => Ok(BoundaryStatus::Unsafe),
+        _ => Err(error(EXIT_SCHEMA, format!("unknown status: {value}"))),
+    }
+}
+
+fn parse_reason(value: &str) -> Result<TerminalReason, CliError> {
+    match value.to_ascii_lowercase().as_str() {
+        "none" => Ok(TerminalReason::None),
+        "released" => Ok(TerminalReason::Released),
+        "raw-leak-limit" => Ok(TerminalReason::RawLeakLimit),
+        "stimulation-crossed" => Ok(TerminalReason::StimulationCrossed),
+        "integrity-collapse" => Ok(TerminalReason::IntegrityCollapse),
+        "risk-overflow" => Ok(TerminalReason::RiskOverflow),
+        "time-expired" => Ok(TerminalReason::TimeExpired),
+        "invariant-violation" => Ok(TerminalReason::InvariantViolation),
+        _ => Err(error(EXIT_SCHEMA, format!("unknown terminal reason: {value}"))),
+    }
+}
+
+fn validate_expected(expected: &ReplayExpected, config: &ReplayConfig) -> Result<(), CliError> {
+    if expected.terminal_tick > config.max_ticks {
+        return Err(error(
+            EXIT_SCHEMA,
+            format!(
+                "expected terminal_tick {} exceeds max_ticks {}",
+                expected.terminal_tick, config.max_ticks
+            ),
+        ));
+    }
+    if expected.trust > 100 || expected.risk > 100 || expected.integrity > 100 {
+        return Err(error(EXIT_SCHEMA, "expected trust/risk/integrity must be within 0..=100"));
+    }
+    if expected.evidence > 3 {
+        return Err(error(EXIT_SCHEMA, "expected evidence must be within 0..=3"));
+    }
+    if expected.review_gates & !neural_boundary_core::ALL_REVIEW_GATES != 0 {
+        return Err(error(EXIT_SCHEMA, "expected review_gates contains unknown bits"));
+    }
+    parse_hash(&expected.state_hash)?;
+    let status = parse_status(&expected.status)?;
+    let reason = parse_reason(&expected.reason)?;
+    let expected_status = match reason {
+        TerminalReason::None => BoundaryStatus::Open,
+        TerminalReason::Released => BoundaryStatus::Sealed,
+        TerminalReason::RawLeakLimit => BoundaryStatus::Breached,
+        TerminalReason::TimeExpired => BoundaryStatus::Degraded,
+        TerminalReason::StimulationCrossed
+        | TerminalReason::IntegrityCollapse
+        | TerminalReason::RiskOverflow
+        | TerminalReason::InvariantViolation => BoundaryStatus::Unsafe,
+    };
+    if status != expected_status {
+        return Err(error(
+            EXIT_SCHEMA,
+            format!(
+                "status/reason mismatch: {:?} requires {:?}, got {:?}",
+                reason, expected_status, status
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn parse_hash(value: &str) -> Result<u64, CliError> {
+    if value.len() != 16
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+    {
+        return Err(error(
+            EXIT_SCHEMA,
+            format!("state hash must be exactly 16 lowercase hexadecimal characters: {value}"),
+        ));
+    }
+    u64::from_str_radix(value, 16)
+        .map_err(|_| error(EXIT_SCHEMA, format!("invalid state hash: {value}")))
+}
+
+fn action_name(action: BoundaryAction) -> &'static str {
+    match action {
+        BoundaryAction::Validate => "validate",
+        BoundaryAction::Convert => "convert",
+        BoundaryAction::Quarantine => "quarantine",
+        BoundaryAction::Consent => "consent",
+        BoundaryAction::Evidence => "evidence",
+        BoundaryAction::Release => "release",
+        BoundaryAction::None => "none",
+    }
+}
+
+fn mode_name(mode: RunMode) -> &'static str {
+    match mode {
+        RunMode::Guided => "guided",
+        RunMode::Standard => "standard",
+        RunMode::Audit => "audit",
+        RunMode::Grand => "grand",
+        RunMode::Daily => "daily",
+    }
+}
+
+fn difficulty_name(difficulty: Difficulty) -> &'static str {
+    match difficulty {
+        Difficulty::Assisted => "assisted",
+        Difficulty::Standard => "standard",
+        Difficulty::Expert => "expert",
+    }
+}
+
+fn status_name(status: BoundaryStatus) -> &'static str {
+    match status {
+        BoundaryStatus::Open => "open",
+        BoundaryStatus::Sealed => "sealed",
+        BoundaryStatus::Degraded => "degraded",
+        BoundaryStatus::Breached => "breached",
+        BoundaryStatus::Unsafe => "unsafe",
+    }
+}
+
+fn reason_name(reason: TerminalReason) -> &'static str {
+    match reason {
+        TerminalReason::None => "none",
+        TerminalReason::Released => "released",
+        TerminalReason::RawLeakLimit => "raw-leak-limit",
+        TerminalReason::StimulationCrossed => "stimulation-crossed",
+        TerminalReason::IntegrityCollapse => "integrity-collapse",
+        TerminalReason::RiskOverflow => "risk-overflow",
+        TerminalReason::TimeExpired => "time-expired",
+        TerminalReason::InvariantViolation => "invariant-violation",
+    }
+}
+
+#[allow(dead_code)]
+fn feedback_name(feedback: FeedbackCode) -> &'static str {
+    match feedback {
+        FeedbackCode::None => "none",
+        FeedbackCode::IntentValidated => "intent-validated",
+        FeedbackCode::FalseIntentDetected => "false-intent-detected",
+        FeedbackCode::IntentConverted => "intent-converted",
+        FeedbackCode::ConversionBlocked => "conversion-blocked",
+        FeedbackCode::Quarantined => "quarantined",
+        FeedbackCode::ConsentGranted => "consent-granted",
+        FeedbackCode::ConsentRevoked => "consent-revoked",
+        FeedbackCode::EvidenceRegistered => "evidence-registered",
+        FeedbackCode::ReleaseSealed => "release-sealed",
+        FeedbackCode::ReleaseBlocked => "release-blocked",
+        FeedbackCode::IncorrectAction => "incorrect-action",
+        FeedbackCode::NoTarget => "no-target",
+        FeedbackCode::RawLeak => "raw-leak",
+        FeedbackCode::StimulationBreach => "stimulation-breach",
+        FeedbackCode::TypedIntentReleased => "typed-intent-released",
+        FeedbackCode::ConsentExpired => "consent-expired",
+        FeedbackCode::TimeExpired => "time-expired",
     }
 }
 
@@ -584,10 +798,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn action_parser_accepts_known_actions() {
-        assert_eq!(parse_action("validate"), PlayerAction::Validate);
-        assert_eq!(parse_action("release"), PlayerAction::Release);
-        assert_eq!(parse_action("unknown"), PlayerAction::Idle);
+    fn guided_autopilot_seals() {
+        let (simulation, events) = run_autopilot(58, RunMode::Guided, Difficulty::Standard);
+        assert_eq!(simulation.snapshot().terminal_reason, TerminalReason::Released);
+        assert!(!events.is_empty());
     }
->>>>>>> origin/main
+
+    #[test]
+    fn action_parser_is_strict() {
+        assert!(parse_action("validate").is_ok());
+        assert!(parse_action("explode").is_err());
+    }
 }

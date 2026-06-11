@@ -1,140 +1,133 @@
 #!/usr/bin/env python3
-<<<<<<< HEAD
-"""Claim hygiene gate for Neural Boundary Game v2.1.2.
-
-Scans tracked text files for forbidden capability claims. A phrase is allowed
-only when it is explicitly negated in the same sentence fragment (e.g. "this
-is not a medical device"), or when the line carries the `claims-ok` marker
-used by documentation that names the forbidden phrases themselves.
-"""
-
+"""Fail closed on repository debris, conflicted sources, fake runtime, and unsafe claims."""
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-
-FORBIDDEN = [
-=======
-import pathlib
-import sys
-
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-danger = [
->>>>>>> origin/main
-    "clinical-grade",
-    "fda-ready",
-    "guaranteed safe",
-    "real brain control",
-    "mind control",
-    "regulatory compliant",
-    "certified medical",
-    "reads thoughts",
-<<<<<<< HEAD
-    "production bci",
-    "medical device",
-]
-
-NEGATORS = re.compile(
-    r"\b(no|not|non|never|without|nor|isn['’]t|aren['’]t|won['’]t|cannot|can['’]t)\b",
-    re.IGNORECASE,
-)
-
-SKIP_FILES = {
-    "tools/check_hygiene.py",
-    "docs/CLAIM_HYGIENE.md",
+TEXT_SUFFIXES = {
+    ".md", ".rs", ".toml", ".json", ".py", ".sh", ".html", ".css",
+    ".js", ".mjs", ".yml", ".yaml", ".txt", ".svg",
 }
-SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".wasm", ".lock"}
+SKIP_DIRS = {".git", "target", "dist", "node_modules", "__pycache__", "release-assets"}
+TEMP_PATTERNS = ("*.bak", "*.orig", "*.rej", "*.tmp", "*~", ".DS_Store", "Thumbs.db")
+ALLOWED_EMAILS = {"connect@axonos.org", "security@axonos.org"}
+errors: list[str] = []
 
-
-def tracked_files() -> list[Path]:
-    try:
-        output = subprocess.run(
-            ["git", "ls-files"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
-        names = [line.strip() for line in output.splitlines() if line.strip()]
-        return [ROOT / name for name in names]
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return [
-            path
-            for path in ROOT.rglob("*")
-            if path.is_file()
-            and ".git" not in path.parts
-            and "target" not in path.parts
-            and "dist" not in path.parts
-        ]
-
-
-def line_allows(line: str, start: int) -> bool:
-    if "claims-ok" in line:
-        return True
-    fragment = line[:start]
-    for stop in ".;:!?":
-        cut = fragment.rfind(stop)
-        if cut != -1:
-            fragment = fragment[cut + 1 :]
-    window = fragment[-70:]
-    return bool(NEGATORS.search(window))
-
-
-def main() -> int:
-    violations: list[str] = []
-    for path in tracked_files():
-        rel = path.relative_to(ROOT).as_posix()
-        if rel in SKIP_FILES or path.suffix.lower() in SKIP_SUFFIXES:
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-        lowered_lines = text.lower().splitlines()
-        for line_no, line in enumerate(lowered_lines, start=1):
-            for phrase in FORBIDDEN:
-                start = 0
-                while True:
-                    index = line.find(phrase, start)
-                    if index == -1:
-                        break
-                    if not line_allows(line, index):
-                        violations.append(f"{rel}:{line_no}: forbidden claim {phrase!r}")
-                    start = index + len(phrase)
-
-    if violations:
-        print("Claim hygiene FAILED:")
-        for violation in violations:
-            print(f"  - {violation}")
-        return 1
-    print("Claim hygiene OK: no forbidden capability claims found.")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-=======
+conflict = re.compile(r"^(<<<<<<<|=======|>>>>>>>)", re.MULTILINE)
+secret = re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}")
+placeholder = re.compile(r"(?i)\b(TODO|FIXME|TBD|PLACEHOLDER|LOREM\s+IPSUM)\b")
+email = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+unsafe_claims = [
+    re.compile(r"(?i)process(?:es|ing)? real neural data"),
+    re.compile(r"(?i)\b(diagnos(?:e|es|ed|ing|is)|treats?|therapeutic efficacy)\b"),
+    re.compile(r"(?i)(certified|approved) medical device"),
+    re.compile(r"(?i)controls? real stimulation hardware"),
 ]
-problems = []
+allowed_claim_files = {
+    Path("docs/CLAIM_HYGIENE.md"),
+    Path("docs/LIMITATIONS.md"),
+    Path("tools/check_hygiene.py"),
+}
+allowed_placeholder_files = {Path("tools/check_hygiene.py")}
+
+for pattern in TEMP_PATTERNS:
+    for path in ROOT.rglob(pattern):
+        if any(part in SKIP_DIRS for part in path.parts):
+            continue
+        errors.append(f"{path.relative_to(ROOT)}: backup/reject/temporary artifact")
+
+html_roots = [
+    path.relative_to(ROOT)
+    for path in ROOT.rglob("index.html")
+    if not any(part in SKIP_DIRS for part in path.parts)
+]
+if html_roots != [Path("index.html")]:
+    errors.append(f"active HTML entry points must be exactly ['index.html']; found {html_roots}")
 
 for path in ROOT.rglob("*"):
-    if path.is_dir() or ".git" in path.parts:
+    if not path.is_file() or any(part in SKIP_DIRS for part in path.parts):
         continue
-    if path.suffix.lower() not in {".md", ".rs", ".toml", ".html", ".json", ".yml", ".yaml", ".txt", ".sh"}:
+    relative = path.relative_to(ROOT)
+    if path.suffix.lower() not in TEXT_SUFFIXES and path.name not in {"VERSION", "LICENSE"}:
         continue
-    text = path.read_text(encoding="utf-8", errors="ignore").lower()
-    for phrase in danger:
-        if phrase in text:
-            problems.append((path.relative_to(ROOT), phrase))
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        continue
 
-if problems:
-    for path, phrase in problems:
-        print(f"claim hygiene problem: {path}: {phrase}", file=sys.stderr)
-    raise SystemExit(1)
+    if conflict.search(text):
+        errors.append(f"{relative}: unresolved merge-conflict marker")
+    if secret.search(text):
+        errors.append(f"{relative}: possible committed secret")
+    if relative not in allowed_placeholder_files and placeholder.search(text):
+        errors.append(f"{relative}: unfinished placeholder marker")
 
-print("claim hygiene checks passed")
->>>>>>> origin/main
+    for found in email.findall(text):
+        if found.lower() not in ALLOWED_EMAILS:
+            errors.append(f"{relative}: non-canonical contact address {found}")
+
+    if relative not in allowed_claim_files:
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            normalized = line.lower()
+            denied = any(marker in normalized for marker in (
+                "not ", "no ", "does not", "do not", "never ", "without ",
+                "prohibited", "out of scope", "isn't", "cannot ",
+            ))
+            if denied:
+                continue
+            for pattern in unsafe_claims:
+                if pattern.search(line):
+                    errors.append(
+                        f"{relative}:{line_number}: unqualified capability/medical claim matched {pattern.pattern!r}"
+                    )
+
+runtime_files = [ROOT / "index.html", ROOT / "web/app.js", ROOT / "web/styles.css"]
+remote_asset = re.compile(r"(?:src|href)=[\"']https?://|@import\s+url\([\"']?https?://", re.IGNORECASE)
+for path in runtime_files:
+    text = path.read_text(encoding="utf-8")
+    for match in remote_asset.finditer(text):
+        snippet = text[match.start():match.start() + 160]
+        # External navigation anchors are allowed; runtime assets are not.
+        if path.name == "index.html" and snippet.startswith("href="):
+            continue
+        errors.append(f"{path.relative_to(ROOT)}: remote runtime asset reference")
+
+app = (ROOT / "web/app.js").read_text(encoding="utf-8")
+for forbidden in ("Math.random(", "eval(", "new Function(", "googletag", "gtag(", "analytics"):
+    if forbidden in app:
+        errors.append(f"web/app.js: forbidden runtime primitive {forbidden!r}")
+
+for script in sorted((ROOT / "scripts").glob("*.sh")):
+    first_line = script.read_text(encoding="utf-8").splitlines()[0]
+    if first_line != "#!/usr/bin/env bash":
+        errors.append(f"{script.relative_to(ROOT)}: non-canonical shell shebang")
+    if not os.access(script, os.X_OK):
+        errors.append(f"{script.relative_to(ROOT)}: shell script is not executable")
+
+# Generated outputs may exist locally, but must never be tracked in the source release.
+if (ROOT / ".git").exists():
+    result = subprocess.run(
+        ["git", "ls-files", "target", "dist", "release-assets", "node_modules"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    tracked = [line for line in result.stdout.splitlines() if line]
+    if tracked:
+        errors.append(f"generated output is tracked: {tracked}")
+
+if errors:
+    print("FAIL: repository hygiene")
+    for item in errors:
+        print(f"  - {item}")
+    sys.exit(1)
+print(
+    "PASS: single source tree; no conflicts, debris, secrets, fake runtime, "
+    "remote runtime assets, stale contacts, placeholders, or unqualified capability claims"
+)

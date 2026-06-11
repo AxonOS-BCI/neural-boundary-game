@@ -1,213 +1,111 @@
 #!/usr/bin/env python3
-<<<<<<< HEAD
-"""Release gate for Neural Boundary Game v2.1.2.
-
-Verifies that the working tree is internally consistent for the v2.1.2
-Foundation Grande release:
-  * version 2.1.2 is present in every place that states a version
-  * no stray previous-release version strings outside CHANGELOG history
-  * every file required by the release layout exists
-  * preview.png is a 1280x720 PNG
-  * the replay schema in shipped vectors matches the release
-"""
-
+"""Structural, semantic, and test-surface release gate for v3.0.0."""
 from __future__ import annotations
 
 import json
-import struct
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "2.1.2"
-PREVIOUS = "1.0.3"
-
-REQUIRED_FILES = [
-    "Cargo.toml",
-    "Cargo.lock",
-    "Trunk.toml",
-    "index.html",
-    "preview.png",
-    "rust-toolchain.toml",
-    "LICENSE",
-    "LICENSE-MIT",
-    "LICENSE-APACHE",
-    "README.md",
-    "CHANGELOG.md",
-    "RELEASE_NOTES.md",
-    "CONTRIBUTING.md",
-    "SECURITY.md",
-    ".gitignore",
+REQUIRED_FILES = (
+    "VERSION", "release.toml", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
+    "package.json", "README.md", "CHANGELOG.md", "RELEASE_NOTES.md", "SECURITY.md",
+    "CONTRIBUTING.md", "LICENSE", "LICENSE-MIT", "LICENSE-APACHE", "index.html",
+    "preview.png", "SOURCE_MANIFEST.sha256", ".gitattributes",
+    ".github/dependabot.yml",
+    "crates/neural-boundary-core/Cargo.toml", "crates/neural-boundary-core/src/lib.rs",
+    "crates/neural-boundary-cli/Cargo.toml", "crates/neural-boundary-cli/src/main.rs",
+    "crates/neural-boundary-web/Cargo.toml", "crates/neural-boundary-web/src/lib.rs",
+    "web/app.js", "web/styles.css", "web/favicon.svg",
+    "web/tests/app.test.mjs", "web/tests/wasm-smoke.mjs",
+    "tools/check_versions.py", "tools/check_version_consistency.py",
+    "tools/check_hygiene.py", "tools/check_links.py", "tools/validate_replays.py",
+    "tools/validate_replay.py", "tools/reference_model.py", "tools/generate_vectors.py",
+    "tools/generate_source_manifest.py", "tools/check_source_manifest.py",
+    "tools/deep_audit.py", "tools/package_release.py",
+    "docs/GAME_SPEC.md", "docs/REPLAY_SPEC.md", "docs/ARCHITECTURE.md",
+    "docs/BCI_BOUNDARY.md", "docs/NO_RAW_NEURAL_DATA.md", "docs/LIMITATIONS.md",
+    "docs/CLAIM_HYGIENE.md", "docs/COMMERCIAL_SERVICES.md", "docs/GITHUB_SETUP.md",
+    "docs/RELEASE_PROCESS.md", "docs/UX_STANDARD.md",
+    "docs/ABI_CONTRACT.md", "docs/THREAT_MODEL.md",
+    "scripts/build_web.sh", "scripts/verify_release.sh", "scripts/http_smoke.sh",
+    "scripts/serve_dist.sh", "scripts/smoke_check.sh", "scripts/termux_release.sh",
+    ".github/workflows/ci.yml", ".github/workflows/pages.yml",
+    ".github/workflows/release.yml", ".github/pull_request_template.md",
     ".github/CODEOWNERS",
-    ".github/workflows/ci.yml",
-    ".github/workflows/pages.yml",
-    ".github/ISSUE_TEMPLATE/bug_report.md",
-    ".github/ISSUE_TEMPLATE/feature_request.md",
-    ".github/ISSUE_TEMPLATE/docs.md",
-    ".github/PULL_REQUEST_TEMPLATE.md",
-    "crates/neural-boundary-core/Cargo.toml",
-    "crates/neural-boundary-core/src/lib.rs",
-    "crates/neural-boundary-cli/Cargo.toml",
-    "crates/neural-boundary-cli/src/main.rs",
-    "crates/neural-boundary-cli/src/bot.rs",
-    "crates/neural-boundary-cli/tests/vectors.rs",
-    "crates/neural-boundary-web/Cargo.toml",
-    "crates/neural-boundary-web/src/lib.rs",
-    "vectors/replay-v2.1.2.json",
-    "vectors/replay-breach-demo-v2.1.2.json",
-    "vectors/checksums.txt",
-    "docs/GAME_SPEC.md",
-    "docs/REPLAY_SPEC.md",
-    "docs/AXONOS_STANDARD_STYLE.md",
-    "docs/BCI_BOUNDARY.md",
-    "docs/NO_RAW_NEURAL_DATA.md",
-    "docs/CLAIM_HYGIENE.md",
-    "docs/COMMERCIAL_SERVICES.md",
-    "docs/LIMITATIONS.md",
-    "docs/ROADMAP.md",
-    "docs/RELEASE_CHECKLIST.md",
-    "docs/GITHUB_SETUP.md",
-    "scripts/termux_push.sh",
-    "scripts/termux_find_unpack_push.sh",
-    "scripts/create_release_tag.sh",
-    "scripts/smoke_check.sh",
-    "tools/validate_replay.py",
-    "tools/check_hygiene.py",
-    "tools/release_check.py",
-    "tools/generate_preview.py",
-]
+)
 
-VERSION_SITES = [
-    ("Cargo.toml", f'version = "{VERSION}"'),
-    ("README.md", f"v{VERSION}"),
-    ("CHANGELOG.md", f"## [{VERSION}]"),
-    ("RELEASE_NOTES.md", f"v{VERSION}"),
-    ("index.html", f"v{VERSION}"),
-    ("scripts/create_release_tag.sh", f"v{VERSION}"),
-    ("docs/GAME_SPEC.md", VERSION),
-    ("docs/REPLAY_SPEC.md", f"neural-boundary-replay-v{VERSION}"),
-]
+errors = [f"missing {item}" for item in REQUIRED_FILES if not (ROOT / item).is_file()]
 
-# CHANGELOG legitimately keeps history of previous releases.
-PREVIOUS_ALLOWED = {"CHANGELOG.md"}
-PREVIOUS_SCAN = [
-    "Cargo.toml",
-    "README.md",
-    "RELEASE_NOTES.md",
-    "index.html",
-    "Trunk.toml",
-    "docs/GAME_SPEC.md",
-    "docs/REPLAY_SPEC.md",
-    "scripts/create_release_tag.sh",
-    "scripts/termux_push.sh",
-    "scripts/termux_find_unpack_push.sh",
-    "scripts/smoke_check.sh",
-]
+release_path = ROOT / "release.toml"
+release = {}
+if release_path.is_file():
+    release = tomllib.loads(release_path.read_text(encoding="utf-8"))
+    expected_release = {
+        "product": "Neural Boundary Game",
+        "version": "3.0.0",
+        "display_version": "v3.0.0",
+        "git_tag": "v3.0.0",
+        "replay_schema": "neural-boundary-replay-v3.0.0",
+        "storage_namespace": "axonos_nbg_v300_",
+        "license": "MIT OR Apache-2.0",
+    }
+    for key, expected in expected_release.items():
+        if release.get(key) != expected:
+            errors.append(f"release.toml {key!r}: expected {expected!r}, got {release.get(key)!r}")
 
+readme_path = ROOT / "README.md"
+readme = readme_path.read_text(encoding="utf-8") if readme_path.is_file() else ""
+for needle in (
+    "v3.0.0", "RUN THE GAME", "neural-boundary-replay-v3.0.0",
+    "Educational technical simulation", "Commercial deployment", "MIT OR Apache-2.0",
+    "scripts/verify_release.sh",
+):
+    if needle not in readme:
+        errors.append(f"README missing {needle!r}")
 
-def png_size(path: Path) -> tuple[int, int] | None:
-    data = path.read_bytes()
-    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
-        return None
-    width, height = struct.unpack(">II", data[16:24])
-    return width, height
+package_path = ROOT / "package.json"
+if package_path.is_file():
+    package = json.loads(package_path.read_text(encoding="utf-8"))
+    if package.get("version") != "3.0.0":
+        errors.append("package.json version must be 3.0.0")
+    scripts = package.get("scripts", {})
+    for script in ("check:js", "test:web", "verify"):
+        if script not in scripts:
+            errors.append(f"package.json missing script {script!r}")
 
+vectors = sorted((ROOT / "vectors").glob("*.json"))
+if len(vectors) != 8:
+    errors.append(f"expected exactly 8 canonical replay vectors, found {len(vectors)}")
+for vector in vectors:
+    try:
+        data = json.loads(vector.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f"{vector.relative_to(ROOT)}: invalid JSON: {exc}")
+        continue
+    if data.get("schema") != "neural-boundary-replay-v3.0.0":
+        errors.append(f"{vector.relative_to(ROOT)}: wrong replay schema")
+    if "expected" not in data:
+        errors.append(f"{vector.relative_to(ROOT)}: missing expected outcome")
 
-def main() -> int:
-    errors: list[str] = []
+workflow_text = "\n".join(
+    path.read_text(encoding="utf-8")
+    for path in sorted((ROOT / ".github/workflows").glob("*.yml"))
+)
+# Compiler and protocol commands are intentionally centralized in one canonical gate.
+workflow_text += "\n" + (ROOT / "scripts/verify_release.sh").read_text(encoding="utf-8")
+for needle in (
+    "cargo fmt", "cargo clippy", "cargo test", "wasm32-unknown-unknown",
+    "validate_replay.py", "deep_audit.py", "check_source_manifest.py", "http_smoke.sh",
+    "package_release.py", "git merge-base --is-ancestor",
+):
+    if needle not in workflow_text:
+        errors.append(f"workflow surface missing {needle!r}")
 
-    for rel in REQUIRED_FILES:
-        if not (ROOT / rel).exists():
-            errors.append(f"missing required file: {rel}")
-
-    for rel, needle in VERSION_SITES:
-        path = ROOT / rel
-        if path.exists() and needle not in path.read_text(encoding="utf-8"):
-            errors.append(f"{rel}: expected to contain {needle!r}")
-
-    for rel in PREVIOUS_SCAN:
-        path = ROOT / rel
-        if rel in PREVIOUS_ALLOWED or not path.exists():
-            continue
-        if PREVIOUS in path.read_text(encoding="utf-8"):
-            errors.append(f"{rel}: stray previous version string {PREVIOUS}")
-
-    preview = ROOT / "preview.png"
-    if preview.exists():
-        size = png_size(preview)
-        if size is None:
-            errors.append("preview.png: not a valid PNG")
-        elif size != (1280, 720):
-            errors.append(f"preview.png: expected 1280x720, got {size[0]}x{size[1]}")
-
-    for rel in ("vectors/replay-v2.1.2.json", "vectors/replay-breach-demo-v2.1.2.json"):
-        path = ROOT / rel
-        if not path.exists():
-            continue
-        try:
-            schema = json.loads(path.read_text(encoding="utf-8")).get("schema")
-        except json.JSONDecodeError:
-            schema = None
-        if schema != f"neural-boundary-replay-v{VERSION}":
-            errors.append(f"{rel}: schema does not match release version")
-
-    if errors:
-        print(f"Release check FAILED for v{VERSION}:")
-        for error in errors:
-            print(f"  - {error}")
-        return 1
-    print(f"Release check OK: v{VERSION} is consistent across the tree.")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-=======
-import hashlib
-import pathlib
-import sys
-
-ROOT = pathlib.Path(__file__).resolve().parents[1]
-VECTOR_DIR = ROOT / "vectors"
-CHECKSUMS = VECTOR_DIR / "checksums.txt"
-
-checks = {}
-for line in CHECKSUMS.read_text(encoding="utf-8").splitlines():
-    if line.strip():
-        digest, name = line.split(None, 1)
-        checks[name] = digest
-
-for name, expected in checks.items():
-    path = VECTOR_DIR / name
-    if not path.exists():
-        print(f"missing vector artifact: {name}", file=sys.stderr)
-        raise SystemExit(1)
-    actual = hashlib.sha256(path.read_bytes()).hexdigest()
-    if actual != expected:
-        print(f"checksum mismatch for {name}", file=sys.stderr)
-        raise SystemExit(1)
-
-required = [
-    "README.md",
-    "CHANGELOG.md",
-    "RELEASE_NOTES.md",
-    "docs/GITHUB_SETUP.md",
-    "docs/AXONOS_STANDARD_STYLE.md",
-    "preview.png",
-    ".github/workflows/ci.yml",
-    ".github/workflows/pages.yml",
-    "assets/quick-launch-banner.svg",
-    "scripts/fix_public_surface.sh",
-    "scripts/enable_pages_docs_source.sh",
-    "docs/.nojekyll",
-    "docs/index.html",
-    "tools/check_links.py",
-    "docs/GAMEPLAY.md",
-]
-for name in required:
-    if not (ROOT / name).exists():
-        print(f"missing required release file: {name}", file=sys.stderr)
-        raise SystemExit(1)
-
-print(f"release checks passed for {len(checks)} vector artifact(s)")
->>>>>>> origin/main
+if errors:
+    print("FAIL: release structure")
+    for item in errors:
+        print(f"  - {item}")
+    sys.exit(1)
+print("PASS: v3.0.0 release surface, canonical vectors, tests, and workflows are complete")

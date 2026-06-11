@@ -1,44 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-<<<<<<< HEAD
-echo "== Neural Boundary Game v2.1.2 smoke check =="
-=======
-echo "== Neural Boundary Game v2.0.0 smoke check =="
->>>>>>> origin/main
-
-if command -v rustup >/dev/null 2>&1; then
-  rustup target add wasm32-unknown-unknown >/dev/null 2>&1 || true
-fi
-
-cargo fmt --all --check
-cargo test -p neural-boundary-core
-cargo test -p neural-boundary-cli
-<<<<<<< HEAD
-cargo check -p neural-boundary-web
-cargo build -p neural-boundary-web --target wasm32-unknown-unknown
-=======
-cargo test -p neural-boundary-web
-cargo check -p neural-boundary-web
-cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release
->>>>>>> origin/main
-
-python3 tools/validate_replay.py
-python3 tools/check_hygiene.py
-python3 tools/release_check.py
-<<<<<<< HEAD
-=======
-python3 tools/check_docs.py
-python3 tools/check_license.py
-
-if python3 - <<'PY' >/dev/null 2>&1
-import PIL
-PY
-then
-  python3 tools/check_preview.py
-else
-  echo "Skipping local preview check: Pillow not installed."
-fi
->>>>>>> origin/main
-
-echo "OK"
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+exec "$ROOT/scripts/verify_release.sh" "$@"

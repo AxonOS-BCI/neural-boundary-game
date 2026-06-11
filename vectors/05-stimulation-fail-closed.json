@@ -1,0 +1,110 @@
+{
+  "schema": "neural-boundary-replay-v3.0.0",
+  "product_version": "3.0.0",
+  "core_version": "3.0.0",
+  "hash_algorithm": "fnv1a64-v1",
+  "seed": 58,
+  "mode": "guided",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "initial_config": {
+    "max_ticks": 3600,
+    "raw_leak_limit": 3
+  },
+  "events": [
+    {
+      "tick": 60,
+      "lane": 2,
+      "action": "quarantine"
+    },
+    {
+      "tick": 270,
+      "lane": 1,
+      "action": "consent"
+    },
+    {
+      "tick": 480,
+      "lane": 3,
+      "action": "evidence"
+    },
+    {
+      "tick": 690,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 690,
+      "lane": 2,
+      "action": "convert"
+    },
+    {
+      "tick": 900,
+      "lane": 4,
+      "action": "evidence"
+    },
+    {
+      "tick": 1110,
+      "lane": 0,
+      "action": "evidence"
+    },
+    {
+      "tick": 1320,
+      "lane": 1,
+      "action": "quarantine"
+    },
+    {
+      "tick": 1530,
+      "lane": 3,
+      "action": "consent"
+    },
+    {
+      "tick": 1740,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 1741,
+      "lane": 2,
+      "action": "quarantine"
+    },
+    {
+      "tick": 1950,
+      "lane": 1,
+      "action": "consent"
+    },
+    {
+      "tick": 2160,
+      "lane": 4,
+      "action": "evidence"
+    },
+    {
+      "tick": 2370,
+      "lane": 0,
+      "action": "quarantine"
+    },
+    {
+      "tick": 2580,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 2580,
+      "lane": 2,
+      "action": "convert"
+    }
+  ],
+  "expected": {
+    "terminal_tick": 2907,
+    "status": "unsafe",
+    "reason": "stimulation-crossed",
+    "state_hash": "13abb88490acde21",
+    "trust": 100,
+    "risk": 0,
+    "integrity": 100,
+    "evidence": 3,
+    "review_gates": 31,
+    "raw_leaks": 0,
+    "score": 1790
+  },
+  "summary": "All routine packets are handled, but one stimulation command is intentionally allowed to cross and terminates the run immediately."
+}

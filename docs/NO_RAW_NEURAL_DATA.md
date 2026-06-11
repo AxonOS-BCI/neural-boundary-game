@@ -1,23 +1,9 @@
-# No Raw Signal Crossing
+# No Raw Neural Data
 
-<<<<<<< HEAD
-Raw signal data is sensitive. The demo encodes a simple software principle:
+The public application has no input for EEG, ECoG, EMG, neural implant telemetry, biometric streams, medical records, or user-uploaded signal files.
 
-- raw signal stays inside the device or trusted processing boundary;
-- application interfaces receive typed intent;
-- consent state, confidence, and evidence metadata travel with outputs;
-- claims must be scoped and evidence-backed.
+The phrase “raw frame” is a synthetic game entity generated from a deterministic seed. It contains no biological measurement and is not derived from a person.
 
-In game terms: a `RAW` card crossing the membrane costs integrity −10 and
-counts toward the three-leak defeat; a `STIM` crossing ends the run
-immediately; `Release` is rejected while the raw-leak counter is non-zero.
-The rule is not decoration — it is the win condition.
+The browser build performs no telemetry and no background upload. Local preferences and best-run summaries use a release-specific namespace and can be cleared from the footer.
 
-This repository does not process real signal data. The cards are typed enum
-values in a `no_std` simulation; nothing here reads, stores, or transmits
-physiological measurements of any kind.
-=======
-Raw signal stays inside the device or trusted processing boundary.
-
-This repository demonstrates the boundary concept through a deterministic game.
->>>>>>> origin/main
+A future real hardware gateway would be a separate product and threat model. It must not be inferred from this repository.

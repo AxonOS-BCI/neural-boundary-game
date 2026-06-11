@@ -1,36 +1,39 @@
 #!/usr/bin/env python3
-import pathlib
+"""Check local Markdown links without making network requests."""
+from __future__ import annotations
+
 import re
 import sys
+from pathlib import Path
+from urllib.parse import unquote
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[1]
+pattern = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+errors: list[str] = []
 
-expected = {
-    "https://github.com/AxonOS-BCI/neural-boundary-game",
-    "https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml",
-    "https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/pages.yml",
-    "https://github.com/AxonOS-BCI/neural-boundary-game/releases/tag/v2.0.0",
-    "https://github.com/AxonOS-BCI/neural-boundary-game/tags",
-    "https://axonos-bci.github.io/neural-boundary-game/",
-}
+for path in ROOT.rglob("*.md"):
+    if any(part in {"target", "dist", ".git"} for part in path.parts):
+        continue
+    text = path.read_text(encoding="utf-8")
+    for target in pattern.findall(text):
+        target = target.strip().split()[0].strip("<>")
+        if target.startswith(("http://", "https://", "mailto:", "#")):
+            continue
+        clean = unquote(target.split("#", 1)[0])
+        if not clean:
+            continue
+        resolved = (path.parent / clean).resolve()
+        try:
+            resolved.relative_to(ROOT.resolve())
+        except ValueError:
+            errors.append(f"{path.relative_to(ROOT)}: link escapes repository: {target}")
+            continue
+        if not resolved.exists():
+            errors.append(f"{path.relative_to(ROOT)}: missing local link target: {target}")
 
-text = "\n".join(
-    path.read_text(encoding="utf-8", errors="ignore")
-    for path in ROOT.rglob("*.md")
-    if ".git" not in path.parts
-)
-
-missing = sorted(url for url in expected if url not in text)
-if missing:
-    for url in missing:
-        print(f"missing expected hyperlink: {url}", file=sys.stderr)
-    raise SystemExit(1)
-
-links = set(re.findall(r"https://[^)\s]+", text))
-bad = sorted(url for url in links if "example.com" in url or "localhost" in url)
-if bad:
-    for url in bad:
-        print(f"bad placeholder hyperlink: {url}", file=sys.stderr)
-    raise SystemExit(1)
-
-print(f"link checks passed for {len(expected)} expected public hyperlinks")
+if errors:
+    print("FAIL: local links")
+    for item in errors:
+        print(f"  - {item}")
+    sys.exit(1)
+print("PASS: local Markdown links resolve")

@@ -1,17 +1,24 @@
 # Commercial Services
 
-I help teams working on embedded Rust, BCI-adjacent systems, protocol software, firmware, and safety-relevant interfaces make their repositories clearer, safer to review, and more integration-ready.
+The open-source game is a public technical demonstration. AxonOS may provide separately scoped commercial engineering around the underlying boundary pattern.
 
-Typical work:
+## Engagement categories
 
-- `no_std` Rust architecture review
-- embedded protocol boundary review
-- signal-to-intent pipeline documentation
-- conformance vectors and replay tests
-- CI / release hygiene
-- README and claim hygiene
-- reviewer-ready technical documentation
+- private or air-gapped deployment;
+- customer-specific policy and permission models;
+- neural-signal gateway and device adapter engineering;
+- typed-intent schema design;
+- consent, revocation, provenance, and audit architecture;
+- deterministic conformance suites and test vectors;
+- Rust/WASM performance engineering;
+- security and privacy architecture review;
+- evidence pipelines, release controls, and operational support;
+- branded training or research simulations.
 
-This is not a medical device review, security audit, certification, legal review, or regulatory review.
+## What a commercial engagement is not
 
-Contact: connect@axonos.org
+Purchasing engineering services does not convert this game into a medical device or automatically establish regulatory compliance, clinical validity, hardware safety, or production certification. Those outcomes require explicit scope, evidence, independent review, and jurisdiction-specific work.
+
+## Contact
+
+Use `connect@axonos.org` with the deployment context, target environment, threat model, latency constraints, data classification, and expected assurance level.

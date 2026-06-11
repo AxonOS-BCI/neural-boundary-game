@@ -1,0 +1,155 @@
+{
+  "schema": "neural-boundary-replay-v3.0.0",
+  "product_version": "3.0.0",
+  "core_version": "3.0.0",
+  "hash_algorithm": "fnv1a64-v1",
+  "seed": 9001,
+  "mode": "grand",
+  "difficulty": "standard",
+  "tick_rate": 60,
+  "initial_config": {
+    "max_ticks": 7200,
+    "raw_leak_limit": 3
+  },
+  "events": [
+    {
+      "tick": 45,
+      "lane": 2,
+      "action": "quarantine"
+    },
+    {
+      "tick": 165,
+      "lane": 2,
+      "action": "quarantine"
+    },
+    {
+      "tick": 285,
+      "lane": 0,
+      "action": "validate"
+    },
+    {
+      "tick": 405,
+      "lane": 4,
+      "action": "consent"
+    },
+    {
+      "tick": 525,
+      "lane": 0,
+      "action": "evidence"
+    },
+    {
+      "tick": 645,
+      "lane": 3,
+      "action": "evidence"
+    },
+    {
+      "tick": 765,
+      "lane": 3,
+      "action": "validate"
+    },
+    {
+      "tick": 765,
+      "lane": 3,
+      "action": "convert"
+    },
+    {
+      "tick": 885,
+      "lane": 1,
+      "action": "consent"
+    },
+    {
+      "tick": 1005,
+      "lane": 3,
+      "action": "quarantine"
+    },
+    {
+      "tick": 1125,
+      "lane": 1,
+      "action": "consent"
+    },
+    {
+      "tick": 1245,
+      "lane": 1,
+      "action": "evidence"
+    },
+    {
+      "tick": 1365,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 1365,
+      "lane": 2,
+      "action": "convert"
+    },
+    {
+      "tick": 1485,
+      "lane": 3,
+      "action": "quarantine"
+    },
+    {
+      "tick": 1605,
+      "lane": 1,
+      "action": "quarantine"
+    },
+    {
+      "tick": 1725,
+      "lane": 3,
+      "action": "quarantine"
+    },
+    {
+      "tick": 1845,
+      "lane": 2,
+      "action": "evidence"
+    },
+    {
+      "tick": 1965,
+      "lane": 2,
+      "action": "validate"
+    },
+    {
+      "tick": 1966,
+      "lane": 2,
+      "action": "quarantine"
+    },
+    {
+      "tick": 2085,
+      "lane": 1,
+      "action": "quarantine"
+    },
+    {
+      "tick": 2205,
+      "lane": 2,
+      "action": "evidence"
+    },
+    {
+      "tick": 2325,
+      "lane": 0,
+      "action": "validate"
+    },
+    {
+      "tick": 2326,
+      "lane": 0,
+      "action": "quarantine"
+    },
+    {
+      "tick": 2400,
+      "lane": 0,
+      "action": "release"
+    }
+  ],
+  "expected": {
+    "terminal_tick": 2400,
+    "status": "sealed",
+    "reason": "released",
+    "state_hash": "63f173d0ed3d0fe4",
+    "trust": 100,
+    "risk": 0,
+    "integrity": 93,
+    "evidence": 3,
+    "review_gates": 31,
+    "raw_leaks": 0,
+    "score": 3610
+  },
+  "summary": "Extended Grand Run completes the sovereign boundary review and seals."
+}
