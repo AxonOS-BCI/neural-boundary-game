@@ -3,29 +3,378 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-  <title>Neural Boundary Game</title>
-  <meta name="description" content="AxonOS Standard Foundation Grande Rust/WASM demo: raw signal stays inside the device; apps receive typed intent only."/>
+  <title>Neural Boundary Game — Foundation Grande AxonOS Standard Edition</title>
+  <meta name="description" content="Playable Rust/WASM demo of the core BCI safety rule: raw signal stays inside the device; apps receive typed intent only."/>
   <meta property="og:title" content="Neural Boundary Game"/>
   <meta property="og:description" content="Do not ship raw signal. Ship typed intent."/>
   <meta property="og:image" content="preview.png"/>
   <meta name="theme-color" content="#03070B"/>
   <link data-trunk rel="rust" href="crates/neural-boundary-web/Cargo.toml"/>
+  <link data-trunk rel="copy-file" href="preview.png"/>
   <style>
-    :root{color-scheme:dark;--bg:#03070B;--panel:#071018;--text:#EDF5FF;--muted:#8EA0B6;--cyan:#20D6FF}
-    *{box-sizing:border-box}
-    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#03070B;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    body{background:radial-gradient(circle at 50% 8%,rgba(32,214,255,.10),transparent 34%),radial-gradient(circle at 88% 18%,rgba(140,118,255,.07),transparent 35%),linear-gradient(180deg,#03070B,#06111B 58%,#03070B)}
-    #root{width:100vw;height:100vh;display:grid;place-items:center}
-    canvas{width:min(100vw,177.78vh);height:min(56.25vw,100vh);display:block;background:#03070B;touch-action:none}
-    .fallback{position:fixed;left:24px;bottom:24px;max-width:760px;background:rgba(7,16,24,.94);border:1px solid rgba(32,214,255,.24);border-radius:16px;padding:18px 20px;color:var(--muted)}
+    :root{
+      color-scheme: dark;
+      --bg:#03070B; --panel:#071018; --panel2:#0B1520; --border:#143140;
+      --cyan:#20D6FF; --cyan-soft:#8EEBFF; --green:#7CFF4F; --red:#FF4D4D;
+      --violet:#9B7CFF; --amber:#FF9F1C;
+      --text:#EDF5FF; --muted:#8EA0B6; --faint:#617186;
+      --sans:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --mono:Consolas, "SF Mono", SFMono-Regular, Menlo, "Liberation Mono", monospace;
+    }
+    *{box-sizing:border-box; margin:0; padding:0}
+    html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+    body{
+      background:
+        radial-gradient(900px 420px at 18% -6%, rgba(32,214,255,.07), transparent 60%),
+        radial-gradient(760px 380px at 92% 4%, rgba(155,124,255,.05), transparent 55%),
+        linear-gradient(180deg, #03070B 0%, #050D15 55%, #03070B 100%);
+    }
+    #viewport{width:100vw;height:100vh;display:grid;place-items:center}
+    #stage{
+      width:1280px;height:720px;flex:none;position:relative;transform-origin:center;
+      background:linear-gradient(180deg, rgba(7,16,24,.65), rgba(3,7,11,.85));
+      border:1px solid var(--border);border-radius:18px;
+      box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(141,235,255,.05);
+      padding:24px;display:flex;flex-direction:column;gap:12px;
+    }
+
+    /* ---------- header ---------- */
+    header{height:72px;flex:none;display:flex;align-items:center;justify-content:space-between}
+    .title-block{display:flex;flex-direction:column;gap:6px}
+    .title-row{display:flex;align-items:baseline;gap:14px}
+    h1{font-size:24px;font-weight:800;letter-spacing:.16em}
+    h1 .nb{color:var(--text)} h1 .accent{color:var(--cyan)}
+    .slogan{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--muted)}
+    .slogan b{color:var(--cyan-soft);font-weight:600}
+    .chips{display:flex;gap:8px}
+    .chip{
+      font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted);
+      border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:rgba(11,21,32,.6)
+    }
+    .chip.cyan{color:var(--cyan);border-color:rgba(32,214,255,.35)}
+    .hdr-actions{display:flex;gap:10px}
+    .btn{
+      font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--cyan-soft);
+      background:rgba(11,21,32,.85);border:1px solid var(--border);border-radius:10px;
+      padding:9px 16px;cursor:pointer;transition:border-color .15s, color .15s, background .15s;
+      user-select:none
+    }
+    .btn:hover{border-color:rgba(32,214,255,.5);color:var(--text)}
+    .btn.primary{color:#04222C;background:var(--cyan);border-color:var(--cyan);font-weight:700}
+    .btn.primary:hover{background:var(--cyan-soft);border-color:var(--cyan-soft);color:#04222C}
+    .btn kbd{
+      font-family:var(--mono);font-size:9px;color:var(--faint);border:1px solid var(--border);
+      border-radius:4px;padding:1px 5px;margin-right:7px;background:rgba(3,7,11,.6)
+    }
+    .btn.primary kbd{color:#04222C;border-color:rgba(4,34,44,.4);background:rgba(255,255,255,.18)}
+
+    /* ---------- status rail ---------- */
+    .rail{height:54px;flex:none;display:grid;grid-template-columns:.7fr 1.2fr 1.2fr 1.2fr 1fr 1fr;gap:10px}
+    .cell{
+      background:var(--panel);border:1px solid var(--border);border-radius:12px;
+      padding:8px 12px;display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0
+    }
+    .cell .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
+    .cell .v{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+    .bar{height:4px;border-radius:2px;background:rgba(20,49,64,.7);overflow:hidden}
+    .bar i{display:block;height:100%;width:0%;border-radius:2px;transition:width .18s ease}
+    #bar-trust{background:var(--cyan)} #bar-risk{background:var(--red)} #bar-integrity{background:var(--green)}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none;transition:background .15s, box-shadow .15s}
+    .dot.on{background:var(--green);box-shadow:0 0 8px rgba(124,255,79,.6)}
+
+    /* ---------- main row ---------- */
+    .main{height:414px;flex:none;display:flex;gap:16px;min-height:0}
+    .field-col{width:916px;flex:none;display:flex;flex-direction:column;gap:8px}
+    #playfield{
+      width:916px;height:372px;display:block;border-radius:14px;border:1px solid var(--border);
+      background:var(--bg);cursor:pointer
+    }
+    .event-strip{
+      height:34px;flex:none;display:flex;align-items:center;gap:14px;overflow:hidden;
+      background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:0 14px;
+      font-family:var(--mono);font-size:11px;letter-spacing:.05em;white-space:nowrap
+    }
+    .msg.ok{color:var(--cyan-soft)} .msg.warn{color:var(--amber)} .msg.bad{color:var(--red)}
+    .msg.fade1{opacity:.55} .msg.fade2{opacity:.3}
+
+    /* ---------- right panel ---------- */
+    .principle{
+      flex:1;background:var(--panel);border:1px solid var(--border);border-radius:14px;
+      padding:16px 16px 14px;display:flex;flex-direction:column;gap:10px;min-width:0
+    }
+    .principle .head{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--cyan)}
+    .principle .law{font-size:13px;line-height:1.45;color:var(--text)}
+    .principle .law b{color:var(--cyan-soft)}
+    .plist{display:flex;flex-direction:column;gap:5px}
+    .plist .pk{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint)}
+    .plist .pv{font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--muted)}
+    .pv.allow{color:var(--green)} .pv.deny{color:var(--red)}
+    .gatebox{margin-top:auto;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+    #gates-line{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--muted)}
+    .pips{display:flex;gap:6px}
+    .pip{
+      flex:1;text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--faint);
+      border:1px solid var(--border);border-radius:6px;padding:5px 0;background:rgba(11,21,32,.5)
+    }
+    .pip.passed{color:#04222C;background:var(--cyan);border-color:var(--cyan);font-weight:700}
+
+    /* ---------- action bar ---------- */
+    .actions{height:54px;flex:none;display:grid;grid-template-columns:repeat(5,1fr) 1.25fr;gap:10px}
+    .act{
+      display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;user-select:none;
+      background:var(--panel);border:1px solid var(--border);border-radius:12px;
+      font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--text);
+      transition:border-color .15s, background .15s
+    }
+    .act:hover{border-color:rgba(32,214,255,.45);background:var(--panel2)}
+    .act.cooling{opacity:.5}
+    .act kbd{
+      font-family:var(--mono);font-size:10px;color:var(--cyan);border:1px solid rgba(32,214,255,.3);
+      border-radius:5px;padding:2px 7px;background:rgba(32,214,255,.06)
+    }
+    .act .sub{font-size:8px;letter-spacing:.08em;color:var(--faint);margin-left:2px}
+    .act.release{border-color:rgba(255,159,28,.4);color:var(--amber)}
+    .act.release kbd{color:var(--amber);border-color:rgba(255,159,28,.4);background:rgba(255,159,28,.06)}
+    .act.release:hover{border-color:var(--amber);background:rgba(255,159,28,.07)}
+
+    /* ---------- footer ---------- */
+    footer{height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;
+      font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--faint)}
+    footer .links{display:flex;gap:14px;align-items:center}
+    footer a{color:var(--muted);text-decoration:none}
+    footer a:hover{color:var(--cyan-soft)}
+    #seed-chip{color:var(--muted)}
+
+    /* ---------- overlays ---------- */
+    .overlay{
+      position:absolute;inset:0;border-radius:18px;display:none;place-items:center;z-index:10;
+      background:rgba(3,7,11,.82);backdrop-filter:blur(7px)
+    }
+    .sheet{
+      width:620px;max-width:calc(100% - 80px);background:var(--panel);
+      border:1px solid var(--border);border-radius:16px;padding:30px 34px;
+      display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 70px rgba(0,0,0,.5)
+    }
+    .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--cyan)}
+    .sheet h2{font-size:26px;font-weight:800;letter-spacing:.12em}
+    .sheet .lede{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em}
+    .zones{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .zone{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:rgba(11,21,32,.55)}
+    .zone .zk{font-family:var(--mono);font-size:9px;letter-spacing:.14em;margin-bottom:5px}
+    .zone .zv{font-size:11px;line-height:1.45;color:var(--muted)}
+    .zone.signal .zk{color:var(--muted)} .zone.boundary .zk{color:var(--cyan)} .zone.app .zk{color:var(--green)}
+    .diff-row{display:flex;align-items:center;gap:10px}
+    .diff-row .dk{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint)}
+    .diff{cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);
+      border:1px solid var(--border);border-radius:999px;padding:6px 14px;user-select:none}
+    .diff:hover{border-color:rgba(32,214,255,.4)}
+    .diff.selected{color:#04222C;background:var(--cyan);border-color:var(--cyan);font-weight:700}
+    .menu-actions{display:flex;align-items:center;gap:12px;margin-top:2px}
+    .hint{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.08em}
+    .help-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .help-grid h3{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--cyan);margin-bottom:8px}
+    .help-grid ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+    .help-grid li{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;gap:9px;align-items:baseline}
+    .help-grid li kbd{color:var(--cyan-soft);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;flex:none}
+    .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px;flex:none;transform:translateY(1px)}
+    .end-title{font-size:30px;font-weight:800;letter-spacing:.14em}
+    .end-title.victory{color:var(--green)} .end-title.failure{color:var(--red)}
+    .end-body{font-size:14px;line-height:1.7;color:var(--text)}
+    .end-stats{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted);
+      border-top:1px solid var(--border);padding-top:12px}
+
+    @media (orientation:portrait){
+      #rotate-hint{display:grid}
+    }
+    #rotate-hint{
+      display:none;position:fixed;inset:0;z-index:50;background:rgba(3,7,11,.96);
+      place-items:center;text-align:center;font-family:var(--mono);font-size:13px;color:var(--muted);
+      letter-spacing:.08em;line-height:2;padding:30px
+    }
   </style>
 </head>
 <body>
-  <div id="root">
-    <canvas id="nbg-canvas" width="1280" height="720" aria-label="Neural Boundary Game"></canvas>
+  <div id="viewport">
+    <div id="stage">
+
+      <header>
+        <div class="title-block">
+          <div class="title-row">
+            <h1><span class="nb">NEURAL BOUNDARY</span> <span class="accent">GAME</span></h1>
+            <div class="chips">
+              <span class="chip cyan">AxonOS-BCI</span>
+              <span class="chip">RUST → WASM</span>
+              <span class="chip">no_std CORE</span>
+            </div>
+          </div>
+          <div class="slogan">Do not ship raw signal. <b>Ship typed intent.</b></div>
+        </div>
+        <div class="hdr-actions">
+          <button class="btn" data-cmd="help"><kbd>H</kbd>HELP</button>
+          <button class="btn" data-cmd="restart"><kbd>R</kbd>RESTART</button>
+        </div>
+      </header>
+
+      <div class="rail">
+        <div class="cell"><span class="k">RUN</span><span class="v" id="st-run">01</span></div>
+        <div class="cell"><span class="k">TRUST · TARGET ≥90</span><span class="v" id="st-trust">50</span><span class="bar"><i id="bar-trust"></i></span></div>
+        <div class="cell"><span class="k">RISK · LIMIT ≤20</span><span class="v" id="st-risk">0</span><span class="bar"><i id="bar-risk"></i></span></div>
+        <div class="cell"><span class="k">INTEGRITY · TARGET ≥80</span><span class="v" id="st-integrity">100</span><span class="bar"><i id="bar-integrity"></i></span></div>
+        <div class="cell"><span class="k">EVIDENCE · TARGET L2</span><span class="v" id="st-evidence">L0 · 0 pts</span></div>
+        <div class="cell"><span class="k">CONSENT</span><span class="v"><span class="dot" id="consent-dot"></span><span id="st-consent">CLOSED</span></span></div>
+      </div>
+
+      <div class="main">
+        <div class="field-col">
+          <canvas id="playfield" width="916" height="372" aria-label="Neural Boundary playfield"></canvas>
+          <div class="event-strip" id="event-log"><span class="msg ok">PRESS ENTER TO START · HOLD THE BOUNDARY</span></div>
+        </div>
+
+        <aside class="principle">
+          <div class="head">BOUNDARY PRINCIPLE</div>
+          <div class="law">Raw signal stays <b>inside the device</b>.<br/>Applications receive <b>typed intent only</b>.</div>
+          <div class="plist">
+            <span class="pk">APPS RECEIVE</span>
+            <span class="pv allow">typed intent · consent state · confidence</span>
+          </div>
+          <div class="plist">
+            <span class="pk">APPS NEVER RECEIVE</span>
+            <span class="pv deny">raw frames · spectral bands · waveforms</span>
+          </div>
+          <div class="plist">
+            <span class="pk">RELEASE REQUIRES</span>
+            <span class="pv">TRUST ≥90 · RISK ≤20 · INTEGRITY ≥80 · EVIDENCE ≥L2 · 5 GATES · 0 RAW LEAKS</span>
+          </div>
+          <div class="gatebox">
+            <span id="gates-line">GATES PASSED 0/5</span>
+            <div class="pips">
+              <span class="pip" id="gate-0">SCHEMA</span>
+              <span class="pip" id="gate-1">CONSENT</span>
+              <span class="pip" id="gate-2">EVIDENCE</span>
+              <span class="pip" id="gate-3">CONTAIN</span>
+              <span class="pip" id="gate-4">DELIVERY</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="actions">
+        <button class="act" id="act-1" data-act="1"><kbd>1</kbd>VALIDATE<span class="sub">TYPE / CLASSIFY</span></button>
+        <button class="act" id="act-2" data-act="2"><kbd>2</kbd>CONVERT<span class="sub">→ TYPED</span></button>
+        <button class="act" id="act-3" data-act="3"><kbd>3</kbd>QUARANTINE<span class="sub">CONTAIN</span></button>
+        <button class="act" id="act-4" data-act="4"><kbd>4</kbd>CONSENT<span class="sub">OPEN GATE</span></button>
+        <button class="act" id="act-5" data-act="5"><kbd>5</kbd>EVIDENCE<span class="sub">LOG PROOF</span></button>
+        <button class="act release" id="act-release" data-act="release"><kbd>⏎</kbd>RELEASE<span class="sub">SEAL BOUNDARY</span></button>
+      </div>
+
+      <footer>
+        <span>v2.1.2 • AxonOS Standard Foundation Grande Style • deterministic Rust core</span>
+        <span class="links">
+          <a href="https://github.com/AxonOS-BCI/neural-boundary-game" target="_blank" rel="noopener">GITHUB</a>
+          <span id="seed-chip">SEED 0x00002112</span>
+        </span>
+      </footer>
+
+      <!-- ---------- overlays ---------- -->
+      <div class="overlay" id="ov-menu" style="display:grid">
+        <div class="sheet">
+          <span class="eyebrow">AXONOS-BCI · FOUNDATION GRANDE AXONOS STANDARD EDITION</span>
+          <h2>NEURAL BOUNDARY GAME</h2>
+          <p class="lede">Do not ship raw signal. Ship typed intent.<br/>Survive review: validate, gate consent, log evidence, quarantine hazards — then release.</p>
+          <div class="zones">
+            <div class="zone signal"><div class="zk">SIGNAL ZONE</div><div class="zv">Raw frames live here and never leave the device.</div></div>
+            <div class="zone boundary"><div class="zk">BOUNDARY</div><div class="zv">Validate · consent · evidence · quarantine at the membrane.</div></div>
+            <div class="zone app"><div class="zk">APP ZONE</div><div class="zv">Applications receive typed intent only.</div></div>
+          </div>
+          <div class="diff-row">
+            <span class="dk">DIFFICULTY</span>
+            <span class="diff" id="diff-calm" data-diff="calm">CALM</span>
+            <span class="diff selected" id="diff-standard" data-diff="standard">STANDARD</span>
+            <span class="diff" id="diff-intense" data-diff="intense">INTENSE</span>
+          </div>
+          <div class="menu-actions">
+            <button class="btn primary" data-cmd="start"><kbd>⏎</kbd>START RUN</button>
+            <button class="btn" data-cmd="help"><kbd>H</kbd>HOW TO PLAY</button>
+            <span class="hint">↑↓ SELECT LANE · 1–5 ACTIONS · ⏎ RELEASE</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="ov-help">
+        <div class="sheet">
+          <span class="eyebrow">FIELD MANUAL</span>
+          <h2>HOLD THE BOUNDARY</h2>
+          <div class="help-grid">
+            <div>
+              <h3>CONTROLS</h3>
+              <ul>
+                <li><kbd>↑ ↓ / W S</kbd> select lane</li>
+                <li><kbd>1</kbd> Validate — type intent, classify ?PKT</li>
+                <li><kbd>2</kbd> Convert — validated intent → TYPED (needs consent + L1)</li>
+                <li><kbd>3</kbd> Quarantine — contain a classified hazard</li>
+                <li><kbd>4</kbd> Consent — gate a CONSENT token (25 s window)</li>
+                <li><kbd>5</kbd> Evidence — log EVIDENCE / CHECKSUM / CI TEST</li>
+                <li><kbd>⏎</kbd> Release — seal the boundary</li>
+                <li><kbd>P</kbd> pause · <kbd>R</kbd> restart · <kbd>H</kbd> help</li>
+              </ul>
+            </div>
+            <div>
+              <h3>READ THE FIELD</h3>
+              <ul class="legend">
+                <li><i style="background:var(--cyan)"></i>artifacts: INTENT · CONSENT · EVIDENCE</li>
+                <li><i style="background:var(--green)"></i>TYPED intent — the only thing that may cross</li>
+                <li><i style="background:var(--red)"></i>hazards: RAW · STIM · UNSAFE · UNBOUND</li>
+                <li><i style="background:var(--amber)"></i>claims: CLAIM · NO TRACE · ROADMAP — they move fast</li>
+                <li><i style="background:var(--violet)"></i>?PKT — classify before quarantine</li>
+              </ul>
+              <h3 style="margin-top:14px">RELEASE WHEN</h3>
+              <ul>
+                <li>TRUST ≥90 · RISK ≤20 · INTEGRITY ≥80</li>
+                <li>EVIDENCE ≥L2 · ALL 5 GATES · 0 RAW LEAKS</li>
+              </ul>
+            </div>
+          </div>
+          <div class="menu-actions">
+            <button class="btn primary" data-cmd="close-help"><kbd>ESC</kbd>CLOSE</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="ov-pause">
+        <div class="sheet" style="width:430px">
+          <span class="eyebrow">RUN SUSPENDED</span>
+          <h2>PAUSED</h2>
+          <p class="lede">The membrane is frozen. Nothing crosses while you think.</p>
+          <div class="menu-actions">
+            <button class="btn primary" data-cmd="resume"><kbd>P</kbd>RESUME</button>
+            <button class="btn" data-cmd="restart"><kbd>R</kbd>RESTART</button>
+            <button class="btn" data-cmd="help"><kbd>H</kbd>HELP</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="ov-end">
+        <div class="sheet">
+          <span class="eyebrow">REVIEW VERDICT</span>
+          <h2 class="end-title" id="end-title">REVIEWER SURVIVAL ACHIEVED</h2>
+          <p class="end-body" id="end-body"></p>
+          <div class="end-stats" id="end-stats"></div>
+          <div class="menu-actions">
+            <button class="btn primary" data-cmd="restart"><kbd>⏎</kbd>RUN AGAIN</button>
+            <button class="btn" data-cmd="help"><kbd>H</kbd>HELP</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
+
+  <div id="rotate-hint">NEURAL BOUNDARY GAME<br/>rotate the device to landscape<br/>1280×720 review console</div>
+
   <noscript>
-    <div class="fallback">Neural Boundary Game requires JavaScript and WebAssembly. The deterministic core is implemented in Rust.</div>
+    <div style="position:fixed;left:24px;bottom:24px;max-width:720px;background:rgba(7,16,24,.95);border:1px solid rgba(32,214,255,.25);border-radius:14px;padding:18px 20px;color:#8EA0B6;font-family:Consolas,monospace;font-size:12px">
+      Neural Boundary Game requires JavaScript and WebAssembly. The deterministic core is implemented in Rust (`no_std`); replays can be verified offline with `neural-boundary-cli`.
+    </div>
   </noscript>
 </body>
 </html>

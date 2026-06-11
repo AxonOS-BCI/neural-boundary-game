@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PATTERN="${PATTERN:-*neural*boundary*game*v1.0.3*.zip}"
-REMOTE_URL="${1:-https://github.com/AxonOS-BCI/neural-boundary-game.git}"
+# Find the downloaded release archive on Android, unpack it, run the full
+# gate, commit and push. The archive ships with .git inside, so history is
+# preserved and `git push` just works.
 
-echo "== Find ZIP =="
-ZIP="$(find /storage/emulated/0 /sdcard -maxdepth 6 -type f -iname "$PATTERN" 2>/dev/null | head -n 1 || true)"
-echo "ZIP=$ZIP"
+PATTERN="${PATTERN:-neural-boundary-game-v2.1.2.tar.gz}"
+SEARCH_DIR="${SEARCH_DIR:-/sdcard/Download}"
+WORK_DIR="${WORK_DIR:-$HOME}"
 
-if [ -z "$ZIP" ] || [ ! -f "$ZIP" ]; then
-  echo "ERROR: ZIP not found."
-  echo "Download neural-boundary-game-v1.0.3.zip to Android Downloads first."
-  exit 1
+ARCHIVE="$(find "$SEARCH_DIR" -maxdepth 2 -name "$PATTERN" -print -quit 2>/dev/null || true)"
+if [ -z "$ARCHIVE" ]; then
+  echo "ERROR: $PATTERN not found under $SEARCH_DIR."
+  echo "Download neural-boundary-game-v2.1.2.tar.gz to Android Downloads first."
+  exit 2
 fi
 
-cd "$HOME"
-rm -rf "neural-boundary-game-v1.0.3" neural-boundary-game
+echo "== Archive =="
+echo "$ARCHIVE"
 
-echo "== Unpack =="
-unzip "$ZIP"
+cd "$WORK_DIR"
+rm -rf neural-boundary-game
+mkdir neural-boundary-game
+tar xzf "$ARCHIVE" -C neural-boundary-game
+cd neural-boundary-game
 
-cd "neural-boundary-game-v1.0.3"
-bash scripts/termux_push.sh "$REMOTE_URL"
+bash scripts/termux_push.sh "$@"
