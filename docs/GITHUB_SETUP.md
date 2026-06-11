@@ -64,8 +64,14 @@ Actions -> Pages
 Create release:
 
 ```text
-v1.0.3
-Neural Boundary Game v1.0.3 — Foundation Grande AxonOS Standard Edition
+v2.1.2
+Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition
+```
+
+Tag from the command line:
+
+```bash
+git tag -a v2.1.2 -m "Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition" && git push origin v2.1.2
 ```
 
 Use `RELEASE_NOTES.md`.

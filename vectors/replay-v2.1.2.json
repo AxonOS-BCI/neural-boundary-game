@@ -1,0 +1,211 @@
+{
+  "schema": "neural-boundary-replay-v2.1.2",
+  "title": "Canonical clean run — boundary sealed",
+  "generated_by": "neural-boundary-cli record --policy clean --seed 58 --difficulty standard",
+  "seed": 58,
+  "difficulty": "standard",
+  "actions": [
+    {
+      "tick": 221,
+      "lane": 2,
+      "action": "ConsentGate"
+    },
+    {
+      "tick": 272,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 315,
+      "lane": 1,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 334,
+      "lane": 2,
+      "action": "Convert"
+    },
+    {
+      "tick": 378,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 397,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 422,
+      "lane": 1,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 480,
+      "lane": 0,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 517,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 536,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 555,
+      "lane": 0,
+      "action": "EvidenceGate"
+    },
+    {
+      "tick": 638,
+      "lane": 4,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 667,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 686,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 805,
+      "lane": 1,
+      "action": "Validate"
+    },
+    {
+      "tick": 824,
+      "lane": 1,
+      "action": "Convert"
+    },
+    {
+      "tick": 854,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 873,
+      "lane": 2,
+      "action": "Convert"
+    },
+    {
+      "tick": 892,
+      "lane": 1,
+      "action": "Validate"
+    },
+    {
+      "tick": 911,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 930,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 949,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1029,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1048,
+      "lane": 4,
+      "action": "Validate"
+    },
+    {
+      "tick": 1067,
+      "lane": 4,
+      "action": "Convert"
+    },
+    {
+      "tick": 1267,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 1286,
+      "lane": 2,
+      "action": "Convert"
+    },
+    {
+      "tick": 1305,
+      "lane": 1,
+      "action": "ConsentGate"
+    },
+    {
+      "tick": 1427,
+      "lane": 2,
+      "action": "Validate"
+    },
+    {
+      "tick": 1446,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1542,
+      "lane": 0,
+      "action": "Validate"
+    },
+    {
+      "tick": 1561,
+      "lane": 0,
+      "action": "Convert"
+    },
+    {
+      "tick": 1652,
+      "lane": 0,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1671,
+      "lane": 2,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1723,
+      "lane": 3,
+      "action": "Validate"
+    },
+    {
+      "tick": 1742,
+      "lane": 3,
+      "action": "Convert"
+    },
+    {
+      "tick": 1823,
+      "lane": 1,
+      "action": "Quarantine"
+    },
+    {
+      "tick": 1862,
+      "lane": 1,
+      "action": "Release"
+    }
+  ],
+  "expected": {
+    "final_tick": 1862,
+    "trust": 92,
+    "risk": 12,
+    "integrity": 88,
+    "evidence_level": "L3",
+    "raw_leaks": 0,
+    "gates_passed": 5,
+    "status": "victory",
+    "boundary": "SEALED",
+    "state_hash": "0x3385d1c44b271154"
+  }
+}

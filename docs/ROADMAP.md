@@ -1,20 +1,25 @@
 # Roadmap
 
-## v1.0.x
+## v2.1.x — keep the flagship stable
 
-- keep public demo stable;
-- improve mobile action hit zones;
-- refine replay CLI output;
-- add more README screenshots.
+- keep the public demo and replay vectors stable;
+- mobile/touch polish for lane selection and action hit zones;
+- minor canvas readability passes (card density at Intense).
 
-## v1.1.x
+## v2.2.x — teach better
 
-- guided tutorial mode;
-- deterministic replay playback overlay;
-- victory/failure summary cards.
+- guided tutorial overlay driven by the warm-up wave;
+- deterministic replay playback inside the web stage (load a vector, watch
+  the run);
+- per-run summary card with metric timeline.
 
-## v1.2.x
+## Later
 
-- additional Foundation Grande visual polish;
-- automated preview generation;
-- better public landing copy for GitHub Pages.
+- additional curated seeds with distinct narratives (consent drought,
+  claim storm, leak cascade);
+- localized stage copy;
+- optional colorblind-safe palette variant within the Foundation Grande
+  token system.
+
+Anything that changes game rules bumps the replay schema and regenerates the
+vectors — see `docs/REPLAY_SPEC.md`.

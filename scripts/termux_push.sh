@@ -3,7 +3,7 @@ set -euo pipefail
 
 REMOTE_URL="${1:-https://github.com/AxonOS-BCI/neural-boundary-game.git}"
 BRANCH="${BRANCH:-main}"
-COMMIT_MSG="${COMMIT_MSG:-feat: release Neural Boundary Game v1.0.3 Foundation Grande Edition}"
+COMMIT_MSG="${COMMIT_MSG:-feat: release Neural Boundary Game v2.1.2 Foundation Grande Edition}"
 
 echo "== Target remote =="
 echo "$REMOTE_URL"

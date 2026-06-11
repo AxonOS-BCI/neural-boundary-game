@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "== Neural Boundary Game v1.0.3 smoke check =="
+echo "== Neural Boundary Game v2.1.2 smoke check =="
 
 if command -v rustup >/dev/null 2>&1; then
   rustup target add wasm32-unknown-unknown >/dev/null 2>&1 || true
