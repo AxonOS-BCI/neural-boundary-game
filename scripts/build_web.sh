@@ -21,7 +21,8 @@ command -v python3 >/dev/null 2>&1 || {
 rustup target add "$TARGET" >/dev/null 2>&1 || true
 
 if [ ! -f Cargo.lock ]; then
-  cargo generate-lockfile
+  echo "INFO: Cargo.lock is absent; generating a fresh lockfile from crates.io"
+  CARGO_NET_RETRY="${CARGO_NET_RETRY:-5}" cargo generate-lockfile
 fi
 
 cargo build --locked -p neural-boundary-web --target "$TARGET" --release
