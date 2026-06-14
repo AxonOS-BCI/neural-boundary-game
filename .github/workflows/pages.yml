@@ -19,7 +19,7 @@ jobs:
   build:
     name: Build static WASM site
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -38,10 +38,18 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache Rust
-        uses: Swatinem/rust-cache@v2
+      - name: Reset Cargo registry cache
+        run: |
+          rm -rf ~/.cargo/registry/cache
+          rm -rf ~/.cargo/registry/src
+          rm -rf ~/.cargo/git/checkouts
+          rm -rf ~/.cargo/git/db
+          cargo --version
+          rustc --version
 
       - name: Build Pages artifact
+        env:
+          CARGO_NET_RETRY: "5"
         run: |
           chmod +x scripts/build_web.sh
           ./scripts/build_web.sh
