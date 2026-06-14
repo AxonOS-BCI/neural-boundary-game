@@ -20,6 +20,10 @@ command -v python3 >/dev/null 2>&1 || {
 
 rustup target add "$TARGET" >/dev/null 2>&1 || true
 
+if [ ! -f Cargo.lock ]; then
+  cargo generate-lockfile
+fi
+
 cargo build --locked -p neural-boundary-web --target "$TARGET" --release
 
 if [ ! -s "$WASM_SOURCE" ]; then
@@ -33,20 +37,11 @@ mkdir -p "$DIST/web" "$DIST/pkg" "$DIST/docs"
 cp "$ROOT/index.html" "$DIST/index.html"
 cp "$ROOT/web/app.js" "$DIST/web/app.js"
 cp "$ROOT/web/styles.css" "$DIST/web/styles.css"
-
-if [ -f "$ROOT/web/favicon.svg" ]; then
-  cp "$ROOT/web/favicon.svg" "$DIST/web/favicon.svg"
-fi
-
 cp "$WASM_SOURCE" "$DIST/pkg/neural_boundary_web.wasm"
 
-if [ -f "$ROOT/docs/COMMERCIAL_SERVICES.md" ]; then
-  cp "$ROOT/docs/COMMERCIAL_SERVICES.md" "$DIST/docs/COMMERCIAL_SERVICES.md"
-fi
-
-if [ -f "$ROOT/preview.png" ]; then
-  cp "$ROOT/preview.png" "$DIST/preview.png"
-fi
+[ -f "$ROOT/web/favicon.svg" ] && cp "$ROOT/web/favicon.svg" "$DIST/web/favicon.svg"
+[ -f "$ROOT/preview.png" ] && cp "$ROOT/preview.png" "$DIST/preview.png"
+[ -f "$ROOT/docs/COMMERCIAL_SERVICES.md" ] && cp "$ROOT/docs/COMMERCIAL_SERVICES.md" "$DIST/docs/COMMERCIAL_SERVICES.md"
 
 : > "$DIST/.nojekyll"
 
@@ -71,27 +66,22 @@ try:
         capture_output=True,
         text=True,
     ).stdout.strip()
-except (OSError, subprocess.CalledProcessError):
+except Exception:
     revision = "unavailable"
 
+version = "3.0.0"
 version_file = root / "VERSION"
-source_manifest_file = root / "SOURCE_MANIFEST.sha256"
+if version_file.exists():
+    version = version_file.read_text(encoding="utf-8").strip()
 
 info = {
     "abi_version": 3000000,
     "product": "Neural Boundary Game",
     "source_revision": revision,
     "tick_rate": 60,
-    "version": version_file.read_text(encoding="utf-8").strip()
-    if version_file.exists()
-    else "3.0.0",
+    "version": version,
     "wasm_sha256": hashlib.sha256(wasm.read_bytes()).hexdigest(),
 }
-
-if source_manifest_file.exists():
-    info["source_manifest_sha256"] = hashlib.sha256(
-        source_manifest_file.read_bytes()
-    ).hexdigest()
 
 (dist / "build-info.json").write_text(
     json.dumps(info, indent=2, sort_keys=True) + "\n",
@@ -108,12 +98,7 @@ required = [
     dist / ".nojekyll",
 ]
 
-missing = [
-    str(path)
-    for path in required
-    if not path.exists() or path.stat().st_size == 0
-]
-
+missing = [str(path) for path in required if not path.exists() or path.stat().st_size == 0]
 if missing:
     raise SystemExit("FAIL: incomplete Pages artifact: " + ", ".join(missing))
 

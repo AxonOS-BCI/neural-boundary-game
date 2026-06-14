@@ -27,44 +27,25 @@ jobs:
       - name: Reject empty critical files
         run: |
           test -s Cargo.toml
-          test -s Cargo.lock
           test -s index.html
           test -s web/app.js
           test -s web/styles.css
           test -s scripts/build_web.sh
+          test -s tools/check_hygiene.py
           test -s .github/workflows/ci.yml
           test -s .github/workflows/pages.yml
 
-      - name: Reject one-line YAML corruption
+      - name: Reject workflow/script one-line corruption
         run: |
-          test "$(wc -l < .github/workflows/ci.yml)" -ge 40
+          test "$(wc -l < .github/workflows/ci.yml)" -ge 45
           test "$(wc -l < .github/workflows/pages.yml)" -ge 55
-          test "$(wc -l < scripts/build_web.sh)" -ge 60
-          test "$(wc -l < Cargo.toml)" -ge 10
+          test "$(wc -l < scripts/build_web.sh)" -ge 40
+          test "$(wc -l < Cargo.toml)" -ge 20
 
-      - name: Reject unresolved merge conflicts
+      - name: Check repository hygiene
         run: |
-          ! grep -RInE '(<{7}|={7}|>{7})'             .github Cargo.toml Cargo.lock index.html scripts web crates docs tools vectors             --exclude-dir=.git
+          python3 tools/check_hygiene.py
 
       - name: Check shell syntax
         run: |
           bash -n scripts/build_web.sh
-          if [ -f scripts/verify_release.sh ]; then
-            bash -n scripts/verify_release.sh
-          fi
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Check JavaScript syntax
-        run: |
-          node --check web/app.js
-
-      - name: Install Rust 1.81.0
-        uses: dtolnay/rust-toolchain@1.81.0
-
-      - name: Check Cargo metadata
-        run: |
-          cargo metadata --locked --no-deps

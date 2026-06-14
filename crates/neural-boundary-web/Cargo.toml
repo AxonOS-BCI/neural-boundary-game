@@ -16,10 +16,6 @@ path = "src/lib.rs"
 [dependencies]
 neural-boundary-core = { path = "../neural-boundary-core" }
 
-# `#[no_mangle]` is intentionally required by the C-compatible WASM ABI and is
-# covered by Rust's broad `unsafe_code` lint. This crate therefore cannot inherit
-# the workspace-level deny. Source gates separately reject unsafe blocks, unsafe
-# functions, unsafe impls, and mutable/external statics.
 [lints.rust]
 unsafe_code = "allow"
 missing_docs = "warn"
