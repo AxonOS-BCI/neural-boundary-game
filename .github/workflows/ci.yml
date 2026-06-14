@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "fix/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify repository
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.81.0
+        uses: dtolnay/rust-toolchain@1.81.0
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Reject unresolved merge conflicts
+        run: |
+          ! grep -RInE '(<{7}|={7}|>{7})' \
+            .github index.html scripts web crates docs tools vectors \
+            --exclude-dir=.git
+
+      - name: Check JavaScript syntax
+        run: |
+          if [ -f web/app.js ]; then
+            node --check web/app.js
+          fi
+
+      - name: Rust format
+        run: cargo fmt --all --check
+
+      - name: Rust tests
+        run: cargo test --locked --workspace
+
+      - name: WASM build
+        run: cargo build --locked -p neural-boundary-web --target wasm32-unknown-unknown --release
+
+      - name: Build Pages bundle
+        run: |
+          chmod +x scripts/build_web.sh
+          ./scripts/build_web.sh
+          test -f dist/index.html
+          test -f dist/web/app.js
+          test -f dist/web/styles.css
+          test -f dist/pkg/neural_boundary_web.wasm
+          test -f dist/build-info.json
+          test -f dist/.nojekyll
