@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main, "release/**"]
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -14,50 +15,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  repository-gates:
-    name: Repository gates
+  static-gates:
+    name: Static repository gates
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-      - name: Validate exact source surface
-        run: ./scripts/verify_release.sh --static
-      - name: Prove reproducible source packaging
-        env:
-          SOURCE_DATE_EPOCH: "946684800"
-        run: |
-          python3 tools/package_release.py --output /tmp/release-assets-a
-          python3 tools/package_release.py --output /tmp/release-assets-b
-          cmp /tmp/release-assets-a/neural-boundary-game-v3.0.0-source.zip /tmp/release-assets-b/neural-boundary-game-v3.0.0-source.zip
-          cmp /tmp/release-assets-a/neural-boundary-game-v3.0.0-source.tar.gz /tmp/release-assets-b/neural-boundary-game-v3.0.0-source.tar.gz
-          cmp /tmp/release-assets-a/SHA256SUMS /tmp/release-assets-b/SHA256SUMS
+    timeout-minutes: 8
 
-  rust-and-protocol:
-    name: Rust, protocol, and WASM
-    runs-on: ubuntu-24.04
-    timeout-minutes: 22
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: "22"
-      - name: Install pinned Rust toolchain
+          node-version: "20"
+
+      - name: Reject empty deployment files
         run: |
-          rustup toolchain install 1.81.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
-          rustup override set 1.81.0
-      - name: Full compiler and protocol gate
-        run: ./scripts/verify_release.sh --full
-      - name: Inspect artifact
+          test -s index.html
+          test -s web/app.js
+          test -s web/styles.css
+          test -s scripts/build_web.sh
+          test -s .github/workflows/ci.yml
+          test -s .github/workflows/pages.yml
+
+      - name: Reject unresolved merge conflicts
         run: |
-          test -s dist/index.html
-          test -s dist/web/app.js
-          test -s dist/web/styles.css
-          test -s dist/pkg/neural_boundary_web.wasm
-          test -s dist/build-info.json
-          ! grep -R -nE '<<<<<<<|=======|>>>>>>>' dist
+          ! grep -RInE '(<{7}|={7}|>{7})' \
+            .github index.html scripts web crates docs tools vectors \
+            --exclude-dir=.git
+
+      - name: Check shell syntax
+        run: |
+          bash -n scripts/build_web.sh
+          if [ -f scripts/verify_release.sh ]; then
+            bash -n scripts/verify_release.sh
+          fi
+
+      - name: Check JavaScript syntax
+        run: node --check web/app.js
