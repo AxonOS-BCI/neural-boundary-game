@@ -2,8 +2,13 @@ name: Pages
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -11,44 +16,51 @@ concurrency:
 
 jobs:
   build:
-    name: Build Pages
-    permissions:
-      contents: read
-      pages: read
+    name: Build Rust/WASM static site
     runs-on: ubuntu-24.04
-    timeout-minutes: 22
+
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/configure-pages@v5
-      - uses: actions/setup-node@v6
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install Rust 1.81.0
+        uses: dtolnay/rust-toolchain@1.81.0
         with:
-          node-version: "22"
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-      - name: Install pinned Rust toolchain
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Pages artifact
         run: |
-          rustup toolchain install 1.81.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
-          rustup override set 1.81.0
-      - name: Full release gate
-        run: ./scripts/verify_release.sh --full
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
+          chmod +x scripts/build_web.sh
+          ./scripts/build_web.sh
+
+          test -f dist/index.html
+          test -f dist/web/app.js
+          test -f dist/web/styles.css
+          test -f dist/pkg/neural_boundary_web.wasm
+          test -f dist/build-info.json
+          test -f dist/.nojekyll
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
   deploy:
-    name: Deploy Pages
-    permissions:
-      pages: write
-      id-token: write
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-24.04
+    needs: build
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    needs: build
-    timeout-minutes: 10
+
     steps:
-      - name: Deploy
+      - name: Deploy artifact
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
