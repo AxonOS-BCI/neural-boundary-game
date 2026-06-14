@@ -90,16 +90,30 @@ info = {
     newline="\n",
 )
 
-required = [
+non_empty_required = [
     dist / "index.html",
     dist / "web" / "app.js",
     dist / "web" / "styles.css",
     wasm,
     dist / "build-info.json",
+]
+
+existing_required = [
     dist / ".nojekyll",
 ]
 
-missing = [str(path) for path in required if not path.exists() or path.stat().st_size == 0]
+missing = [
+    str(path)
+    for path in non_empty_required
+    if not path.exists() or path.stat().st_size == 0
+]
+
+missing.extend(
+    str(path)
+    for path in existing_required
+    if not path.exists()
+)
+
 if missing:
     raise SystemExit("FAIL: incomplete Pages artifact: " + ", ".join(missing))
 
