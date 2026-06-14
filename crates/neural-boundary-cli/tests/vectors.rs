@@ -96,7 +96,7 @@ fn wrong_schema_exits_4() {
     let dir = temp_dir("schema");
     let raw = fs::read_to_string(root.join("vectors/01-clean-sealed.json")).unwrap();
     let mut value: serde_json::Value = serde_json::from_str(&raw).unwrap();
-    value["schema"] = "neural-boundary-replay-v2.1.2".into();
+    value["schema"] = "neural-boundary-replay-v0.0.0".into();
     let path = dir.join("old-schema.json");
     fs::write(&path, serde_json::to_string_pretty(&value).unwrap()).unwrap();
     let (code, _, stderr) = run(&["verify", path.to_str().unwrap()], &root);

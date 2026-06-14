@@ -1,33 +1,30 @@
 #!/usr/bin/env python3
-"""Release gate for Neural Boundary Game v2.1.2.
-
-Verifies that the working tree is internally consistent for the v2.1.2
-Foundation Grande release:
-  * version 2.1.2 is present in every place that states a version
-  * no stray previous-release version strings outside CHANGELOG history
-  * every file required by the release layout exists
-  * preview.png is a 1280x720 PNG
-  * the replay schema in shipped vectors matches the release
+"""Release gate aggregator: runs every repository invariant and prints one
+concise PASS/FAIL table suitable for CI logs. Expected identity values come
+from release.toml; this script never maintains its own magic strings.
 """
 
 from __future__ import annotations
 
 import json
 import struct
+import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "2.1.2"
-PREVIOUS = "1.0.3"
 
 REQUIRED_FILES = [
+    "VERSION",
+    "release.toml",
     "Cargo.toml",
     "Cargo.lock",
     "Trunk.toml",
-    "index.html",
-    "preview.png",
     "rust-toolchain.toml",
+    "web/index.html",
+    "web/styles.css",
+    "preview.png",
     "LICENSE",
     "LICENSE-MIT",
     "LICENSE-APACHE",
@@ -40,122 +37,114 @@ REQUIRED_FILES = [
     ".github/CODEOWNERS",
     ".github/workflows/ci.yml",
     ".github/workflows/pages.yml",
-    ".github/ISSUE_TEMPLATE/bug_report.md",
-    ".github/ISSUE_TEMPLATE/feature_request.md",
-    ".github/ISSUE_TEMPLATE/docs.md",
-    ".github/PULL_REQUEST_TEMPLATE.md",
-    "crates/neural-boundary-core/Cargo.toml",
+    ".github/workflows/release.yml",
     "crates/neural-boundary-core/src/lib.rs",
-    "crates/neural-boundary-cli/Cargo.toml",
     "crates/neural-boundary-cli/src/main.rs",
     "crates/neural-boundary-cli/src/bot.rs",
     "crates/neural-boundary-cli/tests/vectors.rs",
-    "crates/neural-boundary-web/Cargo.toml",
     "crates/neural-boundary-web/src/lib.rs",
-    "vectors/replay-v2.1.2.json",
-    "vectors/replay-breach-demo-v2.1.2.json",
-    "vectors/checksums.txt",
+    "crates/neural-boundary-web/src/app.rs",
+    "crates/neural-boundary-web/src/bridge.rs",
+    "crates/neural-boundary-web/src/input.rs",
+    "crates/neural-boundary-web/src/render.rs",
+    "crates/neural-boundary-web/src/hud.rs",
+    "crates/neural-boundary-web/src/storage.rs",
+    "crates/neural-boundary-web/src/accessibility.rs",
+    "vectors/checksums.sha256",
     "docs/GAME_SPEC.md",
     "docs/REPLAY_SPEC.md",
-    "docs/AXONOS_STANDARD_STYLE.md",
+    "docs/ARCHITECTURE.md",
     "docs/BCI_BOUNDARY.md",
     "docs/NO_RAW_NEURAL_DATA.md",
+    "docs/LIMITATIONS.md",
     "docs/CLAIM_HYGIENE.md",
     "docs/COMMERCIAL_SERVICES.md",
-    "docs/LIMITATIONS.md",
-    "docs/ROADMAP.md",
-    "docs/RELEASE_CHECKLIST.md",
     "docs/GITHUB_SETUP.md",
+    "docs/RELEASE_PROCESS.md",
+    "docs/UX_STANDARD.md",
+    "scripts/verify_release.sh",
+    "scripts/create_release_tag.sh",
     "scripts/termux_push.sh",
     "scripts/termux_find_unpack_push.sh",
-    "scripts/create_release_tag.sh",
-    "scripts/smoke_check.sh",
     "tools/validate_replay.py",
     "tools/check_hygiene.py",
+    "tools/check_version_consistency.py",
+    "tools/check_links.py",
     "tools/release_check.py",
     "tools/generate_preview.py",
+    "qa/package.json",
+    "qa/playwright.config.ts",
+    "qa/tests/smoke.spec.ts",
 ]
 
-VERSION_SITES = [
-    ("Cargo.toml", f'version = "{VERSION}"'),
-    ("README.md", f"v{VERSION}"),
-    ("CHANGELOG.md", f"## [{VERSION}]"),
-    ("RELEASE_NOTES.md", f"v{VERSION}"),
-    ("index.html", f"v{VERSION}"),
-    ("scripts/create_release_tag.sh", f"v{VERSION}"),
-    ("docs/GAME_SPEC.md", VERSION),
-    ("docs/REPLAY_SPEC.md", f"neural-boundary-replay-v{VERSION}"),
+SUBCHECKS = [
+    ("vectors", [sys.executable, "tools/validate_replay.py"]),
+    ("hygiene", [sys.executable, "tools/check_hygiene.py"]),
+    ("versions", [sys.executable, "tools/check_version_consistency.py"]),
+    ("links", [sys.executable, "tools/check_links.py"]),
 ]
 
-# CHANGELOG legitimately keeps history of previous releases.
-PREVIOUS_ALLOWED = {"CHANGELOG.md"}
-PREVIOUS_SCAN = [
-    "Cargo.toml",
-    "README.md",
-    "RELEASE_NOTES.md",
-    "index.html",
-    "Trunk.toml",
-    "docs/GAME_SPEC.md",
-    "docs/REPLAY_SPEC.md",
-    "scripts/create_release_tag.sh",
-    "scripts/termux_push.sh",
-    "scripts/termux_find_unpack_push.sh",
-    "scripts/smoke_check.sh",
-]
+
+def manifest() -> dict:
+    with open(ROOT / "release.toml", "rb") as handle:
+        return tomllib.load(handle)
 
 
 def png_size(path: Path) -> tuple[int, int] | None:
     data = path.read_bytes()
     if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
         return None
-    width, height = struct.unpack(">II", data[16:24])
-    return width, height
+    return struct.unpack(">II", data[16:24])
 
 
 def main() -> int:
-    errors: list[str] = []
+    identity = manifest()
+    rows: list[tuple[str, bool, str]] = []
 
-    for rel in REQUIRED_FILES:
-        if not (ROOT / rel).exists():
-            errors.append(f"missing required file: {rel}")
+    missing = [name for name in REQUIRED_FILES if not (ROOT / name).exists()]
+    rows.append(("layout", not missing, "all release files present" if not missing else f"missing: {', '.join(missing[:6])}{' …' if len(missing) > 6 else ''}"))
 
-    for rel, needle in VERSION_SITES:
-        path = ROOT / rel
-        if path.exists() and needle not in path.read_text(encoding="utf-8"):
-            errors.append(f"{rel}: expected to contain {needle!r}")
+    trunk = (ROOT / "Trunk.toml").read_text(encoding="utf-8")
+    rows.append(("trunk", 'target = "web/index.html"' in trunk, "single Pages build path via web/index.html"))
 
-    for rel in PREVIOUS_SCAN:
-        path = ROOT / rel
-        if rel in PREVIOUS_ALLOWED or not path.exists():
-            continue
-        if PREVIOUS in path.read_text(encoding="utf-8"):
-            errors.append(f"{rel}: stray previous version string {PREVIOUS}")
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    ignored = all(token in gitignore for token in ("target", "dist", "node_modules"))
+    rows.append((".gitignore", ignored, "build output ignored (target, dist, node_modules)"))
 
-    preview = ROOT / "preview.png"
-    if preview.exists():
-        size = png_size(preview)
-        if size is None:
-            errors.append("preview.png: not a valid PNG")
-        elif size != (1280, 720):
-            errors.append(f"preview.png: expected 1280x720, got {size[0]}x{size[1]}")
+    license_root = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    license_ok = "MIT" in license_root and "Apache" in license_root and identity["license"] == "MIT OR Apache-2.0"
+    rows.append(("license", license_ok, "dual MIT OR Apache-2.0 surface is unambiguous"))
 
-    for rel in ("vectors/replay-v2.1.2.json", "vectors/replay-breach-demo-v2.1.2.json"):
-        path = ROOT / rel
-        if not path.exists():
-            continue
-        try:
-            schema = json.loads(path.read_text(encoding="utf-8")).get("schema")
-        except json.JSONDecodeError:
-            schema = None
-        if schema != f"neural-boundary-replay-v{VERSION}":
-            errors.append(f"{rel}: schema does not match release version")
+    preview = png_size(ROOT / "preview.png") if (ROOT / "preview.png").exists() else None
+    rows.append(("preview", preview == (1280, 720), f"preview.png is 1280x720 PNG (got {preview})"))
 
-    if errors:
-        print(f"Release check FAILED for v{VERSION}:")
-        for error in errors:
-            print(f"  - {error}")
+    vector_names = sorted(path.name for path in (ROOT / "vectors").glob("*.json"))
+    rows.append(("vector-set", len(vector_names) == 8, f"8 canonical vectors present ({len(vector_names)} found)"))
+
+    csp = (ROOT / "web/index.html").read_text(encoding="utf-8")
+    rows.append(("csp", "Content-Security-Policy" in csp and "object-src 'none'" in csp, "restrictive CSP meta present"))
+
+    for name, command in SUBCHECKS:
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+        ok = result.returncode == 0
+        detail = (result.stdout or result.stderr).strip().splitlines()
+        rows.append((name, ok, detail[0] if ok else "; ".join(detail[:4])))
+        if not ok:
+            for line in detail:
+                print(f"    {line}")
+
+    width = max(len(name) for name, _, _ in rows)
+    failed = False
+    for name, ok, detail in rows:
+        status = "PASS" if ok else "FAIL"
+        if not ok:
+            failed = True
+        print(f"{status}  {name.ljust(width)}  {detail}")
+
+    if failed:
+        print(f"\nRelease check FAILED for v{identity['version']}.")
         return 1
-    print(f"Release check OK: v{VERSION} is consistent across the tree.")
+    print(f"\nRelease check OK: {identity['release_title']}.")
     return 0
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TAG="${1:-v2.1.2}"
-TITLE="Neural Boundary Game ${TAG} — Foundation Grande AxonOS Standard Edition"
+TAG="${1:-v3.0.1}"
+TITLE="Neural Boundary Game ${TAG} — Sovereign Boundary Edition"
 
 git tag -a "$TAG" -m "$TITLE"
 git push origin "$TAG"

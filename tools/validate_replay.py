@@ -1,113 +1,186 @@
 #!/usr/bin/env python3
-"""Validate replay vectors for Neural Boundary Game v2.1.2.
+"""Structural validation of replay vectors (schema neural-boundary-replay-v3.0.1).
 
-Checks every vectors/*.json file:
-  * schema == neural-boundary-replay-v2.1.2
-  * seed is a positive integer, difficulty is calm|standard|intense
-  * actions have strictly increasing ticks >= 1, lanes 0..4, known action names
-  * no action is scheduled past expected.final_tick
-  * expected block carries every required field with sane types
-  * sha256 of each vector matches vectors/checksums.txt, and every vector
-    is listed there
-
-Exits non-zero on the first family of failures, printing all of them.
+Deterministic re-execution is the CLI's job (`verify-all`); this gate checks
+structure, enums, ordering, checksums, and — as a cross-language conformance
+check — recomputes the Daily Seed in Python from the documented algorithm.
+Expected identity values come from release.toml.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = ROOT / "vectors"
-SCHEMA = "neural-boundary-replay-v2.1.2"
+
+MODES = {"guided", "standard", "audit", "grand", "daily"}
 DIFFICULTIES = {"calm", "standard", "intense"}
 ACTIONS = {"Validate", "Convert", "Quarantine", "ConsentGate", "EvidenceGate", "Release"}
+STATUSES = {"sealed", "breached", "expired"}
+REASONS = {
+    "sealed",
+    "horizon_reached",
+    "integrity_collapse",
+    "risk_overflow",
+    "raw_leak_threshold",
+    "stimulation_crossed",
+}
+GRADES = {"Sovereign", "Sealed", "Reviewable", "Degraded", "Breached", "Unsafe"}
+REQUIRED_VECTORS = [
+    "01-clean-sealed.json",
+    "02-idle-breach.json",
+    "03-revoked-consent.json",
+    "04-raw-leak.json",
+    "05-stimulation-fail-closed.json",
+    "06-audit-sealed.json",
+    "07-grand-run-sealed.json",
+    "08-daily-seed-sealed.json",
+]
+
 EXPECTED_FIELDS = {
-    "final_tick": int,
+    "terminal_tick": int,
+    "status": str,
+    "terminal_reason": str,
+    "boundary": str,
+    "grade": str,
     "trust": int,
     "risk": int,
     "integrity": int,
     "evidence_level": str,
-    "raw_leaks": int,
+    "evidence_points": int,
     "gates_passed": int,
-    "status": str,
-    "boundary": str,
+    "raw_leaks": int,
+    "delivered": int,
+    "score": int,
+    "best_streak": int,
+    "revocations": int,
     "state_hash": str,
 }
 
 
-def fail(errors: list[str], message: str) -> None:
-    errors.append(message)
+def manifest() -> dict:
+    with open(ROOT / "release.toml", "rb") as handle:
+        return tomllib.load(handle)
 
 
-def validate_vector(path: Path, errors: list[str]) -> None:
+def fnv1a64(data: bytes) -> int:
+    value = 0xCBF29CE484222325
+    for byte in data:
+        value = ((value ^ byte) * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return value
+
+
+def splitmix(value: int) -> int:
+    value &= 0xFFFFFFFFFFFFFFFF
+    value ^= value >> 30
+    value = (value * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
+    value ^= value >> 27
+    value = (value * 0x94D049BB133111EB) & 0xFFFFFFFFFFFFFFFF
+    value ^= value >> 31
+    return value or 0x3001
+
+
+def daily_seed(schema: str, year: int, month: int, day: int) -> int:
+    payload = schema.encode() + year.to_bytes(2, "little") + bytes([month, day])
+    return splitmix(fnv1a64(payload))
+
+
+def validate_vector(path: Path, identity: dict, errors: list[str]) -> None:
     name = path.name
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        fail(errors, f"{name}: invalid JSON: {exc}")
+        errors.append(f"{name}: invalid JSON: {exc}")
         return
 
-    if data.get("schema") != SCHEMA:
-        fail(errors, f"{name}: schema must be {SCHEMA!r}, got {data.get('schema')!r}")
+    for field, expected in (
+        ("schema", identity["replay_schema"]),
+        ("product_version", identity["version"]),
+        ("core_version", identity["version"]),
+        ("hash_algorithm", identity["hash_algorithm"]),
+    ):
+        if data.get(field) != expected:
+            errors.append(f"{name}: {field} must be {expected!r}")
+
+    if data.get("tick_rate") != 60:
+        errors.append(f"{name}: tick_rate must be 60")
+    if data.get("mode") not in MODES:
+        errors.append(f"{name}: mode must be one of {sorted(MODES)}")
+    if data.get("difficulty") not in DIFFICULTIES:
+        errors.append(f"{name}: difficulty must be one of {sorted(DIFFICULTIES)}")
     seed = data.get("seed")
     if not isinstance(seed, int) or seed <= 0:
-        fail(errors, f"{name}: seed must be a positive integer")
-    if data.get("difficulty") not in DIFFICULTIES:
-        fail(errors, f"{name}: difficulty must be one of {sorted(DIFFICULTIES)}")
+        errors.append(f"{name}: seed must be a positive integer")
     for key in ("title", "generated_by"):
         if not isinstance(data.get(key), str) or not data[key].strip():
-            fail(errors, f"{name}: {key} must be a non-empty string")
+            errors.append(f"{name}: {key} must be a non-empty string")
+
+    if data.get("mode") == "daily":
+        date = data.get("date")
+        if not isinstance(date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+            errors.append(f"{name}: daily vector requires date YYYY-MM-DD")
+        elif isinstance(seed, int):
+            year, month, day = (int(part) for part in date.split("-"))
+            expected_seed = daily_seed(identity["replay_schema"], year, month, day)
+            if expected_seed != seed:
+                errors.append(
+                    f"{name}: seed {seed} != daily_seed({date}) = {expected_seed} (cross-language check)"
+                )
 
     expected = data.get("expected")
     if not isinstance(expected, dict):
-        fail(errors, f"{name}: expected block missing")
+        errors.append(f"{name}: expected block missing")
         return
     for field, kind in EXPECTED_FIELDS.items():
         if not isinstance(expected.get(field), kind):
-            fail(errors, f"{name}: expected.{field} must be {kind.__name__}")
-    final_tick = expected.get("final_tick", 0)
-    state_hash = expected.get("state_hash", "")
-    if not (isinstance(state_hash, str) and state_hash.startswith("0x") and len(state_hash) == 18):
-        fail(errors, f"{name}: expected.state_hash must look like 0x<16 hex digits>")
+            errors.append(f"{name}: expected.{field} must be {kind.__name__}")
+    if expected.get("status") not in STATUSES:
+        errors.append(f"{name}: expected.status must be one of {sorted(STATUSES)}")
+    if expected.get("terminal_reason") not in REASONS:
+        errors.append(f"{name}: expected.terminal_reason invalid")
+    if expected.get("grade") not in GRADES:
+        errors.append(f"{name}: expected.grade invalid")
     if expected.get("boundary") not in {"SEALED", "BREACHED", "HOLDING"}:
-        fail(errors, f"{name}: expected.boundary must be SEALED|BREACHED|HOLDING")
-    if expected.get("status") not in {"victory", "defeat", "running"}:
-        fail(errors, f"{name}: expected.status must be victory|defeat|running")
+        errors.append(f"{name}: expected.boundary invalid")
+    state_hash = expected.get("state_hash", "")
+    if not (isinstance(state_hash, str) and re.fullmatch(r"0x[0-9a-f]{16}", state_hash)):
+        errors.append(f"{name}: expected.state_hash must be 0x + 16 lowercase hex digits")
 
-    actions = data.get("actions")
-    if not isinstance(actions, list):
-        fail(errors, f"{name}: actions must be a list")
+    inputs = data.get("inputs")
+    if not isinstance(inputs, list):
+        errors.append(f"{name}: inputs must be a list")
         return
     last_tick = 0
-    for index, action in enumerate(actions):
-        where = f"{name}: actions[{index}]"
-        if not isinstance(action, dict):
-            fail(errors, f"{where} must be an object")
+    terminal_tick = expected.get("terminal_tick", 0)
+    for index, item in enumerate(inputs):
+        where = f"{name}: inputs[{index}]"
+        if not isinstance(item, dict):
+            errors.append(f"{where} must be an object")
             continue
-        tick = action.get("tick")
-        if not isinstance(tick, int) or tick < 1:
-            fail(errors, f"{where}.tick must be an integer >= 1")
-            continue
-        if tick <= last_tick:
-            fail(errors, f"{where}.tick must be strictly increasing")
-        if isinstance(final_tick, int) and tick > final_tick:
-            fail(errors, f"{where}.tick is past expected.final_tick")
-        lane = action.get("lane")
+        tick = item.get("tick")
+        if not isinstance(tick, int) or tick < 1 or tick <= last_tick:
+            errors.append(f"{where}.tick must be strictly increasing and >= 1")
+        elif isinstance(terminal_tick, int) and tick > terminal_tick:
+            errors.append(f"{where}.tick is past terminal_tick")
+        lane = item.get("lane")
         if not isinstance(lane, int) or not 0 <= lane <= 4:
-            fail(errors, f"{where}.lane must be 0..4")
-        if action.get("action") not in ACTIONS:
-            fail(errors, f"{where}.action must be one of {sorted(ACTIONS)}")
-        last_tick = tick
+            errors.append(f"{where}.lane must be 0..4")
+        if item.get("action") not in ACTIONS:
+            errors.append(f"{where}.action invalid")
+        if isinstance(tick, int):
+            last_tick = tick
 
 
 def validate_checksums(paths: list[Path], errors: list[str]) -> None:
-    checks = VECTORS / "checksums.txt"
+    checks = VECTORS / "checksums.sha256"
     if not checks.exists():
-        fail(errors, "vectors/checksums.txt is missing")
+        errors.append("vectors/checksums.sha256 is missing")
         return
     listed: dict[str, str] = {}
     for line in checks.read_text(encoding="utf-8").splitlines():
@@ -117,27 +190,30 @@ def validate_checksums(paths: list[Path], errors: list[str]) -> None:
         try:
             digest, name = line.split(None, 1)
         except ValueError:
-            fail(errors, f"checksums.txt: malformed line {line!r}")
+            errors.append(f"checksums.sha256: malformed line {line!r}")
             continue
         listed[name.strip()] = digest.lower()
     for path in paths:
-        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
         recorded = listed.pop(path.name, None)
         if recorded is None:
-            fail(errors, f"checksums.txt: missing entry for {path.name}")
-        elif recorded != actual:
-            fail(errors, f"checksums.txt: digest mismatch for {path.name}")
+            errors.append(f"checksums.sha256: missing entry for {path.name}")
+        elif recorded != digest:
+            errors.append(f"checksums.sha256: digest mismatch for {path.name}")
     for orphan in listed:
-        fail(errors, f"checksums.txt: lists {orphan}, but the file is absent")
+        errors.append(f"checksums.sha256: lists {orphan}, but the file is absent")
 
 
 def main() -> int:
+    identity = manifest()
     vectors = sorted(VECTORS.glob("*.json"))
     errors: list[str] = []
-    if not vectors:
-        errors.append("no replay vectors found in vectors/")
+    names = {path.name for path in vectors}
+    for required in REQUIRED_VECTORS:
+        if required not in names:
+            errors.append(f"required vector missing: {required}")
     for path in vectors:
-        validate_vector(path, errors)
+        validate_vector(path, identity, errors)
     validate_checksums(vectors, errors)
 
     if errors:
@@ -145,7 +221,10 @@ def main() -> int:
         for error in errors:
             print(f"  - {error}")
         return 1
-    print(f"Replay vectors OK ({len(vectors)} file(s), schema {SCHEMA}).")
+    print(
+        f"Replay vectors OK ({len(vectors)} file(s), schema {identity['replay_schema']}, "
+        "daily seed cross-checked in Python)."
+    )
     return 0
 
 

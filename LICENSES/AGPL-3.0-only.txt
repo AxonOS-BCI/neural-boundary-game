@@ -1,0 +1,8 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+[Full text available at: https://www.gnu.org/licenses/agpl-3.0.txt]
+
+The complete AGPL-3.0 licence text must be included in distributions.
+This stub will be replaced with the full text before release.
+TODO-RELEASE: replace with complete AGPL-3.0 text from gnu.org
