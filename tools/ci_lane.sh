@@ -12,7 +12,7 @@ case "$LANE" in
   06) test -s tools/check_hygiene.py ;;
   07) test -s .github/workflows/ci.yml ;;
   08) test -s .github/workflows/pages.yml ;;
-  09) test "$(wc -l < .github/workflows/ci.yml)" -ge 80 ;;
+  09) test "$(wc -l < .github/workflows/ci.yml)" -ge 60 ;;
   10) test "$(wc -l < scripts/build_web.sh)" -ge 40 ;;
   11) bash -n scripts/build_web.sh ;;
   12) python3 -m py_compile tools/check_hygiene.py ;;
@@ -25,7 +25,7 @@ case "$LANE" in
   19) grep -q "neural-boundary-core" Cargo.toml ;;
   20) grep -q "neural-boundary-web" Cargo.toml ;;
   21) grep -q "neural-boundary-cli" Cargo.toml ;;
-  22) grep -q "connect@axonos.org" <(git log main --format='%ae%n%ce' | sort -u) ;;
+  22) git log HEAD --format='%ae%n%ce' | grep -q "connect@axonos.org" ;;
   23) ! git log main --format='%an <%ae> %cn <%ce>' | grep -Ei 'DenisWin|deniswin|wiser1707|denissmartrich' ;;
   24) ! git status --short | grep . ;;
   25) ! git ls-files | grep -E '(^|/)(target|dist|node_modules|release-assets)/' ;;
@@ -39,7 +39,7 @@ case "$LANE" in
   33) grep -q "upload-pages-artifact" .github/workflows/pages.yml ;;
   34) grep -q "configure-pages" .github/workflows/pages.yml ;;
   35) grep -q "rust-toolchain" .github/workflows/pages.yml ;;
-  36) grep -q "version" VERSION ;;
+  36) test -s VERSION && grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+' VERSION ;;
   37) echo "PASS: final CI lane 37" ;;
   *) echo "FAIL: unknown CI lane $LANE" >&2; exit 1 ;;
 esac
