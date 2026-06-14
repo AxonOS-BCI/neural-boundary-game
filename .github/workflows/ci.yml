@@ -52,4 +52,5 @@ jobs:
           fi
 
       - name: Check JavaScript syntax
-        run: node --check web/app.js
+        run: |
+          node --check web/app.js
