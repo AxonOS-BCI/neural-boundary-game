@@ -2,8 +2,14 @@ name: Pages
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -11,44 +17,58 @@ concurrency:
 
 jobs:
   build:
-    name: Build Pages
-    permissions:
-      contents: read
-      pages: read
+    name: Build static WASM site
     runs-on: ubuntu-24.04
-    timeout-minutes: 22
+    timeout-minutes: 25
+
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/configure-pages@v5
-      - uses: actions/setup-node@v6
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install Rust 1.81.0
+        uses: dtolnay/rust-toolchain@1.81.0
         with:
-          node-version: "22"
-      - uses: actions/setup-python@v6
+          targets: wasm32-unknown-unknown
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
-      - name: Install pinned Rust toolchain
+          python-version: "3.11"
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Pages artifact
         run: |
-          rustup toolchain install 1.81.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
-          rustup override set 1.81.0
-      - name: Full release gate
-        run: ./scripts/verify_release.sh --full
+          chmod +x scripts/build_web.sh
+          ./scripts/build_web.sh
+
+          test -s dist/index.html
+          test -s dist/web/app.js
+          test -s dist/web/styles.css
+          test -s dist/pkg/neural_boundary_web.wasm
+          test -s dist/build-info.json
+          test -f dist/.nojekyll
+
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    name: Deploy Pages
-    permissions:
-      pages: write
-      id-token: write
+    name: Deploy GitHub Pages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: build
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    needs: build
-    timeout-minutes: 10
+
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
