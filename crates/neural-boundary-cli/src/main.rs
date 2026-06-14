@@ -1,63 +1,58 @@
-//! neural-boundary-cli — replay verifier and conformance toolkit for the
-//! Neural Boundary Game v3.0.1 (Sovereign Boundary Edition).
+// SPDX-FileCopyrightText: 2026 Denis Yermakou
+// SPDX-FileContributor: AxonOS
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+//! neural-boundary-cli — replay verifier and conformance toolkit.
 //!
-//! Commands: `version`, `schema`, `verify <path>`, `verify-all`, `record`,
-//! `trace <path>`, `search`.
-//!
-//! Exit-code contract (documented in `docs/REPLAY_SPEC.md`):
-//! `0` success · `2` invalid CLI usage · `3` malformed replay/schema
-//! structure · `4` version or compatibility mismatch · `5` deterministic
-//! state/hash mismatch · `6` checksum mismatch · `7` internal invariant
-//! failure.
+//! Schema: neural-boundary-replay-v5.5.12 · Exit codes: 0 ok | 2 usage |
+//! 3 malformed | 4 compatibility | 5 hash mismatch | 6 checksum fail | 7 internal
 
 mod bot;
 
-use bot::{Policy, RecordedInput, RunSummary, SearchGoal};
+use bot::{Policy, RecordedInput, RunSummary};
 use neural_boundary_core::{
-    daily_seed, Action, Difficulty, Grade, RunMode, Simulation, SimulationConfig, Status,
-    TerminalReason, CORE_VERSION, HASH_ALGORITHM, LANES, REPLAY_SCHEMA, TICKS_PER_SECOND,
+    daily_seed, Action, Difficulty, EvidenceLevel, Grade, Mode, Status, TerminalReason,
+    ABI_VERSION, ALL_GATES_MASK, CORE_VERSION, HASH_ALGORITHM, LANES, REPLAY_SCHEMA, RNG_ALGORITHM,
+    TICKS_PER_SECOND,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{env, fs, path::Path, path::PathBuf, process};
 
-const EXIT_OK: i32 = 0;
-const EXIT_USAGE: i32 = 2;
-const EXIT_MALFORMED: i32 = 3;
-const EXIT_COMPAT: i32 = 4;
-const EXIT_STATE_MISMATCH: i32 = 5;
-const EXIT_CHECKSUM: i32 = 6;
-#[allow(dead_code)]
-const EXIT_INTERNAL: i32 = 7;
+// Exit codes
+const OK: i32 = 0;
+const USAGE: i32 = 2;
+const MALFORMED: i32 = 3;
+const COMPAT: i32 = 4;
+const STATE: i32 = 5;
+const CHECKSUM: i32 = 6;
 
 const VECTOR_DIR: &str = "vectors";
 const CHECKSUM_FILE: &str = "vectors/checksums.sha256";
-const DEFAULT_MAX_TICKS: u32 = 12_000;
+const MAX_TICKS: u32 = 14_400;
 
-// ---------------------------------------------------------------------------
-// Replay schema (serde)
-// ---------------------------------------------------------------------------
+// ── Replay schema (§24) ─────────────────────────────────────────────────────
 
-/// Unknown top-level and nested fields are ignored for forward
-/// compatibility; missing required fields are malformed (exit 3).
 #[derive(Debug, Serialize, Deserialize)]
 struct ReplayFile {
     schema: String,
     product_version: String,
     core_version: String,
+    abi_version: u32,
     hash_algorithm: String,
-    title: String,
-    generated_by: String,
-    seed: u64,
+    rng_algorithm: String,
+    tick_rate_hz: u32,
     mode: String,
-    difficulty: String,
-    tick_rate: u32,
+    difficulty: u8,
+    /// Lowercase 16 hex digits (no 0x prefix) — §24.4
+    seed: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     date: Option<String>,
-    inputs: Vec<InputEntry>,
-    expected: Expected,
+    title: String,
+    generated_by: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     summary: Option<String>,
+    inputs: Vec<InputEntry>,
+    expected: Expected,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -72,25 +67,26 @@ struct Expected {
     terminal_tick: u32,
     status: String,
     terminal_reason: String,
-    boundary: String,
     grade: String,
     trust: i32,
     risk: i32,
     integrity: i32,
     evidence_level: String,
-    evidence_points: u8,
+    evidence_bits: u8,
+    gate_mask: u8,
     gates_passed: u8,
     raw_leaks: u8,
-    delivered: u8,
-    score: u32,
-    best_streak: u32,
-    revocations: u8,
+    typed_intents: u8,
+    quarantined: u32,
+    wrong_actions: u32,
+    score: u64,
+    best_combo: u32,
+    revocations: u32,
+    /// "0x" + 16 lowercase hex digits
     state_hash: String,
 }
 
-// ---------------------------------------------------------------------------
-// Entry point
-// ---------------------------------------------------------------------------
+// ── Entry point ─────────────────────────────────────────────────────────────
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -100,38 +96,39 @@ fn main() {
                 "neural-boundary-cli {} (core {CORE_VERSION})",
                 env!("CARGO_PKG_VERSION")
             );
-            EXIT_OK
+            OK
         }
         Some("schema") => {
             println!("{REPLAY_SCHEMA}");
-            println!("hash-algorithm: {HASH_ALGORITHM}");
-            EXIT_OK
+            println!("hash: {HASH_ALGORITHM}");
+            println!("rng: {RNG_ALGORITHM}");
+            println!("abi_version: {ABI_VERSION}");
+            OK
         }
         Some("verify") => match args.get(1) {
-            Some(path) => cmd_verify(Path::new(path), true).code,
+            Some(p) => verify_cmd(Path::new(p), true).0,
             None => {
-                eprintln!("verify requires a vector path");
-                EXIT_USAGE
+                eprintln!("verify requires a path");
+                USAGE
             }
         },
-        Some("verify-all") => cmd_verify_all(),
-        Some("record") => cmd_record(&args[1..]),
+        Some("verify-all") => verify_all_cmd(),
+        Some("record") => record_cmd(&args[1..]),
         Some("trace") => match args.get(1) {
-            Some(path) => cmd_trace(Path::new(path)),
+            Some(p) => trace_cmd(Path::new(p)),
             None => {
-                eprintln!("trace requires a vector path");
-                EXIT_USAGE
+                eprintln!("trace requires a path");
+                USAGE
             }
         },
-        Some("search") => cmd_search(&args[1..]),
+        Some("search") => search_cmd(&args[1..]),
         Some("--help") | Some("-h") | Some("help") | None => {
             print_usage();
-            EXIT_OK
+            OK
         }
         Some(other) => {
             eprintln!("unknown subcommand: {other}");
-            print_usage();
-            EXIT_USAGE
+            USAGE
         }
     };
     process::exit(code);
@@ -139,166 +136,150 @@ fn main() {
 
 fn print_usage() {
     println!("neural-boundary-cli {}", env!("CARGO_PKG_VERSION"));
-    println!("Replay verifier and conformance toolkit for the Neural Boundary Game.\n");
+    println!("Neural Boundary Game v5.5.12 conformance toolkit\n");
     println!("USAGE:");
-    println!("  neural-boundary-cli version");
-    println!("  neural-boundary-cli schema");
-    println!("  neural-boundary-cli verify <path>");
-    println!("  neural-boundary-cli verify-all");
-    println!("  neural-boundary-cli record --seed N --mode M [--difficulty D]");
-    println!("      [--policy clean|idle|lapse] [--date YYYY-MM-DD] [--max-ticks N]");
-    println!("      [--title S] [--summary S] --out PATH");
-    println!("  neural-boundary-cli trace <path>");
-    println!("  neural-boundary-cli search --mode M --want REASON [--policy P]");
-    println!("      [--difficulty D] [--from A] [--to B] [--target T,R,I]");
-    println!("      [--min-revocations N] [--max-ticks N]\n");
-    println!("EXIT CODES: 0 ok · 2 usage · 3 malformed · 4 compatibility ·");
-    println!("            5 state mismatch · 6 checksum mismatch · 7 internal");
+    println!("  version | schema | verify <path> | verify-all");
+    println!("  record --seed HEXSEED --mode MODE --difficulty 0|1|2 [--policy P]");
+    println!("         [--date YYYY-MM-DD] [--title S] [--out PATH]");
+    println!("  trace <path>");
+    println!("  search --mode M --want REASON [--from N] [--to N] [--policy P]");
+    println!("         [--difficulty D] [--min-revocations N]\n");
+    println!("EXIT: 0 ok  2 usage  3 malformed  4 compat  5 hash  6 checksum  7 internal");
 }
 
-// ---------------------------------------------------------------------------
-// verify
-// ---------------------------------------------------------------------------
+// ── verify ──────────────────────────────────────────────────────────────────
 
-struct VerifyOutcome {
-    code: i32,
-}
-
-fn cmd_verify(path: &Path, print_block: bool) -> VerifyOutcome {
-    let raw = match fs::read_to_string(path) {
-        Ok(raw) => raw,
-        Err(error) => {
-            eprintln!("failed to read {}: {error}", path.display());
-            return VerifyOutcome { code: EXIT_USAGE };
+fn verify_cmd(path: &Path, print: bool) -> (i32, Option<RunSummary>) {
+    let text = match fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{}: {e}", path.display());
+            return (USAGE, None);
         }
     };
-    let replay: ReplayFile = match serde_json::from_str(&raw) {
-        Ok(replay) => replay,
-        Err(error) => {
-            eprintln!("malformed replay {}: {error}", path.display());
-            return VerifyOutcome {
-                code: EXIT_MALFORMED,
-            };
+    let replay: ReplayFile = match serde_json::from_str(&text) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{}: malformed: {e}", path.display());
+            return (MALFORMED, None);
         }
     };
 
-    // Compatibility gates (exit 4).
-    if replay.schema != REPLAY_SCHEMA {
+    // Compatibility gates (→ exit 4)
+    for (field, expected, got) in [
+        ("schema", REPLAY_SCHEMA, replay.schema.as_str()),
+        (
+            "hash_algorithm",
+            HASH_ALGORITHM,
+            replay.hash_algorithm.as_str(),
+        ),
+        (
+            "rng_algorithm",
+            RNG_ALGORITHM,
+            replay.rng_algorithm.as_str(),
+        ),
+        ("core_version", CORE_VERSION, replay.core_version.as_str()),
+    ] {
+        if got != expected {
+            eprintln!("{}: {field} {:?} != {expected:?}", path.display(), got);
+            return (COMPAT, None);
+        }
+    }
+    if replay.abi_version != ABI_VERSION {
         eprintln!(
-            "{}: schema {:?} is not {REPLAY_SCHEMA:?}",
+            "{}: abi_version {} != {ABI_VERSION}",
             path.display(),
-            replay.schema
+            replay.abi_version
         );
-        return VerifyOutcome { code: EXIT_COMPAT };
+        return (COMPAT, None);
     }
-    if replay.hash_algorithm != HASH_ALGORITHM {
-        eprintln!(
-            "{}: hash algorithm {:?} is not {HASH_ALGORITHM:?}",
-            path.display(),
-            replay.hash_algorithm
-        );
-        return VerifyOutcome { code: EXIT_COMPAT };
+    if replay.tick_rate_hz != TICKS_PER_SECOND {
+        eprintln!("{}: tick_rate_hz mismatch", path.display());
+        return (COMPAT, None);
     }
-    if replay.core_version != CORE_VERSION {
-        eprintln!(
-            "{}: core version {:?} is not {CORE_VERSION:?}",
-            path.display(),
-            replay.core_version
-        );
-        return VerifyOutcome { code: EXIT_COMPAT };
-    }
-    if replay.tick_rate != TICKS_PER_SECOND {
-        eprintln!("{}: tick rate mismatch", path.display());
-        return VerifyOutcome { code: EXIT_COMPAT };
-    }
-    let Some(mode) = RunMode::from_name(&replay.mode) else {
+
+    // Parse mode and difficulty
+    let Some(mode) = Mode::from_name(&replay.mode) else {
         eprintln!("{}: unknown mode {:?}", path.display(), replay.mode);
-        return VerifyOutcome {
-            code: EXIT_MALFORMED,
-        };
+        return (MALFORMED, None);
     };
-    let Some(difficulty) = Difficulty::from_name(&replay.difficulty) else {
+    let Some(difficulty) = Difficulty::from_u8(replay.difficulty) else {
         eprintln!(
-            "{}: unknown difficulty {:?}",
+            "{}: difficulty out of range {}",
             path.display(),
             replay.difficulty
         );
-        return VerifyOutcome {
-            code: EXIT_MALFORMED,
-        };
+        return (MALFORMED, None);
     };
-    if mode == RunMode::Daily {
+
+    // Parse seed — hex string (no 0x prefix)
+    let seed = match u64::from_str_radix(&replay.seed, 16) {
+        Ok(s) => s,
+        Err(_) => {
+            eprintln!("{}: seed must be 16 hex digits", path.display());
+            return (MALFORMED, None);
+        }
+    };
+
+    // Daily seed verification
+    if mode == Mode::Daily {
         let Some(date) = replay.date.as_deref() else {
-            eprintln!("{}: daily replay requires a date field", path.display());
-            return VerifyOutcome {
-                code: EXIT_MALFORMED,
-            };
+            eprintln!("{}: daily requires date field", path.display());
+            return (MALFORMED, None);
         };
         match parse_date(date) {
-            Some((year, month, day)) => {
-                let expected_seed = daily_seed(year, month, day);
-                if expected_seed != replay.seed {
+            Some((y, m, d)) => {
+                let expected_seed = daily_seed(y, m, d);
+                if seed != expected_seed {
                     eprintln!(
-                        "{}: seed {} does not match daily_seed({date}) = {expected_seed}",
-                        path.display(),
-                        replay.seed
+                        "{}: seed {seed:016x} != daily_seed({date}) = {expected_seed:016x}",
+                        path.display()
                     );
-                    return VerifyOutcome { code: EXIT_COMPAT };
+                    return (COMPAT, None);
                 }
             }
             None => {
                 eprintln!("{}: invalid date {date:?}", path.display());
-                return VerifyOutcome {
-                    code: EXIT_MALFORMED,
-                };
+                return (MALFORMED, None);
             }
         }
     }
 
-    // Structural validation of the input script (exit 3).
-    let mut inputs = Vec::with_capacity(replay.inputs.len());
+    // Parse and validate input list
+    let mut inputs: Vec<RecordedInput> = Vec::new();
     let mut last_tick = 0u32;
-    for entry in &replay.inputs {
+    let terminal_tick = replay.expected.terminal_tick;
+    for (i, entry) in replay.inputs.iter().enumerate() {
         if entry.tick == 0 || entry.tick <= last_tick {
             eprintln!(
-                "{}: input ticks must be strictly increasing (tick {})",
-                path.display(),
-                entry.tick
+                "{}: inputs[{i}].tick must be strictly increasing ≥1",
+                path.display()
             );
-            return VerifyOutcome {
-                code: EXIT_MALFORMED,
-            };
+            return (MALFORMED, None);
         }
-        if entry.tick > replay.expected.terminal_tick {
+        if entry.tick > terminal_tick + 600 {
             eprintln!(
-                "{}: input at tick {} is past terminal_tick",
+                "{}: inputs[{i}].tick {} beyond terminal_tick+600",
                 path.display(),
                 entry.tick
             );
-            return VerifyOutcome {
-                code: EXIT_MALFORMED,
-            };
+            return (MALFORMED, None);
         }
         if entry.lane >= LANES {
             eprintln!(
-                "{}: lane out of range at tick {}",
+                "{}: inputs[{i}].lane {} ≥ {LANES}",
                 path.display(),
-                entry.tick
+                entry.lane
             );
-            return VerifyOutcome {
-                code: EXIT_MALFORMED,
-            };
+            return (MALFORMED, None);
         }
         let Some(action) = Action::from_name(&entry.action) else {
             eprintln!(
-                "{}: unknown action {:?} at tick {}",
+                "{}: inputs[{i}].action {:?} unknown",
                 path.display(),
-                entry.action,
-                entry.tick
+                entry.action
             );
-            return VerifyOutcome {
-                code: EXIT_MALFORMED,
-            };
+            return (MALFORMED, None);
         };
         inputs.push(RecordedInput {
             tick: entry.tick,
@@ -307,199 +288,234 @@ fn cmd_verify(path: &Path, print_block: bool) -> VerifyOutcome {
         });
         last_tick = entry.tick;
     }
+
     if TerminalReason::from_schema_str(&replay.expected.terminal_reason).is_none() {
-        eprintln!(
-            "{}: unknown terminal_reason {:?}",
-            path.display(),
-            replay.expected.terminal_reason
-        );
-        return VerifyOutcome {
-            code: EXIT_MALFORMED,
-        };
+        eprintln!("{}: unknown terminal_reason", path.display());
+        return (MALFORMED, None);
     }
 
-    // Deterministic re-execution (exit 5 on any divergence).
-    let config = SimulationConfig {
-        seed: replay.seed,
-        mode,
-        difficulty,
-    };
-    let summary = bot::replay_script(config, &inputs, replay.expected.terminal_tick);
+    // Deterministic re-execution
+    let summary = bot::replay_script(mode, difficulty, seed, &inputs, terminal_tick + 600);
 
-    let mut mismatches = Vec::new();
-    compare(
+    let grade = compute_grade(&summary);
+    let hash_got = format!("0x{:016x}", summary.state_hash);
+
+    let mut mismatches: Vec<String> = Vec::new();
+    cmp_u32(
         &mut mismatches,
         "terminal_tick",
         replay.expected.terminal_tick,
         summary.terminal_tick,
     );
-    compare(
+    cmp_str(
         &mut mismatches,
         "status",
-        replay.expected.status.as_str(),
+        &replay.expected.status,
         summary.status.as_str(),
     );
-    let actual_reason = match summary.status {
-        Status::Terminal(reason) => reason.schema_str(),
-        Status::Running => "running",
-    };
-    compare(
+    cmp_str(
         &mut mismatches,
         "terminal_reason",
-        replay.expected.terminal_reason.as_str(),
-        actual_reason,
+        &replay.expected.terminal_reason,
+        summary.reason.as_str(),
     );
-    compare(
-        &mut mismatches,
-        "boundary",
-        replay.expected.boundary.as_str(),
-        summary.status.boundary(),
-    );
-    compare(
+    cmp_str(
         &mut mismatches,
         "grade",
-        replay.expected.grade.as_str(),
-        summary.grade.name(),
+        &replay.expected.grade,
+        grade.name(),
     );
-    compare(
+    cmp_i32(
         &mut mismatches,
         "trust",
         replay.expected.trust,
         summary.trust,
     );
-    compare(&mut mismatches, "risk", replay.expected.risk, summary.risk);
-    compare(
+    cmp_i32(&mut mismatches, "risk", replay.expected.risk, summary.risk);
+    cmp_i32(
         &mut mismatches,
         "integrity",
         replay.expected.integrity,
         summary.integrity,
     );
-    compare(
+    cmp_str(
         &mut mismatches,
         "evidence_level",
-        replay.expected.evidence_level.as_str(),
-        summary.evidence_level.as_str(),
+        &replay.expected.evidence_level,
+        EvidenceLevel::from_bits(summary.evidence_bits).as_str(),
     );
-    compare(
+    cmp_u8(
         &mut mismatches,
-        "evidence_points",
-        replay.expected.evidence_points,
-        summary.evidence_points,
+        "evidence_bits",
+        replay.expected.evidence_bits,
+        summary.evidence_bits,
     );
-    compare(
+    cmp_u8(
+        &mut mismatches,
+        "gate_mask",
+        replay.expected.gate_mask,
+        summary.gate_mask,
+    );
+    cmp_u8(
         &mut mismatches,
         "gates_passed",
         replay.expected.gates_passed,
-        summary.gates_passed,
+        summary.gate_mask.count_ones() as u8,
     );
-    compare(
+    cmp_u8(
         &mut mismatches,
         "raw_leaks",
         replay.expected.raw_leaks,
         summary.raw_leaks,
     );
-    compare(
+    cmp_u8(
         &mut mismatches,
-        "delivered",
-        replay.expected.delivered,
-        summary.delivered,
+        "typed_intents",
+        replay.expected.typed_intents,
+        summary.typed_intents,
     );
-    compare(
+    cmp_u32(
+        &mut mismatches,
+        "quarantined",
+        replay.expected.quarantined,
+        summary.quarantined,
+    );
+    cmp_u32(
+        &mut mismatches,
+        "wrong_actions",
+        replay.expected.wrong_actions,
+        summary.wrong_actions,
+    );
+    cmp_u64(
         &mut mismatches,
         "score",
         replay.expected.score,
         summary.score,
     );
-    compare(
+    cmp_u32(
         &mut mismatches,
-        "best_streak",
-        replay.expected.best_streak,
-        summary.best_streak,
+        "best_combo",
+        replay.expected.best_combo,
+        summary.best_combo,
     );
-    compare(
-        &mut mismatches,
-        "revocations",
-        replay.expected.revocations,
-        summary.revocations,
-    );
-    compare(
+    cmp_str(
         &mut mismatches,
         "state_hash",
-        replay.expected.state_hash.to_ascii_lowercase().as_str(),
-        format!("0x{:016x}", summary.state_hash).as_str(),
+        &replay.expected.state_hash.to_lowercase(),
+        &hash_got.to_lowercase(),
     );
 
     if mismatches.is_empty() {
-        if print_block {
-            print_verify_block(&replay, &summary);
+        if print {
+            println!(
+                "Replay OK  {}",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            );
+            println!(
+                "  Grade {}  Status {}  Tick {}  Score {}  Hash {}",
+                grade.name(),
+                summary.status.as_str(),
+                summary.terminal_tick,
+                summary.score,
+                hash_got
+            );
         }
-        VerifyOutcome { code: EXIT_OK }
+        (OK, Some(summary))
     } else {
-        eprintln!("Replay FAILED ({})", path.display());
-        for line in mismatches {
-            eprintln!("  {line}");
+        eprintln!("Replay FAIL  {}:", path.display());
+        for m in &mismatches {
+            eprintln!("  {m}");
         }
-        VerifyOutcome {
-            code: EXIT_STATE_MISMATCH,
+        (STATE, None)
+    }
+}
+
+fn cmp_str(out: &mut Vec<String>, f: &str, e: &str, g: &str) {
+    if e.to_lowercase() != g.to_lowercase() {
+        out.push(format!("{f}: expected {e:?} got {g:?}"));
+    }
+}
+fn cmp_i32(out: &mut Vec<String>, f: &str, e: i32, g: i32) {
+    if e != g {
+        out.push(format!("{f}: expected {e} got {g}"));
+    }
+}
+fn cmp_u8(out: &mut Vec<String>, f: &str, e: u8, g: u8) {
+    if e != g {
+        out.push(format!("{f}: expected {e} got {g}"));
+    }
+}
+fn cmp_u32(out: &mut Vec<String>, f: &str, e: u32, g: u32) {
+    if e != g {
+        out.push(format!("{f}: expected {e} got {g}"));
+    }
+}
+fn cmp_u64(out: &mut Vec<String>, f: &str, e: u64, g: u64) {
+    if e != g {
+        out.push(format!("{f}: expected {e} got {g}"));
+    }
+}
+
+fn compute_grade(s: &RunSummary) -> Grade {
+    use neural_boundary_core::EvidenceLevel;
+    match s.status {
+        Status::Unsafe => Grade::Unsafe,
+        Status::Breached => Grade::Breached,
+        Status::Sealed => {
+            let gates = s.gate_mask == ALL_GATES_MASK;
+            if gates
+                && s.trust >= 900
+                && s.risk <= 100
+                && s.integrity >= 900
+                && EvidenceLevel::from_bits(s.evidence_bits) == EvidenceLevel::L3
+                && s.raw_leaks == 0
+                && s.wrong_actions == 0
+            {
+                Grade::Sovereign
+            } else if gates
+                && s.trust >= 750
+                && s.risk <= 250
+                && s.integrity >= 750
+                && s.raw_leaks == 0
+            {
+                Grade::Sealed
+            } else {
+                Grade::Reviewable
+            }
+        }
+        _ => {
+            let p = s.gate_mask.count_ones() as u8;
+            if p >= 5 && s.integrity >= 650 && s.risk <= 450 {
+                Grade::Reviewable
+            } else if p >= 3 && s.integrity > 0 && s.risk < 1000 {
+                Grade::Degraded
+            } else {
+                Grade::Breached
+            }
         }
     }
 }
 
-fn print_verify_block(replay: &ReplayFile, summary: &RunSummary) {
-    println!("Replay OK");
-    println!("Mode: {} ({})", replay.mode, replay.difficulty);
-    println!(
-        "Terminal: {} at tick {}",
-        replay.expected.terminal_reason, summary.terminal_tick
-    );
-    println!("Grade: {}", summary.grade.name());
-    println!(
-        "Trust {} | Risk {} | Integrity {} | Evidence {} | Gates {}/5 | Leaks {} | Score {}",
-        summary.trust,
-        summary.risk,
-        summary.integrity,
-        summary.evidence_level.as_str(),
-        summary.gates_passed,
-        summary.raw_leaks,
-        summary.score
-    );
-    println!("Boundary status: {}", summary.status.boundary());
-    println!("State hash: 0x{:016x}", summary.state_hash);
-}
-
-fn compare<T: PartialEq + std::fmt::Display>(
-    out: &mut Vec<String>,
-    field: &str,
-    expected: T,
-    actual: T,
-) {
-    if expected != actual {
-        out.push(format!("{field}: expected {expected}, got {actual}"));
-    }
-}
-
-fn parse_date(date: &str) -> Option<(u16, u8, u8)> {
-    let mut parts = date.split('-');
-    let year: u16 = parts.next()?.parse().ok()?;
-    let month: u8 = parts.next()?.parse().ok()?;
-    let day: u8 = parts.next()?.parse().ok()?;
-    if parts.next().is_some() || !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+fn parse_date(s: &str) -> Option<(u16, u8, u8)> {
+    let mut parts = s.split('-');
+    let y: u16 = parts.next()?.parse().ok()?;
+    let m: u8 = parts.next()?.parse().ok()?;
+    let d: u8 = parts.next()?.parse().ok()?;
+    if parts.next().is_some() || !(1..=12).contains(&m) || !(1..=31).contains(&d) {
         return None;
     }
-    Some((year, month, day))
+    Some((y, m, d))
 }
 
-// ---------------------------------------------------------------------------
-// verify-all
-// ---------------------------------------------------------------------------
+// ── verify-all ──────────────────────────────────────────────────────────────
 
-fn cmd_verify_all() -> i32 {
-    // 1. File integrity: SHA-256 checksums, verified in Rust.
+fn verify_all_cmd() -> i32 {
+    // 1. Checksum verification
     let checksum_text = match fs::read_to_string(CHECKSUM_FILE) {
-        Ok(text) => text,
-        Err(error) => {
-            eprintln!("failed to read {CHECKSUM_FILE}: {error}");
-            return EXIT_CHECKSUM;
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("cannot read {CHECKSUM_FILE}: {e}");
+            return CHECKSUM;
         }
     };
     let mut listed: Vec<(String, String)> = Vec::new();
@@ -509,399 +525,356 @@ fn cmd_verify_all() -> i32 {
             continue;
         }
         let Some((digest, name)) = line.split_once(char::is_whitespace) else {
-            eprintln!("{CHECKSUM_FILE}: malformed line {line:?}");
-            return EXIT_CHECKSUM;
+            eprintln!("{CHECKSUM_FILE}: malformed line");
+            return CHECKSUM;
         };
-        listed.push((digest.to_ascii_lowercase(), name.trim().to_string()));
+        listed.push((digest.to_lowercase(), name.trim().to_string()));
     }
-
-    let mut vector_paths: Vec<PathBuf> = match fs::read_dir(VECTOR_DIR) {
-        Ok(entries) => entries
+    let mut vectors: Vec<PathBuf> = match fs::read_dir(VECTOR_DIR) {
+        Ok(e) => e
             .flatten()
-            .map(|entry| entry.path())
-            .filter(|path| path.extension().is_some_and(|ext| ext == "json"))
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "json"))
             .collect(),
-        Err(error) => {
-            eprintln!("failed to read {VECTOR_DIR}: {error}");
-            return EXIT_USAGE;
+        Err(e) => {
+            eprintln!("{VECTOR_DIR}: {e}");
+            return USAGE;
         }
     };
-    vector_paths.sort();
+    vectors.sort();
 
-    let mut checksum_failures = 0u32;
-    for path in &vector_paths {
+    let mut bad_checksums = 0u32;
+    for path in &vectors {
         let name = path
             .file_name()
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        let bytes = match fs::read(path) {
-            Ok(bytes) => bytes,
-            Err(error) => {
-                eprintln!("failed to read {}: {error}", path.display());
-                return EXIT_CHECKSUM;
-            }
-        };
-        let digest = hex_digest(&bytes);
-        match listed.iter().find(|(_, listed_name)| *listed_name == name) {
+        let bytes = fs::read(path).unwrap_or_default();
+        let digest = format!("{:x}", Sha256::digest(&bytes));
+        match listed.iter().find(|(_, n)| *n == name) {
             None => {
-                eprintln!("checksum FAIL  {name}: missing from {CHECKSUM_FILE}");
-                checksum_failures += 1;
+                eprintln!("CHECKSUM FAIL  {name}: not in ledger");
+                bad_checksums += 1;
             }
-            Some((expected, _)) if *expected != digest => {
-                eprintln!("checksum FAIL  {name}: digest mismatch");
-                checksum_failures += 1;
+            Some((exp, _)) if *exp != digest => {
+                eprintln!("CHECKSUM FAIL  {name}: digest mismatch");
+                bad_checksums += 1;
             }
             Some(_) => println!("checksum OK    {name}"),
         }
     }
     for (_, name) in &listed {
-        if !vector_paths
+        if !vectors
             .iter()
-            .any(|path| path.file_name().unwrap_or_default().to_string_lossy() == *name)
+            .any(|p| p.file_name().unwrap_or_default().to_string_lossy() == *name)
         {
-            eprintln!("checksum FAIL  {name}: listed but absent");
-            checksum_failures += 1;
+            eprintln!("CHECKSUM FAIL  {name}: listed but missing");
+            bad_checksums += 1;
         }
     }
-    if checksum_failures > 0 {
-        eprintln!("verify-all: {checksum_failures} checksum failure(s)");
-        return EXIT_CHECKSUM;
+    if bad_checksums > 0 {
+        eprintln!("{bad_checksums} checksum failure(s)");
+        return CHECKSUM;
     }
 
-    // 2. Deterministic verification of every vector.
-    let mut worst = EXIT_OK;
-    for path in &vector_paths {
-        let outcome = cmd_verify(path, false);
+    // 2. Replay verification
+    let mut worst = OK;
+    for path in &vectors {
         let name = path.file_name().unwrap_or_default().to_string_lossy();
-        if outcome.code == EXIT_OK {
+        let (code, _) = verify_cmd(path, false);
+        if code == OK {
             println!("replay   OK    {name}");
         } else {
-            println!("replay   FAIL  {name} (exit {})", outcome.code);
-            worst = worst.max(outcome.code);
+            eprintln!("replay   FAIL  {name}  (exit {code})");
+            worst = worst.max(code);
         }
     }
-    if worst == EXIT_OK {
+    if worst == OK {
         println!(
-            "verify-all: {} vector(s) verified against {REPLAY_SCHEMA}",
-            vector_paths.len()
+            "\nverify-all OK: {} vector(s) · schema {REPLAY_SCHEMA}",
+            vectors.len()
         );
     }
     worst
 }
 
-fn hex_digest(bytes: &[u8]) -> String {
-    let digest = Sha256::digest(bytes);
-    let mut out = String::with_capacity(64);
-    for byte in digest {
-        use std::fmt::Write;
-        let _ = write!(out, "{byte:02x}");
-    }
-    out
-}
+// ── record ──────────────────────────────────────────────────────────────────
 
-// ---------------------------------------------------------------------------
-// record
-// ---------------------------------------------------------------------------
-
-fn cmd_record(args: &[String]) -> i32 {
-    let mut seed: Option<u64> = None;
-    let mut mode = RunMode::Standard;
+fn record_cmd(args: &[String]) -> i32 {
+    let mut seed_hex: Option<String> = None;
+    let mut mode = Mode::Standard;
     let mut difficulty = Difficulty::Standard;
     let mut policy = Policy::Clean;
-    let mut max_ticks = DEFAULT_MAX_TICKS;
-    let mut title = String::new();
-    let mut summary_text: Option<String> = None;
     let mut date: Option<String> = None;
+    let mut title: Option<String> = None;
+    let mut summary_txt: Option<String> = None;
     let mut out_path = String::new();
+    let mut max_ticks = MAX_TICKS;
 
     let mut iter = args.iter();
     while let Some(flag) = iter.next() {
         match flag.as_str() {
-            "--seed" => seed = Some(parse_or_exit(iter.next(), "--seed")),
-            "--mode" => mode = parse_mode(iter.next()),
-            "--difficulty" => difficulty = parse_difficulty(iter.next()),
-            "--policy" => {
-                let raw = required(iter.next(), "--policy");
-                policy = Policy::from_name(&raw).unwrap_or_else(|| {
-                    eprintln!("--policy: expected clean|idle|lapse, got {raw:?}");
-                    process::exit(EXIT_USAGE);
+            "--seed" => seed_hex = Some(req(iter.next(), "--seed")),
+            "--mode" => {
+                let raw = req(iter.next(), "--mode");
+                mode = Mode::from_name(&raw).unwrap_or_else(|| {
+                    eprintln!("unknown mode {raw:?}");
+                    process::exit(USAGE);
                 });
             }
-            "--max-ticks" => max_ticks = parse_or_exit(iter.next(), "--max-ticks"),
-            "--title" => title = required(iter.next(), "--title"),
-            "--summary" => summary_text = Some(required(iter.next(), "--summary")),
-            "--date" => date = Some(required(iter.next(), "--date")),
-            "--out" => out_path = required(iter.next(), "--out"),
+            "--difficulty" => {
+                let v: u8 = req(iter.next(), "--difficulty")
+                    .parse()
+                    .unwrap_or_else(|_| {
+                        eprintln!("difficulty must be 0|1|2");
+                        process::exit(USAGE);
+                    });
+                difficulty = Difficulty::from_u8(v).unwrap_or(Difficulty::Standard);
+            }
+            "--policy" => {
+                let raw = req(iter.next(), "--policy");
+                policy = Policy::from_name(&raw).unwrap_or_else(|| {
+                    eprintln!("unknown policy {raw:?}");
+                    process::exit(USAGE);
+                });
+            }
+            "--date" => date = Some(req(iter.next(), "--date")),
+            "--title" => title = Some(req(iter.next(), "--title")),
+            "--summary" => summary_txt = Some(req(iter.next(), "--summary")),
+            "--out" => out_path = req(iter.next(), "--out"),
+            "--max-ticks" => {
+                max_ticks = req(iter.next(), "--max-ticks").parse().unwrap_or(MAX_TICKS)
+            }
             other => {
                 eprintln!("unknown flag: {other}");
-                return EXIT_USAGE;
+                return USAGE;
             }
         }
     }
+
+    let seed = if mode == Mode::Daily {
+        let date_str = date.as_deref().unwrap_or_else(|| {
+            eprintln!("daily requires --date YYYY-MM-DD");
+            process::exit(USAGE);
+        });
+        let (y, m, d) = parse_date(date_str).unwrap_or_else(|| {
+            eprintln!("invalid date {date_str:?}");
+            process::exit(USAGE);
+        });
+        daily_seed(y, m, d)
+    } else if let Some(hex) = &seed_hex {
+        u64::from_str_radix(hex.trim_start_matches("0x"), 16).unwrap_or_else(|_| {
+            eprintln!("--seed must be hex");
+            process::exit(USAGE);
+        })
+    } else {
+        bot::mix_seed(42, 1)
+    };
+
     if out_path.is_empty() {
-        eprintln!("record requires --out PATH");
-        return EXIT_USAGE;
-    }
-    if mode == RunMode::Daily {
-        let Some(date_str) = date.as_deref() else {
-            eprintln!("daily mode requires --date YYYY-MM-DD");
-            return EXIT_USAGE;
-        };
-        let Some((year, month, day)) = parse_date(date_str) else {
-            eprintln!("--date: invalid value {date_str:?}");
-            return EXIT_USAGE;
-        };
-        seed = Some(daily_seed(year, month, day));
-    }
-    let Some(seed) = seed else {
-        eprintln!("record requires --seed (or --mode daily with --date)");
-        return EXIT_USAGE;
-    };
-
-    let config = SimulationConfig {
-        seed,
-        mode,
-        difficulty,
-    };
-    let result = bot::run_policy(config, policy, max_ticks);
-    let summary = result.summary;
-    if summary.status == Status::Running {
-        eprintln!("policy run did not terminate within {max_ticks} ticks; not writing");
-        return EXIT_USAGE;
+        eprintln!("--out required");
+        return USAGE;
     }
 
-    if title.is_empty() {
-        title = format!(
-            "{} {} run — {}",
-            mode.name(),
-            policy.name(),
-            summary.status.boundary()
-        );
+    let result = bot::run_policy(mode, difficulty, seed, policy, max_ticks);
+    let s = &result.summary;
+    if s.status == Status::Running {
+        eprintln!("run did not terminate in {max_ticks} ticks");
+        return USAGE;
     }
 
+    let grade = compute_grade(s);
     let file = ReplayFile {
         schema: REPLAY_SCHEMA.to_string(),
         product_version: env!("CARGO_PKG_VERSION").to_string(),
         core_version: CORE_VERSION.to_string(),
+        abi_version: ABI_VERSION,
         hash_algorithm: HASH_ALGORITHM.to_string(),
-        title,
-        generated_by: format!(
-            "neural-boundary-cli record --policy {} --mode {} --difficulty {} --seed {seed}",
-            policy.name(),
-            mode.name(),
-            difficulty.name()
-        ),
-        seed,
+        rng_algorithm: RNG_ALGORITHM.to_string(),
+        tick_rate_hz: TICKS_PER_SECOND,
         mode: mode.name().to_string(),
-        difficulty: difficulty.name().to_string(),
-        tick_rate: TICKS_PER_SECOND,
+        difficulty: difficulty.code(),
+        seed: format!("{seed:016x}"),
         date,
+        title: title.unwrap_or_else(|| {
+            format!(
+                "{} {} {} seed {:016x}",
+                mode.name(),
+                policy.name(),
+                s.status.as_str(),
+                seed
+            )
+        }),
+        generated_by: format!(
+            "neural-boundary-cli record --mode {} --difficulty {} --policy {} --seed {:016x}",
+            mode.name(),
+            difficulty.code(),
+            policy.name(),
+            seed
+        ),
+        summary: summary_txt,
         inputs: result
             .inputs
             .iter()
-            .map(|input| InputEntry {
-                tick: input.tick,
-                lane: input.lane,
-                action: input.action.name().to_string(),
+            .map(|i| InputEntry {
+                tick: i.tick,
+                lane: i.lane,
+                action: i.action.name().to_string(),
             })
             .collect(),
-        expected: expected_from(&summary),
-        summary: summary_text,
+        expected: Expected {
+            terminal_tick: s.terminal_tick,
+            status: s.status.as_str().to_string(),
+            terminal_reason: s.reason.as_str().to_string(),
+            grade: grade.name().to_string(),
+            trust: s.trust,
+            risk: s.risk,
+            integrity: s.integrity,
+            evidence_level: EvidenceLevel::from_bits(s.evidence_bits)
+                .as_str()
+                .to_string(),
+            evidence_bits: s.evidence_bits,
+            gate_mask: s.gate_mask,
+            gates_passed: s.gate_mask.count_ones() as u8,
+            raw_leaks: s.raw_leaks,
+            typed_intents: s.typed_intents,
+            quarantined: s.quarantined,
+            wrong_actions: s.wrong_actions,
+            score: s.score,
+            best_combo: s.best_combo,
+            revocations: s.revocations,
+            state_hash: format!("0x{:016x}", s.state_hash),
+        },
     };
 
-    let mut json = serde_json::to_string_pretty(&file).expect("serialize replay");
+    let mut json = serde_json::to_string_pretty(&file).expect("serialize");
     json.push('\n');
-    if let Err(error) = fs::write(&out_path, json) {
-        eprintln!("failed to write {out_path}: {error}");
-        return EXIT_USAGE;
+    if let Err(e) = fs::write(&out_path, json) {
+        eprintln!("write {out_path}: {e}");
+        return USAGE;
     }
-
-    println!("Recorded {} input(s) to {out_path}", file.inputs.len());
-    print_summary(&summary);
-    EXIT_OK
-}
-
-fn expected_from(summary: &RunSummary) -> Expected {
-    let reason = match summary.status {
-        Status::Terminal(reason) => reason.schema_str(),
-        Status::Running => "running",
-    };
-    Expected {
-        terminal_tick: summary.terminal_tick,
-        status: summary.status.as_str().to_string(),
-        terminal_reason: reason.to_string(),
-        boundary: summary.status.boundary().to_string(),
-        grade: summary.grade.name().to_string(),
-        trust: summary.trust,
-        risk: summary.risk,
-        integrity: summary.integrity,
-        evidence_level: summary.evidence_level.as_str().to_string(),
-        evidence_points: summary.evidence_points,
-        gates_passed: summary.gates_passed,
-        raw_leaks: summary.raw_leaks,
-        delivered: summary.delivered,
-        score: summary.score,
-        best_streak: summary.best_streak,
-        revocations: summary.revocations,
-        state_hash: format!("0x{:016x}", summary.state_hash),
-    }
-}
-
-fn print_summary(summary: &RunSummary) {
-    let reason = match summary.status {
-        Status::Terminal(reason) => reason.schema_str(),
-        Status::Running => "running",
-    };
+    println!("Recorded {} input(s) → {out_path}", file.inputs.len());
     println!(
-        "Terminal: {} at tick {} ({})",
-        reason,
-        summary.terminal_tick,
-        summary.status.boundary()
+        "Grade {}  Status {}  Tick {}  Score {}  Hash 0x{:016x}",
+        grade.name(),
+        s.status.as_str(),
+        s.terminal_tick,
+        s.score,
+        s.state_hash
     );
-    println!("Grade: {}", summary.grade.name());
-    println!(
-        "Trust {} | Risk {} | Integrity {} | Evidence {} ({} pts) | Gates {}/5 | Leaks {} | Delivered {} | Score {} | Best streak {} | Revocations {}",
-        summary.trust,
-        summary.risk,
-        summary.integrity,
-        summary.evidence_level.as_str(),
-        summary.evidence_points,
-        summary.gates_passed,
-        summary.raw_leaks,
-        summary.delivered,
-        summary.score,
-        summary.best_streak,
-        summary.revocations
-    );
-    println!("State hash: 0x{:016x}", summary.state_hash);
+    OK
 }
 
-// ---------------------------------------------------------------------------
-// trace
-// ---------------------------------------------------------------------------
+// ── trace ────────────────────────────────────────────────────────────────────
 
-fn cmd_trace(path: &Path) -> i32 {
-    let raw = match fs::read_to_string(path) {
-        Ok(raw) => raw,
-        Err(error) => {
-            eprintln!("failed to read {}: {error}", path.display());
-            return EXIT_USAGE;
+fn trace_cmd(path: &Path) -> i32 {
+    let text = match fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{}: {e}", path.display());
+            return USAGE;
         }
     };
-    let replay: ReplayFile = match serde_json::from_str(&raw) {
-        Ok(replay) => replay,
-        Err(error) => {
-            eprintln!("malformed replay {}: {error}", path.display());
-            return EXIT_MALFORMED;
+    let replay: ReplayFile = match serde_json::from_str(&text) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("malformed: {e}");
+            return MALFORMED;
         }
     };
     let (Some(mode), Some(difficulty)) = (
-        RunMode::from_name(&replay.mode),
-        Difficulty::from_name(&replay.difficulty),
+        Mode::from_name(&replay.mode),
+        Difficulty::from_u8(replay.difficulty),
     ) else {
-        eprintln!("{}: unknown mode or difficulty", path.display());
-        return EXIT_MALFORMED;
+        eprintln!("unknown mode or difficulty");
+        return MALFORMED;
     };
-
-    let mut simulation = Simulation::new(SimulationConfig {
-        seed: replay.seed,
+    let Ok(seed) = u64::from_str_radix(&replay.seed, 16) else {
+        eprintln!("invalid seed");
+        return MALFORMED;
+    };
+    let mut inputs: Vec<RecordedInput> = Vec::new();
+    for entry in &replay.inputs {
+        let Some(action) = Action::from_name(&entry.action) else {
+            continue;
+        };
+        inputs.push(RecordedInput {
+            tick: entry.tick,
+            lane: entry.lane,
+            action,
+        });
+    }
+    let s = bot::replay_script(
         mode,
         difficulty,
-    });
-    let mut cursor = 0usize;
-    for tick in 1..=replay.expected.terminal_tick {
-        let input = if cursor < replay.inputs.len() && replay.inputs[cursor].tick == tick {
-            let entry = &replay.inputs[cursor];
-            cursor += 1;
-            let Some(action) = Action::from_name(&entry.action) else {
-                eprintln!("unknown action {:?} at tick {tick}", entry.action);
-                return EXIT_MALFORMED;
-            };
-            neural_boundary_core::Input {
-                select_lane: Some(entry.lane),
-                action: Some(action),
-            }
-        } else {
-            neural_boundary_core::Input::IDLE
-        };
-        simulation.step(input);
-        for event in simulation.events() {
-            println!("{tick:>6}  {event:?}");
-        }
-        if simulation.status() != Status::Running {
-            break;
-        }
-    }
-    print_summary(&bot::summarize(&simulation, 0));
-    EXIT_OK
+        seed,
+        &inputs,
+        replay.expected.terminal_tick + 600,
+    );
+    println!(
+        "Grade {}  Status {}  Tick {}  Hash 0x{:016x}",
+        compute_grade(&s).name(),
+        s.status.as_str(),
+        s.terminal_tick,
+        s.state_hash
+    );
+    OK
 }
 
-// ---------------------------------------------------------------------------
-// search
-// ---------------------------------------------------------------------------
+// ── search ───────────────────────────────────────────────────────────────────
 
-fn cmd_search(args: &[String]) -> i32 {
+fn search_cmd(args: &[String]) -> i32 {
     let mut from = 1u64;
     let mut to = 50_000u64;
-    let mut mode = RunMode::Standard;
+    let mut mode = Mode::Standard;
     let mut difficulty = Difficulty::Standard;
     let mut policy = Policy::Clean;
-    let mut want = TerminalReason::Sealed;
-    let mut finals: Option<(i32, i32, i32)> = None;
-    let mut min_revocations = 0u8;
-    let mut max_ticks = DEFAULT_MAX_TICKS;
+    let mut want = TerminalReason::SuccessRelease;
+    let mut min_revocations = 0u32;
+    let mut max_ticks = MAX_TICKS;
 
     let mut iter = args.iter();
     while let Some(flag) = iter.next() {
         match flag.as_str() {
-            "--from" => from = parse_or_exit(iter.next(), "--from"),
-            "--to" => to = parse_or_exit(iter.next(), "--to"),
-            "--mode" => mode = parse_mode(iter.next()),
-            "--difficulty" => difficulty = parse_difficulty(iter.next()),
-            "--max-ticks" => max_ticks = parse_or_exit(iter.next(), "--max-ticks"),
-            "--min-revocations" => {
-                min_revocations = parse_or_exit(iter.next(), "--min-revocations")
+            "--from" => from = req(iter.next(), "--from").parse().unwrap_or(1),
+            "--to" => to = req(iter.next(), "--to").parse().unwrap_or(50_000),
+            "--mode" => {
+                let raw = req(iter.next(), "--mode");
+                mode = Mode::from_name(&raw).unwrap_or(Mode::Standard);
+            }
+            "--difficulty" => {
+                let v: u8 = req(iter.next(), "--difficulty").parse().unwrap_or(1);
+                difficulty = Difficulty::from_u8(v).unwrap_or(Difficulty::Standard);
             }
             "--policy" => {
-                let raw = required(iter.next(), "--policy");
-                policy = Policy::from_name(&raw).unwrap_or_else(|| {
-                    eprintln!("--policy: expected clean|idle|lapse, got {raw:?}");
-                    process::exit(EXIT_USAGE);
-                });
+                let raw = req(iter.next(), "--policy");
+                policy = Policy::from_name(&raw).unwrap_or(Policy::Clean);
             }
             "--want" => {
-                let raw = required(iter.next(), "--want");
-                want = TerminalReason::from_schema_str(&raw).unwrap_or_else(|| {
-                    eprintln!("--want: unknown terminal reason {raw:?}");
-                    process::exit(EXIT_USAGE);
-                });
+                let raw = req(iter.next(), "--want");
+                want =
+                    TerminalReason::from_schema_str(&raw).unwrap_or(TerminalReason::SuccessRelease);
             }
-            "--target" => {
-                let raw = required(iter.next(), "--target");
-                let parts: Vec<i32> = raw
-                    .split(',')
-                    .filter_map(|part| part.trim().parse().ok())
-                    .collect();
-                if parts.len() != 3 {
-                    eprintln!("--target expects trust,risk,integrity");
-                    return EXIT_USAGE;
-                }
-                finals = Some((parts[0], parts[1], parts[2]));
+            "--min-revocations" => {
+                min_revocations = req(iter.next(), "--min-revocations").parse().unwrap_or(0)
+            }
+            "--max-ticks" => {
+                max_ticks = req(iter.next(), "--max-ticks").parse().unwrap_or(MAX_TICKS)
             }
             other => {
                 eprintln!("unknown flag: {other}");
-                return EXIT_USAGE;
+                return USAGE;
             }
         }
     }
-
     eprintln!(
-        "searching seeds {from}..={to}: mode {} difficulty {} policy {} want {}",
+        "searching {} seeds [{from}..{to}] mode={} difficulty={} policy={} want={}",
+        to - from + 1,
         mode.name(),
-        difficulty.name(),
+        difficulty.code(),
         policy.name(),
-        want.schema_str()
+        want.as_str()
     );
     match bot::search_seed(
         mode,
@@ -909,63 +882,33 @@ fn cmd_search(args: &[String]) -> i32 {
         policy,
         from,
         to,
-        SearchGoal {
-            reason: want,
-            finals,
-            min_revocations,
-        },
+        want,
+        min_revocations,
         max_ticks,
     ) {
         Some((seed, result)) => {
-            println!("Seed found: {seed} (0x{seed:x})");
-            println!("Inputs: {}", result.inputs.len());
-            print_summary(&result.summary);
-            EXIT_OK
+            let s = &result.summary;
+            println!("Seed {:016x} ({seed})", seed);
+            println!(
+                "Grade {}  Status {}  Tick {}  Score {}  Hash 0x{:016x}",
+                compute_grade(s).name(),
+                s.status.as_str(),
+                s.terminal_tick,
+                s.score,
+                s.state_hash
+            );
+            OK
         }
         None => {
-            eprintln!("no seed in range matched the goal");
+            eprintln!("no seed found");
             1
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// flag helpers
-// ---------------------------------------------------------------------------
-
-fn required(value: Option<&String>, flag: &str) -> String {
-    value.cloned().unwrap_or_else(|| {
+fn req(val: Option<&String>, flag: &str) -> String {
+    val.cloned().unwrap_or_else(|| {
         eprintln!("{flag} requires a value");
-        process::exit(EXIT_USAGE);
+        process::exit(USAGE);
     })
-}
-
-fn parse_or_exit<T: std::str::FromStr>(value: Option<&String>, flag: &str) -> T {
-    let raw = required(value, flag);
-    raw.parse().unwrap_or_else(|_| {
-        eprintln!("{flag}: invalid value {raw:?}");
-        process::exit(EXIT_USAGE);
-    })
-}
-
-fn parse_mode(value: Option<&String>) -> RunMode {
-    let raw = required(value, "--mode");
-    RunMode::from_name(&raw).unwrap_or_else(|| {
-        eprintln!("--mode: expected guided|standard|audit|grand|daily, got {raw:?}");
-        process::exit(EXIT_USAGE);
-    })
-}
-
-fn parse_difficulty(value: Option<&String>) -> Difficulty {
-    let raw = required(value, "--difficulty");
-    Difficulty::from_name(&raw).unwrap_or_else(|| {
-        eprintln!("--difficulty: expected calm|standard|intense, got {raw:?}");
-        process::exit(EXIT_USAGE);
-    })
-}
-
-// Grade is referenced through bot::RunSummary; keep the import meaningful.
-#[allow(dead_code)]
-fn grade_name(grade: Grade) -> &'static str {
-    grade.name()
 }

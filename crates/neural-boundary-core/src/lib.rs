@@ -46,8 +46,12 @@ pub const LANE_Y: [i32; 5] = [96, 192, 288, 384, 480];
 // ─── Fixed-point: Q24.8 (§7.1) ──────────────────────────────────────────────
 // stored_x = logical_x * 256
 
-pub const fn to_q8(logical: i32) -> u32 { (logical * 256) as u32 }
-pub const fn from_q8(q8: u32) -> i32 { (q8 / 256) as i32 }
+pub const fn to_q8(logical: i32) -> u32 {
+    (logical * 256) as u32
+}
+pub const fn from_q8(q8: u32) -> i32 {
+    (q8 / 256) as i32
+}
 
 // ─── Pool constants ─────────────────────────────────────────────────────────
 
@@ -67,7 +71,9 @@ pub struct Rng {
 impl Rng {
     /// Seed 0 maps to canonical constant (§8.2).
     pub const fn new(seed: u64) -> Self {
-        Self { state: if seed == 0 { 0x9E3779B97F4A7C15 } else { seed } }
+        Self {
+            state: if seed == 0 { 0x9E3779B97F4A7C15 } else { seed },
+        }
     }
 
     pub fn next_u64(&mut self) -> u64 {
@@ -79,8 +85,12 @@ impl Rng {
         x.wrapping_mul(0x2545_F491_4F6C_DD1D)
     }
 
-    pub fn range(&mut self, n: u32) -> u32 { (self.next_u64() % n as u64) as u32 }
-    pub const fn state(&self) -> u64 { self.state }
+    pub fn range(&mut self, n: u32) -> u32 {
+        (self.next_u64() % n as u64) as u32
+    }
+    pub const fn state(&self) -> u64 {
+        self.state
+    }
 }
 
 // ─── Daily Seed (§8.3) ──────────────────────────────────────────────────────
@@ -89,8 +99,13 @@ impl Rng {
 pub fn daily_seed(year: u16, month: u8, day: u8) -> u64 {
     let mut h: u64 = 0xCBF2_9CE4_8422_2325;
     let prime: u64 = 0x0000_0100_0000_01B3;
-    let mut feed = |b: u8| { h ^= b as u64; h = h.wrapping_mul(prime); };
-    for b in b"NBG|5.5.12|" { feed(*b); }
+    let mut feed = |b: u8| {
+        h ^= b as u64;
+        h = h.wrapping_mul(prime);
+    };
+    for b in b"NBG|5.5.12|" {
+        feed(*b);
+    }
     // YYYY-MM-DD as ASCII — inline to avoid slicing bugs
     let y = year;
     feed(b'0' + (y / 1000) as u8);
@@ -103,7 +118,9 @@ pub fn daily_seed(year: u16, month: u8, day: u8) -> u64 {
     feed(b'-');
     feed(b'0' + (day / 10));
     feed(b'0' + (day % 10));
-    for b in b"|DAILY" { feed(*b); }
+    for b in b"|DAILY" {
+        feed(*b);
+    }
     let seed = if h == 0 { 0x3001u64 } else { h };
     // One xorshift64star round (§8.3).
     Rng::new(seed).next_u64()
@@ -112,19 +129,48 @@ pub fn daily_seed(year: u16, month: u8, day: u8) -> u64 {
 // ─── FNV-1a 64 state hash (§24.5) ──────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug)]
-pub struct Fnv64 { h: u64 }
-
-impl Fnv64 {
-    pub const fn new() -> Self { Self { h: 0xCBF2_9CE4_8422_2325 } }
-    pub fn feed_u8(&mut self, v: u8) { self.h ^= v as u64; self.h = self.h.wrapping_mul(0x100_0000_01B3); }
-    pub fn feed_u16(&mut self, v: u16) { for b in v.to_le_bytes() { self.feed_u8(b); } }
-    pub fn feed_u32(&mut self, v: u32) { for b in v.to_le_bytes() { self.feed_u8(b); } }
-    pub fn feed_u64(&mut self, v: u64) { for b in v.to_le_bytes() { self.feed_u8(b); } }
-    pub fn feed_i32(&mut self, v: i32) { self.feed_u32(v as u32); }
-    pub fn finish(&self) -> u64 { self.h }
+pub struct Fnv64 {
+    h: u64,
 }
 
-impl Default for Fnv64 { fn default() -> Self { Self::new() } }
+impl Fnv64 {
+    pub const fn new() -> Self {
+        Self {
+            h: 0xCBF2_9CE4_8422_2325,
+        }
+    }
+    pub fn feed_u8(&mut self, v: u8) {
+        self.h ^= v as u64;
+        self.h = self.h.wrapping_mul(0x100_0000_01B3);
+    }
+    pub fn feed_u16(&mut self, v: u16) {
+        for b in v.to_le_bytes() {
+            self.feed_u8(b);
+        }
+    }
+    pub fn feed_u32(&mut self, v: u32) {
+        for b in v.to_le_bytes() {
+            self.feed_u8(b);
+        }
+    }
+    pub fn feed_u64(&mut self, v: u64) {
+        for b in v.to_le_bytes() {
+            self.feed_u8(b);
+        }
+    }
+    pub fn feed_i32(&mut self, v: i32) {
+        self.feed_u32(v as u32);
+    }
+    pub fn finish(&self) -> u64 {
+        self.h
+    }
+}
+
+impl Default for Fnv64 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 // ─── Entity taxonomy: 19 stable IDs (§9.1) ──────────────────────────────────
 
@@ -155,41 +201,74 @@ pub enum Kind {
 impl Kind {
     pub fn from_u8(v: u8) -> Option<Self> {
         Some(match v {
-            0 => Self::Empty, 1 => Self::RawFrame, 2 => Self::Artifact,
-            3 => Self::UnknownPacket, 4 => Self::CandidateIntent, 5 => Self::ValidatedIntent,
-            6 => Self::TypedIntent, 7 => Self::ConsentGrant, 8 => Self::ConsentRevoke,
-            9 => Self::EvidenceTrace, 10 => Self::ChecksumProof, 11 => Self::CiProof,
-            12 => Self::UnsupportedClaim, 13 => Self::UntraceableClaim, 14 => Self::RoadmapAsFact,
-            15 => Self::StimulationCommand, 16 => Self::DeadlineHazard,
-            17 => Self::VaultRecord, 18 => Self::RawExportRequest,
+            0 => Self::Empty,
+            1 => Self::RawFrame,
+            2 => Self::Artifact,
+            3 => Self::UnknownPacket,
+            4 => Self::CandidateIntent,
+            5 => Self::ValidatedIntent,
+            6 => Self::TypedIntent,
+            7 => Self::ConsentGrant,
+            8 => Self::ConsentRevoke,
+            9 => Self::EvidenceTrace,
+            10 => Self::ChecksumProof,
+            11 => Self::CiProof,
+            12 => Self::UnsupportedClaim,
+            13 => Self::UntraceableClaim,
+            14 => Self::RoadmapAsFact,
+            15 => Self::StimulationCommand,
+            16 => Self::DeadlineHazard,
+            17 => Self::VaultRecord,
+            18 => Self::RawExportRequest,
             _ => return None,
         })
     }
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
     pub const fn label(self) -> &'static str {
         match self {
-            Self::Empty => "EMPTY", Self::RawFrame => "RAW_FRAME",
-            Self::Artifact => "ARTIFACT", Self::UnknownPacket => "UNKNOWN",
-            Self::CandidateIntent => "CANDIDATE", Self::ValidatedIntent => "VALIDATED",
-            Self::TypedIntent => "TYPED", Self::ConsentGrant => "GRANT",
-            Self::ConsentRevoke => "REVOKE", Self::EvidenceTrace => "TRACE",
-            Self::ChecksumProof => "CHECKSUM", Self::CiProof => "CI_PROOF",
-            Self::UnsupportedClaim => "CLAIM", Self::UntraceableClaim => "UNTRACE",
-            Self::RoadmapAsFact => "ROADMAP", Self::StimulationCommand => "STIM",
-            Self::DeadlineHazard => "DEADLINE", Self::VaultRecord => "VAULT_REC",
+            Self::Empty => "EMPTY",
+            Self::RawFrame => "RAW_FRAME",
+            Self::Artifact => "ARTIFACT",
+            Self::UnknownPacket => "UNKNOWN",
+            Self::CandidateIntent => "CANDIDATE",
+            Self::ValidatedIntent => "VALIDATED",
+            Self::TypedIntent => "TYPED",
+            Self::ConsentGrant => "GRANT",
+            Self::ConsentRevoke => "REVOKE",
+            Self::EvidenceTrace => "TRACE",
+            Self::ChecksumProof => "CHECKSUM",
+            Self::CiProof => "CI_PROOF",
+            Self::UnsupportedClaim => "CLAIM",
+            Self::UntraceableClaim => "UNTRACE",
+            Self::RoadmapAsFact => "ROADMAP",
+            Self::StimulationCommand => "STIM",
+            Self::DeadlineHazard => "DEADLINE",
+            Self::VaultRecord => "VAULT_REC",
             Self::RawExportRequest => "RAW_EXPORT",
         }
     }
     pub const fn symbol(self) -> &'static str {
         match self {
-            Self::Empty => "·", Self::RawFrame => "◉", Self::Artifact => "▒",
-            Self::UnknownPacket => "◌", Self::CandidateIntent => "◇",
-            Self::ValidatedIntent => "◈", Self::TypedIntent => "●",
-            Self::ConsentGrant => "⬡", Self::ConsentRevoke => "⬢",
-            Self::EvidenceTrace => "▣", Self::ChecksumProof => "▤", Self::CiProof => "▥",
-            Self::UnsupportedClaim => "△", Self::UntraceableClaim => "▽",
-            Self::RoadmapAsFact => "◭", Self::StimulationCommand => "✕",
-            Self::DeadlineHazard => "⧗", Self::VaultRecord => "◪",
+            Self::Empty => "·",
+            Self::RawFrame => "◉",
+            Self::Artifact => "▒",
+            Self::UnknownPacket => "◌",
+            Self::CandidateIntent => "◇",
+            Self::ValidatedIntent => "◈",
+            Self::TypedIntent => "●",
+            Self::ConsentGrant => "⬡",
+            Self::ConsentRevoke => "⬢",
+            Self::EvidenceTrace => "▣",
+            Self::ChecksumProof => "▤",
+            Self::CiProof => "▥",
+            Self::UnsupportedClaim => "△",
+            Self::UntraceableClaim => "▽",
+            Self::RoadmapAsFact => "◭",
+            Self::StimulationCommand => "✕",
+            Self::DeadlineHazard => "⧗",
+            Self::VaultRecord => "◪",
             Self::RawExportRequest => "⊘",
         }
     }
@@ -207,21 +286,34 @@ impl Kind {
             Self::EvidenceTrace => "Trace proof (L0→L1). Register to advance evidence level.",
             Self::ChecksumProof => "Checksum proof (L1→L2). Register to advance.",
             Self::CiProof => "CI proof (L2→L3). Required for audit and vault release.",
-            Self::UnsupportedClaim => "Unsupported claim. Quarantine — claims block the evidence gate.",
+            Self::UnsupportedClaim => {
+                "Unsupported claim. Quarantine — claims block the evidence gate."
+            }
             Self::UntraceableClaim => "Claim without a trace. Quarantine.",
             Self::RoadmapAsFact => "Roadmap stated as fact. Quarantine.",
-            Self::StimulationCommand => "Stimulation command. QUARANTINE IMMEDIATELY — fail closed.",
-            Self::DeadlineHazard => "Timing hazard. Validate to resolve; missing it fails the WCET gate.",
+            Self::StimulationCommand => {
+                "Stimulation command. QUARANTINE IMMEDIATELY — fail closed."
+            }
+            Self::DeadlineHazard => {
+                "Timing hazard. Validate to resolve; missing it fails the WCET gate."
+            }
             Self::VaultRecord => "Raw vault record. Quarantine to seal locally.",
             Self::RawExportRequest => "Raw export request. Quarantine — always denied.",
         }
     }
     pub const fn correct_action(self) -> Option<Action> {
         match self {
-            Self::RawFrame | Self::Artifact | Self::UnsupportedClaim | Self::UntraceableClaim
-            | Self::RoadmapAsFact | Self::StimulationCommand | Self::VaultRecord
+            Self::RawFrame
+            | Self::Artifact
+            | Self::UnsupportedClaim
+            | Self::UntraceableClaim
+            | Self::RoadmapAsFact
+            | Self::StimulationCommand
+            | Self::VaultRecord
             | Self::RawExportRequest => Some(Action::Quarantine),
-            Self::UnknownPacket | Self::CandidateIntent | Self::DeadlineHazard => Some(Action::Validate),
+            Self::UnknownPacket | Self::CandidateIntent | Self::DeadlineHazard => {
+                Some(Action::Validate)
+            }
             Self::ValidatedIntent => Some(Action::Convert),
             Self::ConsentGrant | Self::ConsentRevoke => Some(Action::Consent),
             Self::EvidenceTrace | Self::ChecksumProof | Self::CiProof => Some(Action::Evidence),
@@ -229,10 +321,16 @@ impl Kind {
         }
     }
     pub const fn is_claim(self) -> bool {
-        matches!(self, Self::UnsupportedClaim | Self::UntraceableClaim | Self::RoadmapAsFact)
+        matches!(
+            self,
+            Self::UnsupportedClaim | Self::UntraceableClaim | Self::RoadmapAsFact
+        )
     }
     pub const fn is_raw_hazard(self) -> bool {
-        matches!(self, Self::RawFrame | Self::VaultRecord | Self::RawExportRequest)
+        matches!(
+            self,
+            Self::RawFrame | Self::VaultRecord | Self::RawExportRequest
+        )
     }
     pub const fn evidence_level_bit(self) -> u8 {
         match self {
@@ -243,11 +341,23 @@ impl Kind {
         }
     }
     pub const ALL_SPAWNABLE: [Self; 17] = [
-        Self::RawFrame, Self::Artifact, Self::UnknownPacket, Self::CandidateIntent,
-        Self::ConsentGrant, Self::ConsentRevoke, Self::EvidenceTrace, Self::ChecksumProof,
-        Self::CiProof, Self::UnsupportedClaim, Self::UntraceableClaim, Self::RoadmapAsFact,
-        Self::StimulationCommand, Self::DeadlineHazard, Self::VaultRecord,
-        Self::RawExportRequest, Self::TypedIntent,
+        Self::RawFrame,
+        Self::Artifact,
+        Self::UnknownPacket,
+        Self::CandidateIntent,
+        Self::ConsentGrant,
+        Self::ConsentRevoke,
+        Self::EvidenceTrace,
+        Self::ChecksumProof,
+        Self::CiProof,
+        Self::UnsupportedClaim,
+        Self::UntraceableClaim,
+        Self::RoadmapAsFact,
+        Self::StimulationCommand,
+        Self::DeadlineHazard,
+        Self::VaultRecord,
+        Self::RawExportRequest,
+        Self::TypedIntent,
     ];
 }
 
@@ -267,36 +377,49 @@ pub enum Action {
 
 impl Action {
     pub fn from_u8(v: u8) -> Option<Self> {
-        Some(match v { 1=>Self::Validate, 2=>Self::Convert, 3=>Self::Quarantine,
-                       4=>Self::Consent, 5=>Self::Evidence, 6=>Self::Release, _=>return None })
+        Some(match v {
+            1 => Self::Validate,
+            2 => Self::Convert,
+            3 => Self::Quarantine,
+            4 => Self::Consent,
+            5 => Self::Evidence,
+            6 => Self::Release,
+            _ => return None,
+        })
     }
     pub fn from_name(name: &str) -> Option<Self> {
         match name {
-            "VALIDATE"|"Validate" => Some(Self::Validate),
-            "CONVERT"|"Convert" => Some(Self::Convert),
-            "QUARANTINE"|"Quarantine" => Some(Self::Quarantine),
-            "CONSENT"|"Consent" => Some(Self::Consent),
-            "EVIDENCE"|"Evidence" => Some(Self::Evidence),
-            "RELEASE"|"Release" => Some(Self::Release),
+            "VALIDATE" | "Validate" => Some(Self::Validate),
+            "CONVERT" | "Convert" => Some(Self::Convert),
+            "QUARANTINE" | "Quarantine" => Some(Self::Quarantine),
+            "CONSENT" | "Consent" => Some(Self::Consent),
+            "EVIDENCE" | "Evidence" => Some(Self::Evidence),
+            "RELEASE" | "Release" => Some(Self::Release),
             _ => None,
         }
     }
     pub const fn name(self) -> &'static str {
         match self {
-            Self::None=>"NONE", Self::Validate=>"VALIDATE", Self::Convert=>"CONVERT",
-            Self::Quarantine=>"QUARANTINE", Self::Consent=>"CONSENT",
-            Self::Evidence=>"EVIDENCE", Self::Release=>"RELEASE",
+            Self::None => "NONE",
+            Self::Validate => "VALIDATE",
+            Self::Convert => "CONVERT",
+            Self::Quarantine => "QUARANTINE",
+            Self::Consent => "CONSENT",
+            Self::Evidence => "EVIDENCE",
+            Self::Release => "RELEASE",
         }
     }
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
 }
 
 // ─── Neural Permissions / Consent (§11) ─────────────────────────────────────
 
-pub const SCOPE_CONVERT: u16  = 0x0001;
-pub const SCOPE_RELEASE: u16  = 0x0002;
-pub const SCOPE_SUMMARY: u16  = 0x0004;
-pub const SCOPE_AUDIT: u16    = 0x0008;
+pub const SCOPE_CONVERT: u16 = 0x0001;
+pub const SCOPE_RELEASE: u16 = 0x0002;
+pub const SCOPE_SUMMARY: u16 = 0x0004;
+pub const SCOPE_AUDIT: u16 = 0x0008;
 
 /// Active consent state within the simulation. Consent is NOT persisted across sessions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -307,7 +430,11 @@ pub struct ConsentState {
 }
 
 impl ConsentState {
-    pub const NONE: Self = Self { epoch: 0, scope_mask: 0, expires_tick: 0 };
+    pub const NONE: Self = Self {
+        epoch: 0,
+        scope_mask: 0,
+        expires_tick: 0,
+    };
 
     /// Token valid: epoch matches, scope present, not expired.
     pub fn is_valid_for(&self, state_epoch: u32, current_tick: u32, scope: u16) -> bool {
@@ -325,15 +452,20 @@ impl ConsentState {
 
 // ─── Evidence model (§12) ───────────────────────────────────────────────────
 
-pub const EVIDENCE_TRACE:    u8 = 0x01;
+pub const EVIDENCE_TRACE: u8 = 0x01;
 pub const EVIDENCE_CHECKSUM: u8 = 0x02;
-pub const EVIDENCE_CI:       u8 = 0x04;
-pub const EVIDENCE_REPLAY:   u8 = 0x08;
+pub const EVIDENCE_CI: u8 = 0x04;
+pub const EVIDENCE_REPLAY: u8 = 0x08;
 pub const EVIDENCE_REVIEWED: u8 = 0x10;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
-pub enum EvidenceLevel { L0=0, L1=1, L2=2, L3=3 }
+pub enum EvidenceLevel {
+    L0 = 0,
+    L1 = 1,
+    L2 = 2,
+    L3 = 3,
+}
 
 impl EvidenceLevel {
     pub const fn from_bits(bits: u8) -> Self {
@@ -348,23 +480,41 @@ impl EvidenceLevel {
         }
     }
     pub const fn as_str(self) -> &'static str {
-        match self { Self::L0=>"L0", Self::L1=>"L1", Self::L2=>"L2", Self::L3=>"L3" }
+        match self {
+            Self::L0 => "L0",
+            Self::L1 => "L1",
+            Self::L2 => "L2",
+            Self::L3 => "L3",
+        }
     }
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
 }
 
 // ─── Privacy Vault (§13) ────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
-pub enum VaultState { Empty=0, Open=1, Sealing=2, Sealed=3, Compromised=4 }
+pub enum VaultState {
+    Empty = 0,
+    Open = 1,
+    Sealing = 2,
+    Sealed = 3,
+    Compromised = 4,
+}
 
 impl VaultState {
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Empty=>"EMPTY", Self::Open=>"OPEN", Self::Sealing=>"SEALING",
-            Self::Sealed=>"SEALED", Self::Compromised=>"COMPROMISED",
+            Self::Empty => "EMPTY",
+            Self::Open => "OPEN",
+            Self::Sealing => "SEALING",
+            Self::Sealed => "SEALED",
+            Self::Compromised => "COMPROMISED",
         }
     }
     pub const fn gate_eligible(self) -> bool {
@@ -377,50 +527,90 @@ impl VaultState {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Mode {
-    Guided = 1, Standard = 2, Audit = 3, Grand = 4,
-    Daily = 5, PrivacyVault = 6, KernelTrial = 7,
+    Guided = 1,
+    Standard = 2,
+    Audit = 3,
+    Grand = 4,
+    Daily = 5,
+    PrivacyVault = 6,
+    KernelTrial = 7,
 }
 
 impl Mode {
     pub fn from_u8(v: u8) -> Option<Self> {
-        Some(match v { 1=>Self::Guided, 2=>Self::Standard, 3=>Self::Audit,
-                       4=>Self::Grand, 5=>Self::Daily, 6=>Self::PrivacyVault,
-                       7=>Self::KernelTrial, _=>return None })
+        Some(match v {
+            1 => Self::Guided,
+            2 => Self::Standard,
+            3 => Self::Audit,
+            4 => Self::Grand,
+            5 => Self::Daily,
+            6 => Self::PrivacyVault,
+            7 => Self::KernelTrial,
+            _ => return None,
+        })
     }
     pub fn from_name(name: &str) -> Option<Self> {
         match name {
-            "guided"|"GUIDED"=>Some(Self::Guided), "standard"|"STANDARD"=>Some(Self::Standard),
-            "audit"|"AUDIT"=>Some(Self::Audit), "grand"|"GRAND"=>Some(Self::Grand),
-            "daily"|"DAILY"=>Some(Self::Daily),
-            "privacy_vault"|"PRIVACY_VAULT"=>Some(Self::PrivacyVault),
-            "kernel_trial"|"KERNEL_TRIAL"=>Some(Self::KernelTrial), _=>None,
+            "guided" | "GUIDED" => Some(Self::Guided),
+            "standard" | "STANDARD" => Some(Self::Standard),
+            "audit" | "AUDIT" => Some(Self::Audit),
+            "grand" | "GRAND" => Some(Self::Grand),
+            "daily" | "DAILY" => Some(Self::Daily),
+            "privacy_vault" | "PRIVACY_VAULT" => Some(Self::PrivacyVault),
+            "kernel_trial" | "KERNEL_TRIAL" => Some(Self::KernelTrial),
+            _ => None,
         }
     }
     pub const fn name(self) -> &'static str {
         match self {
-            Self::Guided=>"GUIDED", Self::Standard=>"STANDARD", Self::Audit=>"AUDIT",
-            Self::Grand=>"GRAND", Self::Daily=>"DAILY", Self::PrivacyVault=>"PRIVACY_VAULT",
-            Self::KernelTrial=>"KERNEL_TRIAL",
+            Self::Guided => "GUIDED",
+            Self::Standard => "STANDARD",
+            Self::Audit => "AUDIT",
+            Self::Grand => "GRAND",
+            Self::Daily => "DAILY",
+            Self::PrivacyVault => "PRIVACY_VAULT",
+            Self::KernelTrial => "KERNEL_TRIAL",
         }
     }
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
     pub const fn max_ticks(self) -> u32 {
         match self {
-            Self::Guided=>3600, Self::Standard=>7200, Self::Audit=>7200, Self::Grand=>10800,
-            Self::Daily=>7200, Self::PrivacyVault=>7200, Self::KernelTrial=>6000,
+            Self::Guided => 3600,
+            Self::Standard => 7200,
+            Self::Audit => 7200,
+            Self::Grand => 10800,
+            Self::Daily => 7200,
+            Self::PrivacyVault => 7200,
+            Self::KernelTrial => 6000,
         }
     }
     pub const fn spawn_interval(self, phase: u8) -> (u32, u32) {
         match self {
-            Self::Guided=>(90,150), Self::Standard=>(60,105), Self::Audit=>(42,78),
-            Self::Grand=>match phase { 0=>(50,90), 1=>(42,78), 2=>(30,65), _=>(80,120) },
-            Self::Daily=>(60,105), Self::PrivacyVault=>(45,90), Self::KernelTrial=>(30,66),
+            Self::Guided => (90, 150),
+            Self::Standard => (60, 105),
+            Self::Audit => (42, 78),
+            Self::Grand => match phase {
+                0 => (50, 90),
+                1 => (42, 78),
+                2 => (30, 65),
+                _ => (80, 120),
+            },
+            Self::Daily => (60, 105),
+            Self::PrivacyVault => (45, 90),
+            Self::KernelTrial => (30, 66),
         }
     }
     pub const fn consent_ttl(self) -> u32 {
         match self {
-            Self::Guided=>900, Self::Standard=>720, Self::Audit=>480, Self::Grand=>420,
-            Self::Daily=>600, Self::PrivacyVault=>540, Self::KernelTrial=>360,
+            Self::Guided => 900,
+            Self::Standard => 720,
+            Self::Audit => 480,
+            Self::Grand => 420,
+            Self::Daily => 600,
+            Self::PrivacyVault => 540,
+            Self::KernelTrial => 360,
         }
     }
     pub fn convert_evidence(self) -> EvidenceLevel {
@@ -436,20 +626,36 @@ impl Mode {
         }
     }
     pub const fn raw_leak_limit(self) -> u8 {
-        match self { Self::Guided|Self::Standard=>2, _=>1 }
+        match self {
+            Self::Guided | Self::Standard => 2,
+            _ => 1,
+        }
     }
     pub fn initial_trust(self) -> i32 {
-        match self { Self::Guided=>800, Self::Audit|Self::KernelTrial=>650, _=>700 }
+        match self {
+            Self::Guided => 800,
+            Self::Audit | Self::KernelTrial => 650,
+            _ => 700,
+        }
     }
     pub fn initial_risk(self) -> i32 {
-        match self { Self::Guided=>50, Self::Audit|Self::KernelTrial=>150, _=>100 }
+        match self {
+            Self::Guided => 50,
+            Self::Audit | Self::KernelTrial => 150,
+            _ => 100,
+        }
     }
     pub const fn final_phase_only(self) -> bool {
         matches!(self, Self::Grand)
     }
     pub const ALL: [Self; 7] = [
-        Self::Guided, Self::Standard, Self::Audit, Self::Grand,
-        Self::Daily, Self::PrivacyVault, Self::KernelTrial,
+        Self::Guided,
+        Self::Standard,
+        Self::Audit,
+        Self::Grand,
+        Self::Daily,
+        Self::PrivacyVault,
+        Self::KernelTrial,
     ];
 }
 
@@ -458,8 +664,10 @@ impl Mode {
 pub const GRAND_PHASE_TICKS: [u32; 4] = [0, 2400, 4800, 7200];
 pub const fn grand_phase_name(phase: u8) -> &'static str {
     match phase {
-        0=>"Signal Integrity", 1=>"Consent and Evidence",
-        2=>"Release Under Pressure", _=>"Sovereign Boundary Review",
+        0 => "Signal Integrity",
+        1 => "Consent and Evidence",
+        2 => "Release Under Pressure",
+        _ => "Sovereign Boundary Review",
     }
 }
 
@@ -467,15 +675,30 @@ pub const fn grand_phase_name(phase: u8) -> &'static str {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
-pub enum Difficulty { Calm=0, Standard=1, Intense=2 }
+pub enum Difficulty {
+    Calm = 0,
+    Standard = 1,
+    Intense = 2,
+}
 
 impl Difficulty {
     pub fn from_u8(v: u8) -> Option<Self> {
-        Some(match v { 0=>Self::Calm, 1=>Self::Standard, 2=>Self::Intense, _=>return None })
+        Some(match v {
+            0 => Self::Calm,
+            1 => Self::Standard,
+            2 => Self::Intense,
+            _ => return None,
+        })
     }
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
     pub const fn speed_bonus(self) -> i32 {
-        match self { Self::Calm=>0, Self::Standard=>1, Self::Intense=>2 }
+        match self {
+            Self::Calm => 0,
+            Self::Standard => 1,
+            Self::Intense => 2,
+        }
     }
 }
 
@@ -483,17 +706,32 @@ impl Difficulty {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
-pub enum Status { Running=0, Sealed=1, Breached=2, Unsafe=3, Aborted=4, FatalRuntime=5 }
+pub enum Status {
+    Running = 0,
+    Sealed = 1,
+    Breached = 2,
+    Unsafe = 3,
+    Aborted = 4,
+    FatalRuntime = 5,
+}
 
 impl Status {
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Running=>"RUNNING", Self::Sealed=>"SEALED", Self::Breached=>"BREACHED",
-            Self::Unsafe=>"UNSAFE", Self::Aborted=>"ABORTED", Self::FatalRuntime=>"FATAL_RUNTIME",
+            Self::Running => "RUNNING",
+            Self::Sealed => "SEALED",
+            Self::Breached => "BREACHED",
+            Self::Unsafe => "UNSAFE",
+            Self::Aborted => "ABORTED",
+            Self::FatalRuntime => "FATAL_RUNTIME",
         }
     }
-    pub const fn is_terminal(self) -> bool { !matches!(self, Self::Running) }
+    pub const fn is_terminal(self) -> bool {
+        !matches!(self, Self::Running)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -514,30 +752,39 @@ pub enum TerminalReason {
 }
 
 impl TerminalReason {
-    pub const fn code(self) -> u8 { self as u8 }
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::None=>"NONE", Self::SuccessRelease=>"SUCCESS_RELEASE",
-            Self::TimeoutUnsealed=>"TIMEOUT_UNSEALED", Self::RiskOverflow=>"RISK_OVERFLOW",
-            Self::IntegrityCollapse=>"INTEGRITY_COLLAPSE", Self::RawLeakLimit=>"RAW_LEAK_LIMIT",
-            Self::UnsafeStimulationEscape=>"UNSAFE_STIMULATION_ESCAPE",
-            Self::DeadlineBreach=>"DEADLINE_BREACH",
-            Self::DeterminismMismatch=>"DETERMINISM_MISMATCH",
-            Self::ReplaySchemaError=>"REPLAY_SCHEMA_ERROR",
-            Self::WasmInitFailure=>"WASM_INIT_FAILURE", Self::UserAbort=>"USER_ABORT",
+            Self::None => "NONE",
+            Self::SuccessRelease => "SUCCESS_RELEASE",
+            Self::TimeoutUnsealed => "TIMEOUT_UNSEALED",
+            Self::RiskOverflow => "RISK_OVERFLOW",
+            Self::IntegrityCollapse => "INTEGRITY_COLLAPSE",
+            Self::RawLeakLimit => "RAW_LEAK_LIMIT",
+            Self::UnsafeStimulationEscape => "UNSAFE_STIMULATION_ESCAPE",
+            Self::DeadlineBreach => "DEADLINE_BREACH",
+            Self::DeterminismMismatch => "DETERMINISM_MISMATCH",
+            Self::ReplaySchemaError => "REPLAY_SCHEMA_ERROR",
+            Self::WasmInitFailure => "WASM_INIT_FAILURE",
+            Self::UserAbort => "USER_ABORT",
         }
     }
     pub fn from_schema_str(s: &str) -> Option<Self> {
         Some(match s {
-            "SUCCESS_RELEASE"=>Self::SuccessRelease, "TIMEOUT_UNSEALED"=>Self::TimeoutUnsealed,
-            "RISK_OVERFLOW"=>Self::RiskOverflow, "INTEGRITY_COLLAPSE"=>Self::IntegrityCollapse,
-            "RAW_LEAK_LIMIT"=>Self::RawLeakLimit,
-            "UNSAFE_STIMULATION_ESCAPE"=>Self::UnsafeStimulationEscape,
-            "DEADLINE_BREACH"=>Self::DeadlineBreach,
-            "DETERMINISM_MISMATCH"=>Self::DeterminismMismatch,
-            "REPLAY_SCHEMA_ERROR"=>Self::ReplaySchemaError,
-            "WASM_INIT_FAILURE"=>Self::WasmInitFailure, "USER_ABORT"=>Self::UserAbort,
-            _=>return None,
+            "SUCCESS_RELEASE" => Self::SuccessRelease,
+            "TIMEOUT_UNSEALED" => Self::TimeoutUnsealed,
+            "RISK_OVERFLOW" => Self::RiskOverflow,
+            "INTEGRITY_COLLAPSE" => Self::IntegrityCollapse,
+            "RAW_LEAK_LIMIT" => Self::RawLeakLimit,
+            "UNSAFE_STIMULATION_ESCAPE" => Self::UnsafeStimulationEscape,
+            "DEADLINE_BREACH" => Self::DeadlineBreach,
+            "DETERMINISM_MISMATCH" => Self::DeterminismMismatch,
+            "REPLAY_SCHEMA_ERROR" => Self::ReplaySchemaError,
+            "WASM_INIT_FAILURE" => Self::WasmInitFailure,
+            "USER_ABORT" => Self::UserAbort,
+            _ => return None,
         })
     }
 }
@@ -545,14 +792,24 @@ impl TerminalReason {
 // ─── Boundary grade (§19) ────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Grade { Sovereign, Sealed, Reviewable, Degraded, Breached, Unsafe }
+pub enum Grade {
+    Sovereign,
+    Sealed,
+    Reviewable,
+    Degraded,
+    Breached,
+    Unsafe,
+}
 
 impl Grade {
     pub const fn name(self) -> &'static str {
         match self {
-            Self::Sovereign=>"SOVEREIGN", Self::Sealed=>"SEALED",
-            Self::Reviewable=>"REVIEWABLE", Self::Degraded=>"DEGRADED",
-            Self::Breached=>"BREACHED", Self::Unsafe=>"UNSAFE",
+            Self::Sovereign => "SOVEREIGN",
+            Self::Sealed => "SEALED",
+            Self::Reviewable => "REVIEWABLE",
+            Self::Degraded => "DEGRADED",
+            Self::Breached => "BREACHED",
+            Self::Unsafe => "UNSAFE",
         }
     }
 }
@@ -580,14 +837,25 @@ pub struct Entity {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum EntityState {
-    Incoming=0, InActionWindow=1, Validated=2, Quarantined=3,
-    Consumed=4, Crossed=5, Expired=6,
+    Incoming = 0,
+    InActionWindow = 1,
+    Validated = 2,
+    Quarantined = 3,
+    Consumed = 4,
+    Crossed = 5,
+    Expired = 6,
 }
 
-impl EntityState { pub const fn code(self) -> u8 { self as u8 } }
+impl EntityState {
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
+}
 
 impl Entity {
-    pub fn logical_x(&self) -> i32 { from_q8(self.x_q8) }
+    pub fn logical_x(&self) -> i32 {
+        from_q8(self.x_q8)
+    }
     pub fn in_action_window(&self) -> bool {
         let x = self.logical_x();
         (ACTION_WINDOW_START..BOUNDARY_X).contains(&x)
@@ -596,20 +864,26 @@ impl Entity {
 
 // ─── 7 Review Gates (§16) ────────────────────────────────────────────────────
 
-pub const GATE_PRIVACY: u8      = 0;
-pub const GATE_TYPING: u8       = 1;
-pub const GATE_CONSENT: u8      = 2;
-pub const GATE_EVIDENCE: u8     = 3;
-pub const GATE_DETERMINISM: u8  = 4;
-pub const GATE_VAULT: u8        = 5;
-pub const GATE_WCET: u8         = 6;
-pub const GATE_COUNT: u8        = 7;
-pub const ALL_GATES_MASK: u8    = (1 << GATE_COUNT) - 1;
+pub const GATE_PRIVACY: u8 = 0;
+pub const GATE_TYPING: u8 = 1;
+pub const GATE_CONSENT: u8 = 2;
+pub const GATE_EVIDENCE: u8 = 3;
+pub const GATE_DETERMINISM: u8 = 4;
+pub const GATE_VAULT: u8 = 5;
+pub const GATE_WCET: u8 = 6;
+pub const GATE_COUNT: u8 = 7;
+pub const ALL_GATES_MASK: u8 = (1 << GATE_COUNT) - 1;
 
 pub const fn gate_name(bit: u8) -> &'static str {
     match bit {
-        0=>"PRIVACY", 1=>"TYPING", 2=>"CONSENT",
-        3=>"EVIDENCE", 4=>"DETERMINISM", 5=>"VAULT", 6=>"WCET", _=>"?",
+        0 => "PRIVACY",
+        1 => "TYPING",
+        2 => "CONSENT",
+        3 => "EVIDENCE",
+        4 => "DETERMINISM",
+        5 => "VAULT",
+        6 => "WCET",
+        _ => "?",
     }
 }
 
@@ -639,64 +913,126 @@ pub fn spawn_table(mode: Mode, phase: u8) -> &'static [WeightEntry] {
 // We flatten category→kind directly for simplicity (no runtime category→kind lookup needed).
 
 static GUIDED_TABLE: [WeightEntry; 8] = [
-    (Kind::RawFrame,150), (Kind::Artifact,100), (Kind::CandidateIntent,350),
-    (Kind::ConsentGrant,150), (Kind::EvidenceTrace,140), (Kind::ChecksumProof,60),
-    (Kind::UnsupportedClaim,50), (Kind::UnknownPacket,0),
+    (Kind::RawFrame, 150),
+    (Kind::Artifact, 100),
+    (Kind::CandidateIntent, 350),
+    (Kind::ConsentGrant, 150),
+    (Kind::EvidenceTrace, 140),
+    (Kind::ChecksumProof, 60),
+    (Kind::UnsupportedClaim, 50),
+    (Kind::UnknownPacket, 0),
 ];
 static STANDARD_TABLE: [WeightEntry; 12] = [
-    (Kind::RawFrame,150), (Kind::Artifact,120), (Kind::CandidateIntent,200),
-    (Kind::UnknownPacket,100), (Kind::ConsentGrant,90), (Kind::ConsentRevoke,30),
-    (Kind::EvidenceTrace,80), (Kind::ChecksumProof,60), (Kind::CiProof,40),
-    (Kind::UnsupportedClaim,60), (Kind::UntraceableClaim,30), (Kind::StimulationCommand,10),
+    (Kind::RawFrame, 150),
+    (Kind::Artifact, 120),
+    (Kind::CandidateIntent, 200),
+    (Kind::UnknownPacket, 100),
+    (Kind::ConsentGrant, 90),
+    (Kind::ConsentRevoke, 30),
+    (Kind::EvidenceTrace, 80),
+    (Kind::ChecksumProof, 60),
+    (Kind::CiProof, 40),
+    (Kind::UnsupportedClaim, 60),
+    (Kind::UntraceableClaim, 30),
+    (Kind::StimulationCommand, 10),
 ];
 static AUDIT_TABLE: [WeightEntry; 13] = [
-    (Kind::RawFrame,120), (Kind::Artifact,120), (Kind::CandidateIntent,150),
-    (Kind::UnknownPacket,90), (Kind::ConsentGrant,80), (Kind::ConsentRevoke,70),
-    (Kind::EvidenceTrace,60), (Kind::ChecksumProof,50), (Kind::CiProof,50),
-    (Kind::UnsupportedClaim,80), (Kind::UntraceableClaim,60), (Kind::RoadmapAsFact,60),
-    (Kind::StimulationCommand,20),
+    (Kind::RawFrame, 120),
+    (Kind::Artifact, 120),
+    (Kind::CandidateIntent, 150),
+    (Kind::UnknownPacket, 90),
+    (Kind::ConsentGrant, 80),
+    (Kind::ConsentRevoke, 70),
+    (Kind::EvidenceTrace, 60),
+    (Kind::ChecksumProof, 50),
+    (Kind::CiProof, 50),
+    (Kind::UnsupportedClaim, 80),
+    (Kind::UntraceableClaim, 60),
+    (Kind::RoadmapAsFact, 60),
+    (Kind::StimulationCommand, 20),
 ];
 static GRAND_P1_TABLE: [WeightEntry; 7] = [
-    (Kind::RawFrame,250), (Kind::Artifact,200), (Kind::CandidateIntent,350),
-    (Kind::UnknownPacket,100), (Kind::EvidenceTrace,60), (Kind::UnsupportedClaim,30),
-    (Kind::StimulationCommand,0),
+    (Kind::RawFrame, 250),
+    (Kind::Artifact, 200),
+    (Kind::CandidateIntent, 350),
+    (Kind::UnknownPacket, 100),
+    (Kind::EvidenceTrace, 60),
+    (Kind::UnsupportedClaim, 30),
+    (Kind::StimulationCommand, 0),
 ];
 static GRAND_P2_TABLE: [WeightEntry; 9] = [
-    (Kind::ConsentGrant,160), (Kind::ConsentRevoke,120), (Kind::EvidenceTrace,140),
-    (Kind::ChecksumProof,90), (Kind::CiProof,90), (Kind::CandidateIntent,190),
-    (Kind::RawFrame,60), (Kind::Artifact,50), (Kind::UnsupportedClaim,40),
+    (Kind::ConsentGrant, 160),
+    (Kind::ConsentRevoke, 120),
+    (Kind::EvidenceTrace, 140),
+    (Kind::ChecksumProof, 90),
+    (Kind::CiProof, 90),
+    (Kind::CandidateIntent, 190),
+    (Kind::RawFrame, 60),
+    (Kind::Artifact, 50),
+    (Kind::UnsupportedClaim, 40),
 ];
 static GRAND_P3_TABLE: [WeightEntry; 10] = [
-    (Kind::UnsupportedClaim,180), (Kind::UntraceableClaim,130),
-    (Kind::RoadmapAsFact,120), (Kind::CandidateIntent,180), (Kind::RawFrame,80),
-    (Kind::Artifact,60), (Kind::StimulationCommand,40), (Kind::DeadlineHazard,80),
-    (Kind::ConsentGrant,60), (Kind::EvidenceTrace,40),
+    (Kind::UnsupportedClaim, 180),
+    (Kind::UntraceableClaim, 130),
+    (Kind::RoadmapAsFact, 120),
+    (Kind::CandidateIntent, 180),
+    (Kind::RawFrame, 80),
+    (Kind::Artifact, 60),
+    (Kind::StimulationCommand, 40),
+    (Kind::DeadlineHazard, 80),
+    (Kind::ConsentGrant, 60),
+    (Kind::EvidenceTrace, 40),
 ];
 static GRAND_FINAL_TABLE: [WeightEntry; 9] = [
-    (Kind::CandidateIntent,240), (Kind::ConsentGrant,120), (Kind::EvidenceTrace,120),
-    (Kind::ChecksumProof,80), (Kind::CiProof,80), (Kind::RawFrame,70),
-    (Kind::ConsentRevoke,60), (Kind::UnsupportedClaim,80), (Kind::UnknownPacket,70),
+    (Kind::CandidateIntent, 240),
+    (Kind::ConsentGrant, 120),
+    (Kind::EvidenceTrace, 120),
+    (Kind::ChecksumProof, 80),
+    (Kind::CiProof, 80),
+    (Kind::RawFrame, 70),
+    (Kind::ConsentRevoke, 60),
+    (Kind::UnsupportedClaim, 80),
+    (Kind::UnknownPacket, 70),
 ];
 static PVAULT_TABLE: [WeightEntry; 9] = [
-    (Kind::RawFrame,200), (Kind::VaultRecord,100), (Kind::RawExportRequest,100),
-    (Kind::Artifact,100), (Kind::CandidateIntent,150), (Kind::ConsentGrant,100),
-    (Kind::EvidenceTrace,80), (Kind::ChecksumProof,50), (Kind::CiProof,50),
+    (Kind::RawFrame, 200),
+    (Kind::VaultRecord, 100),
+    (Kind::RawExportRequest, 100),
+    (Kind::Artifact, 100),
+    (Kind::CandidateIntent, 150),
+    (Kind::ConsentGrant, 100),
+    (Kind::EvidenceTrace, 80),
+    (Kind::ChecksumProof, 50),
+    (Kind::CiProof, 50),
 ];
 static KTRIAL_TABLE: [WeightEntry; 9] = [
-    (Kind::RawFrame,80), (Kind::Artifact,80), (Kind::CandidateIntent,220),
-    (Kind::ConsentGrant,100), (Kind::EvidenceTrace,80), (Kind::DeadlineHazard,200),
-    (Kind::UnsupportedClaim,100), (Kind::StimulationCommand,20), (Kind::ChecksumProof,60),
+    (Kind::RawFrame, 80),
+    (Kind::Artifact, 80),
+    (Kind::CandidateIntent, 220),
+    (Kind::ConsentGrant, 100),
+    (Kind::EvidenceTrace, 80),
+    (Kind::DeadlineHazard, 200),
+    (Kind::UnsupportedClaim, 100),
+    (Kind::StimulationCommand, 20),
+    (Kind::ChecksumProof, 60),
 ];
 
 fn roll_kind(rng: &mut Rng, table: &[WeightEntry]) -> Kind {
-    let total: u32 = table.iter().map(|(_,w)| *w).sum();
-    if total == 0 { return Kind::CandidateIntent; }
+    let total: u32 = table.iter().map(|(_, w)| *w).sum();
+    if total == 0 {
+        return Kind::CandidateIntent;
+    }
     let mut r = rng.range(total);
     for (kind, w) in table {
-        if r < *w { return *kind; }
+        if r < *w {
+            return *kind;
+        }
         r -= w;
     }
-    table.last().map(|(k,_)| *k).unwrap_or(Kind::CandidateIntent)
+    table
+        .last()
+        .map(|(k, _)| *k)
+        .unwrap_or(Kind::CandidateIntent)
 }
 
 // ─── Simulation state ────────────────────────────────────────────────────────
@@ -768,7 +1104,10 @@ pub struct Input {
 }
 
 impl Input {
-    pub const IDLE: Self = Self { lane: None, action: None };
+    pub const IDLE: Self = Self {
+        lane: None,
+        action: None,
+    };
 }
 
 /// Read-only snapshot for presentation and WASM ABI.
@@ -809,7 +1148,9 @@ pub struct Snapshot {
 impl Simulation {
     pub fn new(mode: Mode, difficulty: Difficulty, seed: u64) -> Self {
         let mut sim = Self {
-            mode, difficulty, seed,
+            mode,
+            difficulty,
+            seed,
             rng: Rng::new(seed),
             tick: 0,
             status: Status::Running,
@@ -856,31 +1197,81 @@ impl Simulation {
 
     // ── Accessors ────────────────────────────────────────────────────────────
 
-    pub const fn mode(&self) -> Mode { self.mode }
-    pub const fn difficulty(&self) -> Difficulty { self.difficulty }
-    pub const fn seed(&self) -> u64 { self.seed }
-    pub const fn tick(&self) -> u32 { self.tick }
-    pub const fn status(&self) -> Status { self.status }
-    pub const fn reason(&self) -> TerminalReason { self.reason }
-    pub const fn phase(&self) -> u8 { self.phase }
-    pub const fn selected_lane(&self) -> u8 { self.selected_lane }
-    pub const fn trust(&self) -> i32 { self.trust }
-    pub const fn risk(&self) -> i32 { self.risk }
-    pub const fn integrity(&self) -> i32 { self.integrity }
-    pub const fn score(&self) -> u64 { self.score }
-    pub const fn combo(&self) -> u32 { self.combo }
-    pub const fn best_combo(&self) -> u32 { self.best_combo }
-    pub const fn raw_leaks(&self) -> u8 { self.raw_leaks }
-    pub const fn evidence_bits(&self) -> u8 { self.evidence_bits }
-    pub fn evidence_level(&self) -> EvidenceLevel { EvidenceLevel::from_bits(self.evidence_bits) }
-    pub const fn consent(&self) -> ConsentState { self.consent }
-    pub const fn consent_epoch(&self) -> u32 { self.consent_epoch }
-    pub fn consent_expires_tick(&self) -> u32 { self.consent.expires_tick }
-    pub const fn vault(&self) -> VaultState { self.vault }
-    pub const fn gate_mask(&self) -> u8 { self.gate_mask }
-    pub const fn wcet_peak(&self) -> u32 { self.wcet_peak }
-    pub const fn rng_state(&self) -> u64 { self.rng.state() }
-    pub fn pool(&self) -> &[Option<Entity>; ENTITY_CAPACITY] { &self.pool }
+    pub const fn mode(&self) -> Mode {
+        self.mode
+    }
+    pub const fn difficulty(&self) -> Difficulty {
+        self.difficulty
+    }
+    pub const fn seed(&self) -> u64 {
+        self.seed
+    }
+    pub const fn tick(&self) -> u32 {
+        self.tick
+    }
+    pub const fn status(&self) -> Status {
+        self.status
+    }
+    pub const fn reason(&self) -> TerminalReason {
+        self.reason
+    }
+    pub const fn phase(&self) -> u8 {
+        self.phase
+    }
+    pub const fn selected_lane(&self) -> u8 {
+        self.selected_lane
+    }
+    pub const fn trust(&self) -> i32 {
+        self.trust
+    }
+    pub const fn risk(&self) -> i32 {
+        self.risk
+    }
+    pub const fn integrity(&self) -> i32 {
+        self.integrity
+    }
+    pub const fn score(&self) -> u64 {
+        self.score
+    }
+    pub const fn combo(&self) -> u32 {
+        self.combo
+    }
+    pub const fn best_combo(&self) -> u32 {
+        self.best_combo
+    }
+    pub const fn raw_leaks(&self) -> u8 {
+        self.raw_leaks
+    }
+    pub const fn evidence_bits(&self) -> u8 {
+        self.evidence_bits
+    }
+    pub fn evidence_level(&self) -> EvidenceLevel {
+        EvidenceLevel::from_bits(self.evidence_bits)
+    }
+    pub const fn consent(&self) -> ConsentState {
+        self.consent
+    }
+    pub const fn consent_epoch(&self) -> u32 {
+        self.consent_epoch
+    }
+    pub fn consent_expires_tick(&self) -> u32 {
+        self.consent.expires_tick
+    }
+    pub const fn vault(&self) -> VaultState {
+        self.vault
+    }
+    pub const fn gate_mask(&self) -> u8 {
+        self.gate_mask
+    }
+    pub const fn wcet_peak(&self) -> u32 {
+        self.wcet_peak
+    }
+    pub const fn rng_state(&self) -> u64 {
+        self.rng.state()
+    }
+    pub fn pool(&self) -> &[Option<Entity>; ENTITY_CAPACITY] {
+        &self.pool
+    }
     pub fn entity(&self, slot: u8) -> Option<&Entity> {
         self.pool.get(slot as usize).and_then(|e| e.as_ref())
     }
@@ -888,18 +1279,25 @@ impl Simulation {
     // ── Step ─────────────────────────────────────────────────────────────────
 
     pub fn step(&mut self, input: Input) {
-        if self.status.is_terminal() { return; }
+        if self.status.is_terminal() {
+            return;
+        }
         self.tick += 1;
 
         // Lane selection.
         if let Some(lane) = input.lane {
-            if lane < LANES { self.selected_lane = lane; }
+            if lane < LANES {
+                self.selected_lane = lane;
+            }
         }
 
         // Grand phase update.
         if self.mode == Mode::Grand {
             for (i, &start) in GRAND_PHASE_TICKS.iter().enumerate().rev() {
-                if self.tick >= start { self.phase = i as u8; break; }
+                if self.tick >= start {
+                    self.phase = i as u8;
+                    break;
+                }
             }
         }
 
@@ -921,9 +1319,13 @@ impl Simulation {
         // Action.
         if let Some(action) = input.action {
             let action_cost = match action {
-                Action::Validate=>55, Action::Convert=>70, Action::Quarantine=>45,
-                Action::Consent=>50, Action::Evidence=>50, Action::Release=>120,
-                Action::None=>0,
+                Action::Validate => 55,
+                Action::Convert => 70,
+                Action::Quarantine => 45,
+                Action::Consent => 50,
+                Action::Evidence => 50,
+                Action::Release => 120,
+                Action::None => 0,
             };
             wcet += action_cost;
             self.do_action(action);
@@ -939,7 +1341,9 @@ impl Simulation {
 
         // Spawn.
         let spawned = self.do_spawn();
-        if spawned { wcet += 12; }
+        if spawned {
+            wcet += 12;
+        }
 
         // WCET gate.
         self.wcet_peak = self.wcet_peak.max(wcet);
@@ -977,7 +1381,11 @@ impl Simulation {
         // DETERMINISM (§16.5) — starts set; cleared on fault (not tracked in this model)
         mask |= 1 << GATE_DETERMINISM;
         // VAULT (§16.6 / §13.4)
-        if self.vault.gate_eligible() && self.pending_raw == 0 && self.raw_export_violations == 0 && self.raw_leaks == 0 {
+        if self.vault.gate_eligible()
+            && self.pending_raw == 0
+            && self.raw_export_violations == 0
+            && self.raw_leaks == 0
+        {
             mask |= 1 << GATE_VAULT;
         }
         // WCET (§16.7 / §15.2)
@@ -995,7 +1403,8 @@ impl Simulation {
 
     fn do_action(&mut self, action: Action) {
         if action == Action::Release {
-            self.do_release(); return;
+            self.do_release();
+            return;
         }
         // Release cooldown check for non-release actions: no cooldown on these.
 
@@ -1013,12 +1422,12 @@ impl Simulation {
 
         match action {
             Action::Validate => self.do_validate(slot, entity),
-            Action::Convert  => self.do_convert(slot, entity),
+            Action::Convert => self.do_convert(slot, entity),
             Action::Quarantine => self.do_quarantine(slot, entity),
-            Action::Consent  => self.do_consent(slot, entity),
+            Action::Consent => self.do_consent(slot, entity),
             Action::Evidence => self.do_evidence(slot, entity),
-            Action::Release  => unreachable!(),
-            Action::None     => {}
+            Action::Release => unreachable!(),
+            Action::None => {}
         }
     }
 
@@ -1026,9 +1435,13 @@ impl Simulation {
         let mut best: Option<(usize, i32)> = None;
         for (i, slot) in self.pool.iter().enumerate() {
             if let Some(entity) = slot {
-                if entity.lane != self.selected_lane { continue; }
+                if entity.lane != self.selected_lane {
+                    continue;
+                }
                 let x = entity.logical_x();
-                if !(ACTION_WINDOW_START..BOUNDARY_X).contains(&x) { continue; }
+                if !(ACTION_WINDOW_START..BOUNDARY_X).contains(&x) {
+                    continue;
+                }
                 // Closest to boundary (highest x), tie-break: lower slot.
                 if best.map(|(_, bx)| x > bx).unwrap_or(true) {
                     best = Some((i, x));
@@ -1045,7 +1458,14 @@ impl Simulation {
         (base + margin) * combo_pct / 100
     }
 
-    fn correct_action(&mut self, slot: usize, base_score: u64, trust_d: i32, risk_d: i32, int_d: i32) {
+    fn correct_action(
+        &mut self,
+        slot: usize,
+        base_score: u64,
+        trust_d: i32,
+        risk_d: i32,
+        int_d: i32,
+    ) {
         let x = self.pool[slot].map(|e| e.logical_x()).unwrap_or(0);
         let delta = self.safety_score(x, base_score);
         self.score = self.score.saturating_add(delta);
@@ -1086,15 +1506,22 @@ impl Simulation {
                 self.pool[slot] = None;
                 self.correct_action(slot, 100, 30, -15, 0);
             }
-            Kind::StimulationCommand => { self.wrong_action(true); }
-            _ => { self.wrong_action(false); }
+            Kind::StimulationCommand => {
+                self.wrong_action(true);
+            }
+            _ => {
+                self.wrong_action(false);
+            }
         }
     }
 
     fn do_convert(&mut self, slot: usize, entity: Entity) {
         if entity.kind != Kind::ValidatedIntent {
-            if entity.kind == Kind::StimulationCommand { self.wrong_action(true); }
-            else { self.wrong_action(false); }
+            if entity.kind == Kind::StimulationCommand {
+                self.wrong_action(true);
+            } else {
+                self.wrong_action(false);
+            }
             return;
         }
         let has_consent = self.consent.has_convert(self.consent_epoch, self.tick);
@@ -1121,14 +1548,24 @@ impl Simulation {
     }
 
     fn do_quarantine(&mut self, slot: usize, entity: Entity) {
-        let is_valid_target = matches!(entity.kind,
-            Kind::RawFrame | Kind::Artifact | Kind::UnsupportedClaim |
-            Kind::UntraceableClaim | Kind::RoadmapAsFact | Kind::StimulationCommand |
-            Kind::VaultRecord | Kind::RawExportRequest | Kind::ConsentRevoke
+        let is_valid_target = matches!(
+            entity.kind,
+            Kind::RawFrame
+                | Kind::Artifact
+                | Kind::UnsupportedClaim
+                | Kind::UntraceableClaim
+                | Kind::RoadmapAsFact
+                | Kind::StimulationCommand
+                | Kind::VaultRecord
+                | Kind::RawExportRequest
+                | Kind::ConsentRevoke
         );
         if !is_valid_target {
-            if entity.kind == Kind::StimulationCommand { self.wrong_action(true); }
-            else { self.wrong_action(false); }
+            if entity.kind == Kind::StimulationCommand {
+                self.wrong_action(true);
+            } else {
+                self.wrong_action(false);
+            }
             return;
         }
         // Vault: raw-type quarantine transitions vault.
@@ -1139,7 +1576,9 @@ impl Simulation {
                 VaultState::Sealing => VaultState::Sealed,
                 other => other,
             };
-            if self.pending_raw > 0 { self.pending_raw -= 1; }
+            if self.pending_raw > 0 {
+                self.pending_raw -= 1;
+            }
         }
         if entity.kind == Kind::RawExportRequest {
             self.raw_export_violations = self.raw_export_violations.saturating_add(1);
@@ -1169,14 +1608,17 @@ impl Simulation {
                 self.pool[slot] = None;
                 self.correct_action(slot, 120, 35, -10, 0);
             }
-            _ => { self.wrong_action(false); }
+            _ => {
+                self.wrong_action(false);
+            }
         }
     }
 
     fn do_evidence(&mut self, slot: usize, entity: Entity) {
         let bit = entity.kind.evidence_level_bit();
         if bit == 0 {
-            self.wrong_action(false); return;
+            self.wrong_action(false);
+            return;
         }
         // Out-of-order: only accept if prerequisite bit is present (§12, §10.6).
         let ok = match entity.kind {
@@ -1187,7 +1629,8 @@ impl Simulation {
         };
         if !ok {
             // Out-of-order proof; treat as wrong action.
-            self.wrong_action(false); return;
+            self.wrong_action(false);
+            return;
         }
         self.evidence_bits |= bit;
         self.pool[slot] = None;
@@ -1231,7 +1674,9 @@ impl Simulation {
     fn advance_entities(&mut self) -> u32 {
         let mut additional_wcet = 0u32;
         for slot in 0..ENTITY_CAPACITY {
-            let Some(mut entity) = self.pool[slot] else { continue; };
+            let Some(mut entity) = self.pool[slot] else {
+                continue;
+            };
             // Move.
             entity.x_q8 = entity.x_q8.saturating_add(entity.speed_q8 as u32);
             // Typed intents: continue to app zone.
@@ -1253,7 +1698,9 @@ impl Simulation {
             if x >= BOUNDARY_X {
                 self.pool[slot] = None;
                 additional_wcet += self.resolve_crossing(entity);
-                if self.status.is_terminal() { return additional_wcet; }
+                if self.status.is_terminal() {
+                    return additional_wcet;
+                }
             } else {
                 self.pool[slot] = Some(entity);
             }
@@ -1390,13 +1837,23 @@ impl Simulation {
             x_q8: 0,
             speed_q8,
             spawn_tick: self.tick,
-            deadline_tick: if kind == Kind::DeadlineHazard { self.tick + 120 } else { 0 },
-            scope_mask: if kind == Kind::ConsentGrant { SCOPE_CONVERT | SCOPE_RELEASE } else { 0 },
+            deadline_tick: if kind == Kind::DeadlineHazard {
+                self.tick + 120
+            } else {
+                0
+            },
+            scope_mask: if kind == Kind::ConsentGrant {
+                SCOPE_CONVERT | SCOPE_RELEASE
+            } else {
+                0
+            },
             evidence_class: kind.evidence_level_bit(),
             generation: self.pool_generation,
         };
         let spawned = self.pool_insert(entity);
-        if !spawned { self.capacity_pressure = self.capacity_pressure.saturating_add(1); }
+        if !spawned {
+            self.capacity_pressure = self.capacity_pressure.saturating_add(1);
+        }
 
         // Schedule next spawn.
         let (min, max) = self.mode.spawn_interval(self.phase);
@@ -1446,10 +1903,14 @@ impl Simulation {
     }
 
     fn check_risk(&mut self) {
-        if self.risk >= 1000 { self.end_run(Status::Breached, TerminalReason::RiskOverflow); }
+        if self.risk >= 1000 {
+            self.end_run(Status::Breached, TerminalReason::RiskOverflow);
+        }
     }
     fn check_integrity(&mut self) {
-        if self.integrity <= 0 { self.end_run(Status::Breached, TerminalReason::IntegrityCollapse); }
+        if self.integrity <= 0 {
+            self.end_run(Status::Breached, TerminalReason::IntegrityCollapse);
+        }
     }
 
     // ── Grade (§19) ──────────────────────────────────────────────────────────
@@ -1460,13 +1921,20 @@ impl Simulation {
             Status::Breached => Grade::Breached,
             Status::Sealed => {
                 let gates = self.gate_mask == ALL_GATES_MASK;
-                if gates && self.trust >= 900 && self.risk <= 100 && self.integrity >= 900
+                if gates
+                    && self.trust >= 900
+                    && self.risk <= 100
+                    && self.integrity >= 900
                     && self.evidence_level() == EvidenceLevel::L3
-                    && self.raw_leaks == 0 && self.wrong_actions == 0
+                    && self.raw_leaks == 0
+                    && self.wrong_actions == 0
                 {
                     Grade::Sovereign
-                } else if gates && self.trust >= 750 && self.risk <= 250
-                    && self.integrity >= 750 && self.raw_leaks == 0
+                } else if gates
+                    && self.trust >= 750
+                    && self.risk <= 250
+                    && self.integrity >= 750
+                    && self.raw_leaks == 0
                 {
                     Grade::Sealed
                 } else {
@@ -1492,20 +1960,35 @@ impl Simulation {
     pub fn snapshot(&self) -> Snapshot {
         let remaining = if self.tick < self.consent.expires_tick && self.consent.scope_mask != 0 {
             self.consent.expires_tick - self.tick
-        } else { 0 };
+        } else {
+            0
+        };
         Snapshot {
-            mode: self.mode, difficulty: self.difficulty, seed: self.seed,
-            tick: self.tick, status: self.status, reason: self.reason,
-            phase: self.phase, selected_lane: self.selected_lane,
-            trust: self.trust, risk: self.risk, integrity: self.integrity,
-            score: self.score, combo: self.combo, best_combo: self.best_combo,
-            raw_leaks: self.raw_leaks, typed_intents: self.typed_intents,
-            quarantined: self.quarantined, wrong_actions: self.wrong_actions,
+            mode: self.mode,
+            difficulty: self.difficulty,
+            seed: self.seed,
+            tick: self.tick,
+            status: self.status,
+            reason: self.reason,
+            phase: self.phase,
+            selected_lane: self.selected_lane,
+            trust: self.trust,
+            risk: self.risk,
+            integrity: self.integrity,
+            score: self.score,
+            combo: self.combo,
+            best_combo: self.best_combo,
+            raw_leaks: self.raw_leaks,
+            typed_intents: self.typed_intents,
+            quarantined: self.quarantined,
+            wrong_actions: self.wrong_actions,
             evidence_bits: self.evidence_bits,
             evidence_level: self.evidence_level(),
-            consent: self.consent, consent_epoch: self.consent_epoch,
+            consent: self.consent,
+            consent_epoch: self.consent_epoch,
             consent_expires_remaining: remaining,
-            vault: self.vault, gate_mask: self.gate_mask,
+            vault: self.vault,
+            gate_mask: self.gate_mask,
             gates_passed: self.gate_mask.count_ones() as u8,
             wcet_peak: self.wcet_peak,
             capacity_pressure: self.capacity_pressure,
@@ -1519,9 +2002,15 @@ impl Simulation {
     pub fn state_hash(&self) -> u64 {
         let mut h = Fnv64::new();
         // Version and algorithm IDs.
-        for b in CORE_VERSION.as_bytes() { h.feed_u8(*b); }
-        for b in HASH_ALGORITHM.as_bytes() { h.feed_u8(*b); }
-        for b in RNG_ALGORITHM.as_bytes() { h.feed_u8(*b); }
+        for b in CORE_VERSION.as_bytes() {
+            h.feed_u8(*b);
+        }
+        for b in HASH_ALGORITHM.as_bytes() {
+            h.feed_u8(*b);
+        }
+        for b in RNG_ALGORITHM.as_bytes() {
+            h.feed_u8(*b);
+        }
         // Config.
         h.feed_u64(self.seed);
         h.feed_u8(self.mode.code());
@@ -1569,7 +2058,9 @@ impl Simulation {
         // Pool: 32 slots ordered by slot_id.
         for i in 0..ENTITY_CAPACITY {
             match &self.pool[i] {
-                None => { h.feed_u8(0); }
+                None => {
+                    h.feed_u8(0);
+                }
                 Some(e) => {
                     h.feed_u8(1);
                     h.feed_u8(e.slot_id);
@@ -1590,7 +2081,9 @@ impl Simulation {
     }
 }
 
-fn sat(v: i32) -> i32 { v.clamp(0, 1000) }
+fn sat(v: i32) -> i32 {
+    v.clamp(0, 1000)
+}
 
 // ─── Tests (§40) ─────────────────────────────────────────────────────────────
 
@@ -1604,15 +2097,26 @@ mod tests {
 
     fn place(sim: &mut Simulation, kind: Kind, lane: u8, logical_x: i32) {
         sim.pool_insert(Entity {
-            slot_id: 0, kind, lane, state: EntityState::Incoming,
-            flags: 0, x_q8: to_q8(logical_x), speed_q8: 0,
-            spawn_tick: sim.tick, deadline_tick: 0, scope_mask: 0,
-            evidence_class: kind.evidence_level_bit(), generation: 0,
+            slot_id: 0,
+            kind,
+            lane,
+            state: EntityState::Incoming,
+            flags: 0,
+            x_q8: to_q8(logical_x),
+            speed_q8: 0,
+            spawn_tick: sim.tick,
+            deadline_tick: 0,
+            scope_mask: 0,
+            evidence_class: kind.evidence_level_bit(),
+            generation: 0,
         });
     }
 
     fn act(sim: &mut Simulation, lane: u8, action: Action) {
-        sim.step(Input { lane: Some(lane), action: Some(action) });
+        sim.step(Input {
+            lane: Some(lane),
+            action: Some(action),
+        });
     }
 
     // ── §8.1 RNG determinism ─────────────────────────────────────────────────
@@ -1620,7 +2124,9 @@ mod tests {
     fn rng_xorshift64star_deterministic() {
         let mut a = Rng::new(42);
         let mut b = Rng::new(42);
-        for _ in 0..100 { assert_eq!(a.next_u64(), b.next_u64()); }
+        for _ in 0..100 {
+            assert_eq!(a.next_u64(), b.next_u64());
+        }
     }
 
     // ── §8.2 Seed 0 remapping ────────────────────────────────────────────────
@@ -1644,8 +2150,15 @@ mod tests {
         let run = |seed| {
             let mut s = Simulation::new(Mode::Standard, Difficulty::Standard, seed);
             for t in 1..=600u32 {
-                let action = if t % 60 == 0 { Some(Action::Quarantine) } else { None };
-                s.step(Input { lane: Some((t / 60 % 5) as u8), action });
+                let action = if t % 60 == 0 {
+                    Some(Action::Quarantine)
+                } else {
+                    None
+                };
+                s.step(Input {
+                    lane: Some((t / 60 % 5) as u8),
+                    action,
+                });
             }
             s.state_hash()
         };
@@ -1658,7 +2171,9 @@ mod tests {
     fn stim_crossing_fails_closed() {
         let mut s = sim(Mode::Standard);
         place(&mut s, Kind::StimulationCommand, 2, BOUNDARY_X - 1);
-        for e in s.pool.iter_mut().flatten() { e.speed_q8 = 512; }
+        for e in s.pool.iter_mut().flatten() {
+            e.speed_q8 = 512;
+        }
         s.step(Input::IDLE);
         assert_eq!(s.status(), Status::Unsafe);
         assert_eq!(s.reason(), TerminalReason::UnsafeStimulationEscape);
@@ -1670,7 +2185,9 @@ mod tests {
     fn raw_export_compromises_vault() {
         let mut s = sim(Mode::Standard);
         place(&mut s, Kind::RawExportRequest, 1, BOUNDARY_X - 1);
-        for e in s.pool.iter_mut().flatten() { e.speed_q8 = 512; }
+        for e in s.pool.iter_mut().flatten() {
+            e.speed_q8 = 512;
+        }
         s.step(Input::IDLE);
         assert_eq!(s.vault(), VaultState::Compromised);
     }
@@ -1680,8 +2197,8 @@ mod tests {
     fn raw_frame_never_becomes_output() {
         let mut s = sim(Mode::Standard);
         place(&mut s, Kind::RawFrame, 2, 600);
-        act(&mut s, 2, Action::Validate);   // Wrong action.
-        act(&mut s, 2, Action::Convert);    // Wrong action.
+        act(&mut s, 2, Action::Validate); // Wrong action.
+        act(&mut s, 2, Action::Convert); // Wrong action.
         for e in s.pool.iter().flatten() {
             assert_ne!(e.kind, Kind::TypedIntent);
             assert_ne!(e.kind, Kind::ValidatedIntent);
@@ -1743,9 +2260,13 @@ mod tests {
         // Flood with raw frame crossings to drive risk to 1000.
         for _ in 0..8 {
             place(&mut s, Kind::RawFrame, 0, BOUNDARY_X - 1);
-            for e in s.pool.iter_mut().flatten() { e.speed_q8 = 512; }
+            for e in s.pool.iter_mut().flatten() {
+                e.speed_q8 = 512;
+            }
             s.step(Input::IDLE);
-            if s.status().is_terminal() { break; }
+            if s.status().is_terminal() {
+                break;
+            }
         }
         // Should never exceed bounds.
         assert!(s.risk() >= 0 && s.risk() <= 1000);
@@ -1758,12 +2279,17 @@ mod tests {
     fn terminal_state_immutable() {
         let mut s = sim(Mode::Standard);
         place(&mut s, Kind::StimulationCommand, 2, BOUNDARY_X - 1);
-        for e in s.pool.iter_mut().flatten() { e.speed_q8 = 512; }
+        for e in s.pool.iter_mut().flatten() {
+            e.speed_q8 = 512;
+        }
         s.step(Input::IDLE);
         assert_eq!(s.status(), Status::Unsafe);
         let hash = s.state_hash();
         let tick = s.tick();
-        s.step(Input { lane: Some(0), action: Some(Action::Release) });
+        s.step(Input {
+            lane: Some(0),
+            action: Some(Action::Release),
+        });
         assert_eq!(s.state_hash(), hash);
         assert_eq!(s.tick(), tick);
     }
@@ -1773,7 +2299,9 @@ mod tests {
     fn grade_unsafe_on_stimulation() {
         let mut s = sim(Mode::Standard);
         place(&mut s, Kind::StimulationCommand, 2, BOUNDARY_X - 1);
-        for e in s.pool.iter_mut().flatten() { e.speed_q8 = 512; }
+        for e in s.pool.iter_mut().flatten() {
+            e.speed_q8 = 512;
+        }
         s.step(Input::IDLE);
         assert_eq!(s.grade(), Grade::Unsafe);
     }
@@ -1785,10 +2313,18 @@ mod tests {
         // Fill pool to 32 entities → 32*4=128 + base 40 = 168 < 618.
         for i in 0..32u8 {
             let _ = s.pool_insert(Entity {
-                slot_id: i, kind: Kind::CandidateIntent, lane: i % 5,
-                state: EntityState::Incoming, flags: 0,
-                x_q8: to_q8(300 + i as i32), speed_q8: 0,
-                spawn_tick: 0, deadline_tick: 0, scope_mask: 0, evidence_class: 0, generation: 0,
+                slot_id: i,
+                kind: Kind::CandidateIntent,
+                lane: i % 5,
+                state: EntityState::Incoming,
+                flags: 0,
+                x_q8: to_q8(300 + i as i32),
+                speed_q8: 0,
+                spawn_tick: 0,
+                deadline_tick: 0,
+                scope_mask: 0,
+                evidence_class: 0,
+                generation: 0,
             });
         }
         s.step(Input::IDLE);
@@ -1827,10 +2363,18 @@ mod tests {
         let mut s = sim(Mode::Standard);
         for i in 0..40u8 {
             s.pool_insert(Entity {
-                slot_id: 0, kind: Kind::Artifact, lane: i % 5,
-                state: EntityState::Incoming, flags: 0, x_q8: to_q8(100),
-                speed_q8: 0, spawn_tick: 0, deadline_tick: 0, scope_mask: 0,
-                evidence_class: 0, generation: 0,
+                slot_id: 0,
+                kind: Kind::Artifact,
+                lane: i % 5,
+                state: EntityState::Incoming,
+                flags: 0,
+                x_q8: to_q8(100),
+                speed_q8: 0,
+                spawn_tick: 0,
+                deadline_tick: 0,
+                scope_mask: 0,
+                evidence_class: 0,
+                generation: 0,
             });
         }
         let count = s.pool.iter().filter(|e| e.is_some()).count();

@@ -1,14 +1,14 @@
-//! Deterministic reference policies used to record and search replay
-//! vectors. The policies are part of the conformance toolkit, not of the
-//! authoritative core.
+// SPDX-FileCopyrightText: 2026 Denis Yermakou
+// SPDX-FileContributor: AxonOS
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+//! Reference conformance policy — record/search vectors, not shipped to users.
 
 use neural_boundary_core::{
-    Action, ConsentState, Entity, EntityKind, Event, EvidenceLevel, Grade, Input, RunMode,
-    Simulation, SimulationConfig, Status, TerminalReason, BOUNDARY_X, EVIDENCE_POINTS_MAX,
-    GATE_WINDOW, LANES,
+    Action, Difficulty, Input, Kind, Mode, Rng, Simulation, Status, TerminalReason,
+    ACTION_WINDOW_START, BOUNDARY_X,
 };
 
-/// One recorded input event.
+/// Recorded action event for replay files.
 #[derive(Clone, Copy, Debug)]
 pub struct RecordedInput {
     pub tick: u32,
@@ -16,23 +16,24 @@ pub struct RecordedInput {
     pub action: Action,
 }
 
-/// Terminal summary of a run, mirrored into the replay `expected` block.
+/// Run outcome carried into the replay `expected` block.
 #[derive(Clone, Copy, Debug)]
 pub struct RunSummary {
     pub terminal_tick: u32,
     pub status: Status,
-    pub grade: Grade,
+    pub reason: TerminalReason,
     pub trust: i32,
     pub risk: i32,
     pub integrity: i32,
-    pub evidence_points: u8,
-    pub evidence_level: EvidenceLevel,
-    pub gates_passed: u8,
+    pub evidence_bits: u8,
+    pub gate_mask: u8,
     pub raw_leaks: u8,
-    pub delivered: u8,
-    pub score: u32,
-    pub best_streak: u32,
-    pub revocations: u8,
+    pub typed_intents: u8,
+    pub quarantined: u32,
+    pub wrong_actions: u32,
+    pub score: u64,
+    pub best_combo: u32,
+    pub revocations: u32,
     pub state_hash: u64,
 }
 
@@ -41,16 +42,14 @@ pub struct RunResult {
     pub inputs: Vec<RecordedInput>,
 }
 
-/// Recording policies.
+/// Policy determines which action the bot takes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Policy {
-    /// Full boundary discipline: contain, classify, gate, convert, seal.
+    /// Full boundary discipline.
     Clean,
-    /// No input at all: the world crosses freely.
+    /// No inputs whatsoever.
     Idle,
-    /// Boundary discipline, except revoked-consent credentials are ignored
-    /// and allowed to cross — demonstrating immediate revocation and
-    /// recovery through a fresh consent grant.
+    /// Ignore ConsentRevoke entities (let them cross).
     Lapse,
 }
 
@@ -62,7 +61,6 @@ impl Policy {
             Self::Lapse => "lapse",
         }
     }
-
     pub fn from_name(name: &str) -> Option<Self> {
         match name {
             "clean" => Some(Self::Clean),
@@ -73,235 +71,231 @@ impl Policy {
     }
 }
 
-pub fn summarize(simulation: &Simulation, revocations: u8) -> RunSummary {
-    let snapshot = simulation.snapshot();
-    RunSummary {
-        terminal_tick: snapshot.tick,
-        status: snapshot.status,
-        grade: simulation.grade(),
-        trust: snapshot.trust,
-        risk: snapshot.risk,
-        integrity: snapshot.integrity,
-        evidence_points: snapshot.evidence_points,
-        evidence_level: snapshot.evidence_level,
-        gates_passed: snapshot.gates_passed,
-        raw_leaks: snapshot.raw_leaks,
-        delivered: snapshot.delivered,
-        score: snapshot.score,
-        best_streak: snapshot.best_streak,
-        revocations,
-        state_hash: simulation.state_hash(),
-    }
-}
-
-/// Decide the next input for a policy. Public so `trace` can reuse it.
-pub fn decide(simulation: &Simulation, policy: Policy) -> Input {
+/// Decide the next action for the given policy.
+pub fn decide(sim: &Simulation, policy: Policy) -> Input {
+    use neural_boundary_core::EvidenceLevel;
     if policy == Policy::Idle {
         return Input::IDLE;
     }
-    let snapshot = simulation.snapshot();
-    if snapshot.cooldown > 0 {
-        return Input::IDLE;
-    }
-    if simulation.release_blocker().is_none() {
+    let snap = sim.snapshot();
+    let selected = snap.selected_lane;
+
+    // Attempt release first when all gates pass.
+    if snap.gate_mask == neural_boundary_core::ALL_GATES_MASK
+        && snap.consent.has_release(snap.consent_epoch, snap.tick)
+    {
         return Input {
-            select_lane: None,
+            lane: None,
             action: Some(Action::Release),
         };
     }
 
-    let rules = simulation.rules();
-    let consent_active = matches!(snapshot.consent, ConsentState::Active { .. });
-    let consent_low = snapshot.consent_remaining < 480;
-    let evidence_target = rules
-        .evidence_points_min
-        .saturating_add(2)
-        .min(EVIDENCE_POINTS_MAX);
-
+    // Scan frontmost entity in each lane, pick highest-priority action.
     let mut best: Option<(u32, u8, Action)> = None;
-    let mut consider = |rank: u32, lane: u8, action: Action| {
-        if best.map(|(current, _, _)| rank > current).unwrap_or(true) {
-            best = Some((rank, lane, action));
-        }
-    };
-
-    for lane in 0..LANES {
-        let Some(front) = frontmost(simulation, lane) else {
+    for lane in 0..neural_boundary_core::LANES {
+        let Some(entity) = frontmost(sim, lane) else {
             continue;
         };
-        let priority: Option<(u32, Action)> = match front.kind {
-            EntityKind::StimulationCommand => Some((95, Action::Quarantine)),
-            EntityKind::RawFrame => Some((90, Action::Quarantine)),
-            EntityKind::RevokedConsent => {
-                if policy == Policy::Lapse {
-                    None
-                } else {
-                    Some((88, Action::Quarantine))
-                }
+        let x = entity.logical_x();
+        let urgency = (BOUNDARY_X - x).max(0) as u32; // lower = closer to boundary
+        let priority: Option<(u32, Action)> = match entity.kind {
+            Kind::StimulationCommand => Some((10_000, Action::Quarantine)),
+            Kind::RawFrame | Kind::VaultRecord | Kind::RawExportRequest => {
+                Some((9_000 + urgency, Action::Quarantine))
             }
-            EntityKind::Artifact
-            | EntityKind::UnsupportedClaim
-            | EntityKind::UntraceableClaim
-            | EntityKind::RoadmapAsFactClaim => Some((82, Action::Quarantine)),
-            EntityKind::UnknownPacket if front.x >= BOUNDARY_X - 260 => {
-                Some((76, Action::Validate))
+            Kind::Artifact => Some((8_000 + urgency, Action::Quarantine)),
+            Kind::ConsentRevoke if policy != Policy::Lapse => {
+                Some((7_500 + urgency, Action::Consent))
             }
-            EntityKind::ConsentToken if !consent_active || consent_low => {
-                Some((70, Action::ConsentGate))
+            Kind::UnsupportedClaim | Kind::UntraceableClaim | Kind::RoadmapAsFact => {
+                Some((7_000 + urgency, Action::Quarantine))
             }
-            EntityKind::Evidence | EntityKind::Checksum | EntityKind::CiTest
-                if snapshot.evidence_points < evidence_target =>
+            Kind::ConsentGrant if snap.consent.scope_mask == 0 => {
+                Some((6_500 + urgency, Action::Consent))
+            }
+            Kind::EvidenceTrace
+                if snap.evidence_bits & neural_boundary_core::EVIDENCE_TRACE == 0 =>
             {
-                Some((64, Action::EvidenceGate))
+                Some((6_000 + urgency, Action::Evidence))
             }
-            EntityKind::ValidatedIntent
-                if consent_active
-                    && EvidenceLevel::from_points(snapshot.evidence_points)
-                        >= EvidenceLevel::L1 =>
+            Kind::ChecksumProof
+                if snap.evidence_bits & neural_boundary_core::EVIDENCE_CHECKSUM == 0
+                    && snap.evidence_bits & neural_boundary_core::EVIDENCE_TRACE != 0 =>
             {
-                Some((58, Action::Convert))
+                Some((5_800 + urgency, Action::Evidence))
             }
-            EntityKind::IntentCandidate => Some((50, Action::Validate)),
+            Kind::CiProof
+                if snap.evidence_bits & neural_boundary_core::EVIDENCE_CI == 0
+                    && snap.evidence_bits & neural_boundary_core::EVIDENCE_CHECKSUM != 0 =>
+            {
+                Some((5_600 + urgency, Action::Evidence))
+            }
+            Kind::ValidatedIntent
+                if snap.consent.has_convert(snap.consent_epoch, snap.tick)
+                    && EvidenceLevel::from_bits(snap.evidence_bits)
+                        >= sim.mode().convert_evidence() =>
+            {
+                Some((5_000 + urgency, Action::Convert))
+            }
+            Kind::CandidateIntent | Kind::UnknownPacket | Kind::DeadlineHazard => {
+                Some((4_500 + urgency, Action::Validate))
+            }
             _ => None,
         };
-        if let Some((priority, action)) = priority {
-            consider(priority * 2_000 + front.x.max(0) as u32, lane, action);
+        if let Some((p, action)) = priority {
+            if best.map(|(bp, _, _)| p > bp).unwrap_or(true) {
+                best = Some((p, lane, action));
+            }
         }
     }
-
     match best {
         Some((_, lane, action)) => Input {
-            select_lane: Some(lane),
+            lane: Some(lane),
             action: Some(action),
         },
         None => Input::IDLE,
     }
 }
 
-fn frontmost(simulation: &Simulation, lane: u8) -> Option<Entity> {
-    let mut best: Option<Entity> = None;
-    for entity in simulation.entities().iter().flatten() {
-        if entity.lane != lane {
+fn frontmost(sim: &Simulation, lane: u8) -> Option<&neural_boundary_core::Entity> {
+    let mut best: Option<&neural_boundary_core::Entity> = None;
+    for slot in sim.pool().iter().flatten() {
+        if slot.lane != lane {
             continue;
         }
-        if entity.x < BOUNDARY_X - GATE_WINDOW || entity.x >= BOUNDARY_X {
+        let x = slot.logical_x();
+        if x < ACTION_WINDOW_START || x >= BOUNDARY_X {
             continue;
         }
-        if best.map(|current| entity.x > current.x).unwrap_or(true) {
-            best = Some(*entity);
+        if best.map(|b| x > b.logical_x()).unwrap_or(true) {
+            best = Some(slot);
         }
     }
     best
 }
 
-/// Run a policy to its terminal state (bounded by `max_ticks`), recording
-/// every applied input and counting consent revocations.
-pub fn run_policy(config: SimulationConfig, policy: Policy, max_ticks: u32) -> RunResult {
-    let mut simulation = Simulation::new(config);
+/// Run a policy to terminal, recording all inputs.
+pub fn run_policy(
+    mode: Mode,
+    difficulty: Difficulty,
+    seed: u64,
+    policy: Policy,
+    max_ticks: u32,
+) -> RunResult {
+    let mut sim = Simulation::new(mode, difficulty, seed);
     let mut inputs = Vec::new();
-    let mut revocations = 0u8;
-    for tick in 1..=max_ticks {
-        let input = decide(&simulation, policy);
-        if input != Input::IDLE {
-            if let Some(action) = input.action {
-                // Replay sets the lane explicitly, so a recorded input must
-                // carry the lane that is actually selected at this tick.
-                let lane = input
-                    .select_lane
-                    .unwrap_or_else(|| simulation.snapshot().selected_lane);
-                inputs.push(RecordedInput { tick, lane, action });
-            }
+    let mut revocations = 0u32;
+    let mut prev_epoch = sim.consent_epoch();
+    for t in 1..=max_ticks {
+        let input = decide(&sim, policy);
+        if let Some(action) = input.action {
+            inputs.push(RecordedInput {
+                tick: t,
+                lane: input.lane.unwrap_or(sim.selected_lane()),
+                action,
+            });
         }
-        simulation.step(input);
-        for event in simulation.events() {
-            if matches!(event, Event::ConsentRevoked { .. }) {
-                revocations = revocations.saturating_add(1);
-            }
-        }
-        if simulation.status() != Status::Running {
+        sim.step(input);
+        let new_epoch = sim.consent_epoch();
+        revocations += (new_epoch - prev_epoch) as u32;
+        prev_epoch = new_epoch;
+        if sim.status().is_terminal() {
             break;
         }
     }
     RunResult {
-        summary: summarize(&simulation, revocations),
+        summary: summarize(&sim, revocations),
         inputs,
     }
 }
 
-/// Replay a recorded input script to `terminal_tick`, counting revocations.
+pub fn summarize(sim: &Simulation, revocations: u32) -> RunSummary {
+    let snap = sim.snapshot();
+    RunSummary {
+        terminal_tick: snap.tick,
+        status: snap.status,
+        reason: snap.reason,
+        trust: snap.trust,
+        risk: snap.risk,
+        integrity: snap.integrity,
+        evidence_bits: snap.evidence_bits,
+        gate_mask: snap.gate_mask,
+        raw_leaks: snap.raw_leaks,
+        typed_intents: snap.typed_intents,
+        quarantined: snap.quarantined,
+        wrong_actions: snap.wrong_actions,
+        score: snap.score,
+        best_combo: snap.best_combo,
+        revocations,
+        state_hash: sim.state_hash(),
+    }
+}
+
+/// Replay a recorded script up to terminal_tick.
 pub fn replay_script(
-    config: SimulationConfig,
+    mode: Mode,
+    difficulty: Difficulty,
+    seed: u64,
     inputs: &[RecordedInput],
     terminal_tick: u32,
 ) -> RunSummary {
-    let mut simulation = Simulation::new(config);
+    let mut sim = Simulation::new(mode, difficulty, seed);
     let mut cursor = 0usize;
-    let mut revocations = 0u8;
-    for tick in 1..=terminal_tick {
-        let input = if cursor < inputs.len() && inputs[cursor].tick == tick {
-            let entry = inputs[cursor];
+    let mut revocations = 0u32;
+    let mut prev_epoch = sim.consent_epoch();
+    for t in 1..=terminal_tick {
+        let input = if cursor < inputs.len() && inputs[cursor].tick == t {
+            let e = inputs[cursor];
             cursor += 1;
             Input {
-                select_lane: Some(entry.lane),
-                action: Some(entry.action),
+                lane: Some(e.lane),
+                action: Some(e.action),
             }
         } else {
             Input::IDLE
         };
-        simulation.step(input);
-        for event in simulation.events() {
-            if matches!(event, Event::ConsentRevoked { .. }) {
-                revocations = revocations.saturating_add(1);
-            }
-        }
-        if simulation.status() != Status::Running {
+        sim.step(input);
+        let new_epoch = sim.consent_epoch();
+        revocations += (new_epoch - prev_epoch) as u32;
+        prev_epoch = new_epoch;
+        if sim.status().is_terminal() {
             break;
         }
     }
-    summarize(&simulation, revocations)
+    summarize(&sim, revocations)
 }
 
-/// What a seed search is looking for.
-#[derive(Clone, Copy, Debug)]
-pub struct SearchGoal {
-    pub reason: TerminalReason,
-    pub finals: Option<(i32, i32, i32)>,
-    pub min_revocations: u8,
-}
-
-/// Scan seeds in `from..=to` for a run matching the goal under a policy.
+/// Search seeds for a run matching goal criteria.
 pub fn search_seed(
-    mode: RunMode,
-    difficulty: neural_boundary_core::Difficulty,
+    mode: Mode,
+    difficulty: Difficulty,
     policy: Policy,
     from: u64,
     to: u64,
-    goal: SearchGoal,
+    want_reason: TerminalReason,
+    min_revocations: u32,
     max_ticks: u32,
 ) -> Option<(u64, RunResult)> {
     for seed in from..=to {
-        let result = run_policy(
-            SimulationConfig {
-                seed,
-                mode,
-                difficulty,
-            },
-            policy,
-            max_ticks,
-        );
-        let summary = result.summary;
-        if summary.status != Status::Terminal(goal.reason) {
+        let result = run_policy(mode, difficulty, seed, policy, max_ticks);
+        if result.summary.reason != want_reason {
             continue;
         }
-        if let Some((trust, risk, integrity)) = goal.finals {
-            if summary.trust != trust || summary.risk != risk || summary.integrity != integrity {
-                continue;
-            }
-        }
-        if summary.revocations < goal.min_revocations {
+        if result.summary.revocations < min_revocations {
             continue;
         }
         return Some((seed, result));
     }
     None
+}
+
+/// Generate a seed using wall-clock mix — for record command.
+pub fn mix_seed(base: u64, counter: u64) -> u64 {
+    let mut r = Rng::new(base ^ (counter << 48) ^ 0x9E37_79B9_7F4A_7C15);
+    let v = r.next_u64();
+    if v == 0 {
+        0x3001
+    } else {
+        v
+    }
 }
