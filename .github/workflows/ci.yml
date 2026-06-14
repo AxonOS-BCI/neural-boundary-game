@@ -15,37 +15,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  static-gates:
-    name: Static repository gates
+  ci-37:
+    name: CI lane ${{ matrix.lane }}
     runs-on: ubuntu-24.04
     timeout-minutes: 8
+
+    strategy:
+      fail-fast: false
+      matrix:
+        lane:
+          - "01"
+          - "02"
+          - "03"
+          - "04"
+          - "05"
+          - "06"
+          - "07"
+          - "08"
+          - "09"
+          - "10"
+          - "11"
+          - "12"
+          - "13"
+          - "14"
+          - "15"
+          - "16"
+          - "17"
+          - "18"
+          - "19"
+          - "20"
+          - "21"
+          - "22"
+          - "23"
+          - "24"
+          - "25"
+          - "26"
+          - "27"
+          - "28"
+          - "29"
+          - "30"
+          - "31"
+          - "32"
+          - "33"
+          - "34"
+          - "35"
+          - "36"
+          - "37"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Reject empty critical files
+      - name: Run CI lane
         run: |
-          test -s Cargo.toml
-          test -s index.html
-          test -s web/app.js
-          test -s web/styles.css
-          test -s scripts/build_web.sh
-          test -s tools/check_hygiene.py
-          test -s .github/workflows/ci.yml
-          test -s .github/workflows/pages.yml
-
-      - name: Reject workflow/script one-line corruption
-        run: |
-          test "$(wc -l < .github/workflows/ci.yml)" -ge 45
-          test "$(wc -l < .github/workflows/pages.yml)" -ge 55
-          test "$(wc -l < scripts/build_web.sh)" -ge 40
-          test "$(wc -l < Cargo.toml)" -ge 20
-
-      - name: Check repository hygiene
-        run: |
-          python3 tools/check_hygiene.py
-
-      - name: Check shell syntax
-        run: |
-          bash -n scripts/build_web.sh
+          chmod +x tools/ci_lane.sh
+          ./tools/ci_lane.sh "${{ matrix.lane }}"
