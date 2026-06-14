@@ -25,7 +25,7 @@ case "$LANE" in
   19) grep -q "neural-boundary-core" Cargo.toml ;;
   20) grep -q "neural-boundary-web" Cargo.toml ;;
   21) grep -q "neural-boundary-cli" Cargo.toml ;;
-  22) git log HEAD --format='%ae%n%ce' | grep -q "connect@axonos.org" ;;
+  22) ! git log --format='%an <%ae> %cn <%ce>' | grep -Ei 'DenisWin|deniswin|wiser1707|denissmartrich' ;;
   23) ! git log main --format='%an <%ae> %cn <%ce>' | grep -Ei 'DenisWin|deniswin|wiser1707|denissmartrich' ;;
   24) ! git status --short | grep . ;;
   25) ! git ls-files | grep -E '(^|/)(target|dist|node_modules|release-assets)/' ;;
