@@ -1,0 +1,46 @@
+{
+  "schema": "neural-boundary-replay-v3",
+  "product": "Neural Boundary Game",
+  "version": "7.3.0",
+  "scenario_id": 6,
+  "seed": "0000000000000001",
+  "tick_rate": 20,
+  "title": "10-adversarial-probe-breached",
+  "generated_by": "neural-boundary-cli 7.3.0",
+  "actions": [
+    {
+      "tick": 61,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 241,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 481,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 721,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 981,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 1221,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 1461,
+      "action": "AUTHORIZE"
+    }
+  ],
+  "expected": {
+    "grade": "BREACHED",
+    "reason": "CONSENT_COLLAPSE",
+    "score_min": -900,
+    "state_hash": "0x10c5c74fd4efd267"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "neural-boundary-replay-v3",
+  "product": "Neural Boundary Game",
+  "version": "7.3.0",
+  "scenario_id": 3,
+  "seed": "0000000000000001",
+  "tick_rate": 20,
+  "title": "05-consent-drift-sealed",
+  "generated_by": "neural-boundary-cli 7.3.0",
+  "actions": [
+    {
+      "tick": 61,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 62,
+      "action": "REVOKE"
+    },
+    {
+      "tick": 261,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 262,
+      "action": "QUARANTINE"
+    },
+    {
+      "tick": 521,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 522,
+      "action": "REVOKE"
+    },
+    {
+      "tick": 601,
+      "action": "RELEASE"
+    }
+  ],
+  "expected": {
+    "grade": "SEALED",
+    "reason": "SUCCESS_RELEASE",
+    "score_min": 1110,
+    "state_hash": "0x82b0a413e8f97f8c"
+  }
+}

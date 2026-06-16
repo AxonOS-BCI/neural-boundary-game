@@ -1,0 +1,42 @@
+{
+  "schema": "neural-boundary-replay-v3",
+  "product": "Neural Boundary Game",
+  "version": "7.3.0",
+  "scenario_id": 3,
+  "seed": "0000000000000001",
+  "tick_rate": 20,
+  "title": "06-consent-collapse",
+  "generated_by": "neural-boundary-cli 7.3.0",
+  "actions": [
+    {
+      "tick": 61,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 261,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 521,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 761,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 1021,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 1281,
+      "action": "AUTHORIZE"
+    }
+  ],
+  "expected": {
+    "grade": "BREACHED",
+    "reason": "CONSENT_COLLAPSE",
+    "score_min": -900,
+    "state_hash": "0xeea5e9df1867583b"
+  }
+}
