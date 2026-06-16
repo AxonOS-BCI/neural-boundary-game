@@ -107,19 +107,22 @@ def main() -> int:
     identity = manifest()
     rows: list[tuple[str, bool, str]] = []
 
-    missing = [name for name in REQUIRED_FILES if not (ROOT / name).exists()]
+    REQUIRED_MINUS_OLD = [n for n in REQUIRED_FILES
+                          if n not in ("LICENSE-MIT","LICENSE-APACHE")]
+    missing = [name for name in REQUIRED_MINUS_OLD if not (ROOT / name).exists()]
     rows.append(("layout", not missing, "all release files present" if not missing else f"missing: {', '.join(missing[:6])}{' …' if len(missing) > 6 else ''}"))
 
-    trunk = (ROOT / "Trunk.toml").read_text(encoding="utf-8")
-    rows.append(("trunk", 'target = "web/index.html"' in trunk, "single Pages build path via web/index.html"))
+    shell_ok = (ROOT/"web/index.html").exists() and (ROOT/"scripts/build_web.sh").exists()
+    rows.append(("web-build", shell_ok, "web/index.html + scripts/build_web.sh present"))
 
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
     ignored = all(token in gitignore for token in ("target", "dist", "node_modules"))
     rows.append((".gitignore", ignored, "build output ignored (target, dist, node_modules)"))
 
-    license_root = (ROOT / "LICENSE").read_text(encoding="utf-8")
-    license_ok = "MIT" in license_root and "Apache" in license_root and identity["license"] == "MIT OR Apache-2.0"
-    rows.append(("license", license_ok, "dual MIT OR Apache-2.0 surface is unambiguous"))
+    license_root = (ROOT / "LICENSE").read_text(encoding="utf-8") if (ROOT/"LICENSE").exists() else ""
+    sw_lic = identity.get("software_license","")
+    license_ok = "AGPL" in license_root and "Commercial" in license_root and "AGPL" in sw_lic
+    rows.append(("license", license_ok, f"dual {sw_lic} licence surface in LICENSE"))
 
     preview = png_size(ROOT / "preview.png") if (ROOT / "preview.png").exists() else None
     rows.append(("preview", preview == (1280, 720), f"preview.png is 1280x720 PNG (got {preview})"))
