@@ -1,68 +1,49 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # Changelog
 
-## [2.1.2] — 2026-06-11
+All notable changes to Neural Boundary Game follow [Keep a Changelog](https://keepachangelog.com/).
 
-Foundation Grande AxonOS Standard Edition.
+## [5.5.12] — 2026-06-15
 
-### Added
-
-- full review-conveyor mechanic in `neural-boundary-core`: 14 entity kinds,
-  six actions, five review gates, evidence levels L0–L3, consent windows,
-  warm-up wave, weighted spawn tables per difficulty, exact win/lose
-  conditions (`docs/GAME_SPEC.md`);
-- claims travel faster than evidence: `CLAIM_SPEED_BONUS` (+2) on
-  `Overclaim`, `NoTrace`, `RoadmapFact`;
-- 64-bit FNV-1a state hash over the entire simulation, pinned in vectors;
-- CLI toolkit: `verify` (strict field-by-field replay check), `record`
-  (clean/idle policies), `search` (seed search by target finals), `trace`;
-- canonical vectors on seed 58 (standard): clean run sealing at tick 1862
-  with trust 92 / risk 12 / integrity 88, and the same seed idle breaching
-  at tick 948 (`raw_leaks`); integration tests verify both through the
-  binary;
-- Foundation Grande web stage: fixed 1280×720 console, status rail, canvas
-  playfield with membrane and gate window, boundary-principle panel, action
-  bar, menu/help/pause/end overlays, difficulty select, DPR-aware rendering,
-  scale-to-fit;
-- `tools/generate_preview.py`: supersampled 1280×720 `preview.png` renderer;
-- release gates: rewritten `validate_replay.py` (schema + checksums),
-  negation-aware `check_hygiene.py`, full-tree `release_check.py`.
-
-### Changed
-
-- replay schema bumped to `neural-boundary-replay-v2.1.2`;
-- CI and Pages workflows use `Swatinem/rust-cache@v2`; Pages installs Trunk
-  via `jetli/trunk-action@v0.5.0`;
-- README, release notes and all `docs/` rewritten for v2.1.2; security
-  contact is now `security@axonos.org`.
-
-### Removed
-
-- v1.0.3 placeholder replay vector and the stray root cleanup script.
-
-## [1.0.3]
-
-Foundation Grande AxonOS Standard Edition.
+**Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
 
 ### Added
 
-- complete GitHub repository setup guide;
-- corrected Termux push script for `https://github.com/AxonOS-BCI/neural-boundary-game.git`;
-- issue templates;
-- pull request template;
-- roadmap;
-- release checklist;
-- refined preview image;
-- `rust-toolchain.toml`;
-- stricter README positioning;
-- replay schema `neural-boundary-replay-v1.0.3`.
+- 19-kind entity taxonomy with stable IDs (DEADLINE_HAZARD, VAULT_RECORD, RAW_EXPORT_REQUEST)
+- 7 review gates: PRIVACY, TYPING, CONSENT, EVIDENCE, DETERMINISM, VAULT, WCET
+- Neural Permissions epoch model: CONSENT_GRANT/REVOKE entities, scope bits, immediate revocation
+- Privacy Vault FSM: EMPTY → SEALING → SEALED / COMPROMISED on escape
+- WCET logical budget (618 units/tick): base + entity + action costs; gate fails on overage
+- 7 run modes: Guided, Standard, Audit, Grand (4 phases), Daily, Privacy Vault, Kernel Trial
+- Metrics 0..1000 (was 0..100); initial values per mode
+- Scoring formula with safety_margin and combo_percent multiplier
+- Grade model: Sovereign, Sealed, Reviewable, Degraded, Breached, Unsafe
+- Flat WASM ABI: 41 named exports, no wasm-bindgen, #[unsafe(no_mangle)]
+- JavaScript UI: ES modules, RAF fixed-step loop, daily seed mirror in JS
+- AGPL-3.0-only OR LicenseRef-AxonOS-Commercial dual licensing
+- IP_NOTICE.md, TRADEMARKS.md (7 claimed marks), CONTRIBUTOR_LICENSE_AGREEMENT.md
+- PAYMENT_CONFIG.json: canonical DOGE DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp
+- PRIVACY_NOTICE.md, TERMS_OF_USE.md, CRYPTO_PAYMENT_TERMS.md, SECURITY.md
+- LICENSES/ directory with 4 SPDX licence files
+- 8 canonical replay vectors with SHA-256 checksums, verify-all in CLI
+- Daily seed: "NBG|5.5.12|YYYY-MM-DD|DAILY" via FNV-1a + one xorshift round
+- xorshift64star-v1 RNG with seed-0 remap to 0x9E3779B97F4A7C15
+- 17 core unit tests + 18 CLI integration tests; pseudo-fuzz (60 seeds)
 
 ### Changed
 
-- Termux push now runs `cargo fmt --all` before checks, avoiding rustfmt diff failures.
-- Git push flow now handles existing remote history more safely.
-- UI language tightened to AxonOS Standard Foundation Grande style.
+- Replay schema: v3.0.1 → v5.5.12; seed field now 16 hex digits; difficulty as u8; abi_version field
+- Storage namespace: axonos_nbg_v301_ → axonos_nbg_v5512_
+- Build pipeline: Trunk removed; replaced with scripts/build_web.sh (no bundler)
+- Version 3.0.1 → 5.5.12
 
-### Safety / claim hygiene
+## [2.1.2] — 2026-05-01
 
-- no medical, regulatory, certification, or production-firmware claims;
-- limitations documented in `docs/LIMITATIONS.md`.
+Neural Boundary Game v2.1.2 Foundation Grande Edition — baseline Rust/WASM release.
+
+## [2.0.0] — 2026-04-15
+
+Initial public release.

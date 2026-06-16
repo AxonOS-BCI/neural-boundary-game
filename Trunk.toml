@@ -1,12 +1,6 @@
-[build]
-target = "web/index.html"
-dist = "dist"
-public_url = "./"
-
-[watch]
-watch = ["crates/neural-boundary-core", "crates/neural-boundary-web", "web"]
-
-[serve]
-addresses = ["127.0.0.1"]
-port = 8080
-open = false
+# Neural Boundary Game v5.5.12
+# Build pipeline: scripts/build_web.sh (no Trunk required)
+# Trunk is not used for v5.5.12; this file is retained for tooling compatibility.
+# [build]
+# target = "web/index.html"
+# dist = "dist"

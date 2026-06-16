@@ -1,219 +1,197 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Denis Yermakou
+  SPDX-FileContributor: AxonOS
+  SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+  Neural Boundary Game and AxonOS are protected intellectual property.
+-->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'"/>
-  <title>Neural Boundary Game v3.0.1 — Sovereign Boundary Edition</title>
-  <meta name="description" content="Deterministic Rust/WASM game demonstrating the BCI safety boundary: raw neural signal stays private; applications receive typed intent only."/>
-  <meta property="og:title" content="Neural Boundary Game"/>
+        content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"/>
+  <title>Neural Boundary Game v5.5.12 — Cognitive Sovereignty</title>
+  <meta name="description" content="Deterministic Rust/WASM boundary protocol demonstration. AxonOS."/>
+  <meta property="og:title" content="Neural Boundary Game v5.5.12"/>
   <meta property="og:description" content="Do not ship raw signal. Ship typed intent."/>
   <meta property="og:image" content="preview.png"/>
   <meta name="theme-color" content="#030507"/>
-  <link data-trunk rel="css" href="styles.css"/>
-  <link data-trunk rel="rust" href="../crates/neural-boundary-web/Cargo.toml"/>
-  <link data-trunk rel="copy-file" href="../preview.png"/>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <!-- Explicit WASM failure state: shown if the core does not boot. -->
-  <div id="boot-error" hidden role="alert">
+  <div id="boot-error" role="alert" hidden>
     <div class="sheet">
-      <p class="eyebrow">BOOT FAILURE</p>
-      <h2>The deterministic core did not initialize</h2>
-      <p>Neural Boundary Game runs entirely in your browser as a Rust/WASM
-         module. This browser blocked or failed to load WebAssembly, so no
-         game is shown — this product never substitutes a fake fallback.</p>
-      <p class="mono small">Verify the build offline instead:<br/>
-         <code>cargo run -p neural-boundary-cli --release -- verify-all</code></p>
+      <p class="eyebrow">RUNTIME BLOCKED</p>
+      <h2>The authoritative Rust/WASM core could not be verified.</h2>
+      <p>No fallback simulation was started. Verify offline: <code>cargo run -p neural-boundary-cli --release -- verify-all</code></p>
     </div>
   </div>
-  <script>
-    /* Boot watchdog: the Rust entry point sets data-nbg-booted. */
-    setTimeout(function () {
-      if (!document.documentElement.dataset.nbgBooted) {
-        var panel = document.getElementById('boot-error');
-        if (panel) { panel.hidden = false; }
-      }
-    }, 6000);
-  </script>
+  <a class="skip-link" href="#main-field">Skip to field</a>
 
-  <div id="app" class="app" data-phase="landing">
+  <section id="landing-screen" aria-labelledby="landing-title">
+    <div class="landing-inner">
+      <p class="mark" aria-label="AxonOS">AXON<span class="ac">OS</span></p>
+      <h1 id="landing-title">NEURAL BOUNDARY <span class="ac">GAME</span></h1>
+      <p class="version-chip mono">v5.5.12 &middot; COGNITIVE SOVEREIGNTY</p>
+      <p class="rule">Keep raw signal <b>private</b>. Release <b>typed intent</b> only.</p>
+      <button class="cta" id="cta-run" data-cmd="start">RUN BOUNDARY</button>
+      <fieldset class="selector">
+        <legend class="mono">RUN MODE</legend>
+        <div class="chips" role="radiogroup" aria-label="Run mode">
+          <button class="chip" role="radio" data-mode="1" aria-checked="false">GUIDED</button>
+          <button class="chip" role="radio" data-mode="2" aria-checked="true">STANDARD</button>
+          <button class="chip" role="radio" data-mode="3" aria-checked="false">AUDIT</button>
+          <button class="chip" role="radio" data-mode="4" aria-checked="false">GRAND</button>
+          <button class="chip" role="radio" data-mode="5" aria-checked="false">DAILY</button>
+          <button class="chip" role="radio" data-mode="6" aria-checked="false">VAULT</button>
+          <button class="chip" role="radio" data-mode="7" aria-checked="false">KERNEL</button>
+        </div>
+        <p id="mode-blurb" class="blurb">Canonical balanced run. Gate all 7 reviews. Seal the boundary.</p>
+      </fieldset>
+      <fieldset class="selector">
+        <legend class="mono">DIFFICULTY</legend>
+        <div class="chips" role="radiogroup" aria-label="Difficulty">
+          <button class="chip" role="radio" data-difficulty="0" aria-checked="false">CALM</button>
+          <button class="chip" role="radio" data-difficulty="1" aria-checked="true">STANDARD</button>
+          <button class="chip" role="radio" data-difficulty="2" aria-checked="false">INTENSE</button>
+        </div>
+      </fieldset>
+      <p class="honesty">Educational technical simulation. No sensor, no real neural data, no stimulation hardware. Local-only.</p>
+      <p class="landing-links mono">
+        <a href="https://github.com/AxonOS-BCI/neural-boundary-game" rel="noopener noreferrer" target="_blank">SOURCE</a>
+        <span aria-hidden="true">&middot;</span>
+        <a href="COMMERCIAL_LICENSE.md" rel="noopener noreferrer" target="_blank">Commercial</a>
+        <span aria-hidden="true">&middot;</span>
+        <button class="linklike" data-cmd="reset-data">Reset local data</button>
+      </p>
+    </div>
+  </section>
 
-    <!-- ============ Landing ============ -->
-    <section id="landing" class="landing" aria-labelledby="landing-title">
-      <div class="landing-inner">
-        <p class="mark" aria-label="AxonOS">AXON<span>OS</span></p>
-        <h1 id="landing-title">NEURAL BOUNDARY <span class="accent">GAME</span></h1>
-        <p class="version-chip mono">v3.0.1 · SOVEREIGN BOUNDARY EDITION</p>
-        <p class="rule">Keep raw signal <b>private</b>. Release <b>typed intent</b> only.</p>
-
-        <button id="cta-run" class="cta" data-cmd="start">RUN BOUNDARY</button>
-
-        <fieldset class="selector" id="mode-select">
-          <legend class="mono">RUN MODE</legend>
-          <div class="chips" role="radiogroup" aria-label="Run mode">
-            <button class="chip" role="radio" data-mode="guided" aria-checked="false">GUIDED</button>
-            <button class="chip" role="radio" data-mode="standard" aria-checked="true">STANDARD</button>
-            <button class="chip" role="radio" data-mode="audit" aria-checked="false">AUDIT</button>
-            <button class="chip" role="radio" data-mode="grand" aria-checked="false">GRAND RUN</button>
-            <button class="chip" role="radio" data-mode="daily" aria-checked="false">DAILY SEED</button>
-          </div>
-          <p id="mode-blurb" class="blurb">Canonical balanced run. Seal the boundary: trust 90, risk 20, integrity 80, evidence L2, five gates, zero leaks.</p>
-        </fieldset>
-
-        <fieldset class="selector" id="difficulty-select">
-          <legend class="mono">DIFFICULTY</legend>
-          <div class="chips" role="radiogroup" aria-label="Difficulty">
-            <button class="chip" role="radio" data-difficulty="calm" aria-checked="false">CALM</button>
-            <button class="chip" role="radio" data-difficulty="standard" aria-checked="true">STANDARD</button>
-            <button class="chip" role="radio" data-difficulty="intense" aria-checked="false">INTENSE</button>
-          </div>
-        </fieldset>
-
-        <p class="honesty">Educational technical simulation. No sensor. No neural data. No stimulation hardware. Local-only.</p>
-        <p class="landing-links mono">
-          <a href="https://github.com/AxonOS-BCI/neural-boundary-game" rel="noopener noreferrer" target="_blank">SOURCE</a>
-          <span aria-hidden="true">·</span>
-          <a href="https://github.com/AxonOS-BCI/neural-boundary-game/blob/main/docs/COMMERCIAL_SERVICES.md" rel="noopener noreferrer" target="_blank">Commercial deployment</a>
-          <span aria-hidden="true">·</span>
-          <button class="linklike" data-cmd="reset-data">Reset local data</button>
-        </p>
+  <div id="game-shell" hidden>
+    <header class="bar" role="banner">
+      <div class="bar-l">
+        <span class="mark small" aria-hidden="true">AXON<span class="ac">OS</span></span>
+        <span class="mono dim" id="hud-mode-chip">STANDARD</span>
+        <span class="mono dim" id="hud-phase" aria-live="polite" hidden></span>
       </div>
-    </section>
-
-    <!-- ============ Game shell ============ -->
-    <header class="bar" id="game-header" hidden>
-      <div class="bar-left">
-        <span class="mark small" aria-hidden="true">AXON<span>OS</span></span>
-        <span class="mono dim" id="hud-mode">STANDARD</span>
-        <span class="mono dim" id="hud-phase" hidden></span>
-      </div>
-      <div class="bar-right">
+      <div class="bar-r">
         <button class="ghost" data-cmd="help" aria-keyshortcuts="H">HELP</button>
-        <button class="ghost" data-cmd="pause" id="btn-pause" aria-keyshortcuts="P">PAUSE</button>
-        <button class="ghost" data-cmd="restart" aria-keyshortcuts="R">RESTART</button>
+        <button class="ghost" id="btn-pause" data-cmd="pause" aria-keyshortcuts="P">PAUSE</button>
+        <button class="ghost" data-cmd="restart">RESTART</button>
       </div>
     </header>
-
-    <div class="hud" id="hud" hidden>
-      <div class="metric"><span class="k">TRUST</span><span class="v num" id="m-trust">50</span><span class="track"><i id="b-trust"></i></span></div>
-      <div class="metric"><span class="k">RISK</span><span class="v num" id="m-risk">0</span><span class="track"><i id="b-risk"></i></span></div>
-      <div class="metric"><span class="k">INTEGRITY</span><span class="v num" id="m-integrity">100</span><span class="track"><i id="b-integrity"></i></span></div>
-      <div class="metric"><span class="k">EVIDENCE</span><span class="v num" id="m-evidence">L0</span></div>
-      <div class="metric" id="m-consent-wrap"><span class="k">CONSENT</span><span class="v" id="m-consent">INACTIVE</span></div>
-      <div class="metric"><span class="k">GATES</span><span class="v num" id="m-gates">0/5</span></div>
-      <div class="metric"><span class="k">SCORE</span><span class="v num" id="m-score">0</span></div>
-      <div class="metric"><span class="k">STREAK</span><span class="v num" id="m-streak">0</span></div>
+    <div class="hud" role="status" aria-label="Boundary metrics">
+      <div class="metric"><span class="k">TRUST</span><span class="v num" id="hud-trust">700</span><span class="track"><i id="bar-trust"></i></span></div>
+      <div class="metric"><span class="k">RISK</span><span class="v num" id="hud-risk">100</span><span class="track"><i id="bar-risk" class="danger"></i></span></div>
+      <div class="metric"><span class="k">INTEGRITY</span><span class="v num" id="hud-integrity">1000</span><span class="track"><i id="bar-integrity"></i></span></div>
+      <div class="metric"><span class="k">SCORE</span><span class="v num" id="hud-score">0</span></div>
+      <div class="metric"><span class="k">COMBO</span><span class="v" id="hud-combo">&mdash;</span></div>
+      <div class="metric"><span class="k">EVIDENCE</span><span class="v" id="hud-evidence">L0</span></div>
+      <div class="metric"><span class="k">CONSENT</span><span class="v hud-v" id="hud-consent">INACTIVE</span></div>
+      <div class="metric"><span class="k">LEAKS</span><span class="v num" id="hud-leaks">0</span></div>
+      <div class="metric"><span class="k">TIME</span><span class="v mono" id="hud-time">00:00</span></div>
+      <div class="metric wide"><span class="k">GATES</span><span id="hud-gates" class="gates-row"></span></div>
     </div>
-
-    <main class="field-wrap" id="field-wrap" hidden>
-      <canvas id="field" aria-label="Boundary playfield: five signal lanes approaching the sovereign membrane"></canvas>
-      <div class="target mono" id="target-readout" aria-hidden="true"></div>
+    <main id="main-field">
+      <canvas id="field" aria-label="Boundary playfield: five signal lanes approaching the sovereign membrane" tabindex="-1"></canvas>
+      <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
     </main>
-
-    <p class="feedback" id="feedback" role="status"></p>
-    <p class="visually-hidden" id="live" aria-live="polite"></p>
-
-    <nav class="deck" id="deck" hidden aria-label="Boundary actions">
+    <nav class="deck" aria-label="Boundary actions">
       <div class="lane-keys">
-        <button class="lane-btn" data-cmd="lane-up" aria-label="Previous lane" aria-keyshortcuts="ArrowUp W">▲</button>
-        <button class="lane-btn" data-cmd="lane-down" aria-label="Next lane" aria-keyshortcuts="ArrowDown S">▼</button>
+        <button class="lane-btn" data-cmd="lane-up" aria-label="Lane up" aria-keyshortcuts="ArrowUp W">&#9650;</button>
+        <button class="lane-btn" data-cmd="lane-down" aria-label="Lane down" aria-keyshortcuts="ArrowDown S">&#9660;</button>
       </div>
-      <button class="act" data-act="1" aria-keyshortcuts="1"><kbd>1</kbd><span class="al">VALIDATE</span></button>
-      <button class="act" data-act="2" aria-keyshortcuts="2"><kbd>2</kbd><span class="al">CONVERT</span></button>
-      <button class="act" data-act="3" aria-keyshortcuts="3"><kbd>3</kbd><span class="al">QUARANTINE</span></button>
-      <button class="act" data-act="4" aria-keyshortcuts="4"><kbd>4</kbd><span class="al">CONSENT</span></button>
-      <button class="act" data-act="5" aria-keyshortcuts="5"><kbd>5</kbd><span class="al">EVIDENCE</span></button>
-      <button class="act release" data-act="release" aria-keyshortcuts="Enter"><kbd>⏎</kbd><span class="al">RELEASE</span></button>
+      <button class="act" data-act="1"><kbd>1</kbd><span>VALIDATE</span></button>
+      <button class="act" data-act="2"><kbd>2</kbd><span>CONVERT</span></button>
+      <button class="act" data-act="3"><kbd>3</kbd><span>QUARANTINE</span></button>
+      <button class="act" data-act="4"><kbd>4</kbd><span>CONSENT</span></button>
+      <button class="act" data-act="5"><kbd>5</kbd><span>EVIDENCE</span></button>
+      <button class="act release" data-act="6"><kbd>&#9166;</kbd><span>RELEASE</span></button>
     </nav>
-
-    <footer class="foot" id="foot" hidden>
-      <span class="mono dim">v3.0.1 · deterministic Rust core · local-only</span>
-      <span class="mono dim" id="seed-chip">SEED —</span>
+    <footer class="foot">
+      <span class="mono dim" id="seed-chip">&mdash;</span>
+      <span class="mono dim">v5.5.12 &middot; <a href="COMMERCIAL_LICENSE.md" target="_blank">Commercial</a> &middot; <a href="TERMS_OF_USE.md" target="_blank">Terms</a> &middot; <a href="PRIVACY_NOTICE.md" target="_blank">Privacy</a> &middot; DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp</span>
     </footer>
-
-    <!-- ============ Overlays ============ -->
-    <div class="overlay" id="ov-help" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
-      <div class="sheet">
-        <p class="eyebrow">FIELD MANUAL</p>
-        <h2 id="help-title">Hold the boundary</h2>
-        <div class="cols">
-          <div>
-            <h3>CONTROLS</h3>
-            <ul class="mono small">
-              <li><kbd>↑/W</kbd> <kbd>↓/S</kbd> select lane · or tap a lane</li>
-              <li><kbd>1</kbd> Validate — type intent, classify ?PKT</li>
-              <li><kbd>2</kbd> Convert — validated → typed (consent + L1)</li>
-              <li><kbd>3</kbd> Quarantine — contain hazards and claims</li>
-              <li><kbd>4</kbd> Consent — gate a token (25 s scope)</li>
-              <li><kbd>5</kbd> Evidence — register proof</li>
-              <li><kbd>⏎</kbd> Release — seal when every gate passes</li>
-              <li><kbd>P/Space</kbd> pause · <kbd>R</kbd> restart · <kbd>H</kbd> help</li>
-            </ul>
-          </div>
-          <div>
-            <h3>READ THE FIELD</h3>
-            <ul class="mono small legend" id="help-legend"></ul>
-          </div>
-        </div>
-        <div class="row">
-          <button class="cta small" data-cmd="close-modal">CLOSE</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="overlay" id="ov-pause" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title">
-      <div class="sheet narrow">
-        <p class="eyebrow">RUN SUSPENDED</p>
-        <h2 id="pause-title">Paused</h2>
-        <p>The membrane is frozen. Nothing crosses while you think.</p>
-        <div class="row">
-          <button class="cta small" data-cmd="resume">RESUME</button>
-          <button class="ghost" data-cmd="restart">RESTART</button>
-          <button class="ghost" data-cmd="to-menu">MENU</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="overlay" id="ov-blocked" hidden role="dialog" aria-modal="true" aria-labelledby="blocked-title">
-      <div class="sheet narrow">
-        <p class="eyebrow">RELEASE BLOCKED</p>
-        <h2 id="blocked-title">The boundary stayed open</h2>
-        <ul class="mono small" id="blocked-list"></ul>
-        <div class="row"><button class="cta small" data-cmd="close-modal">CONTINUE RUN</button></div>
-      </div>
-    </div>
-
-    <div class="overlay" id="ov-result" hidden role="dialog" aria-modal="true" aria-labelledby="result-title">
-      <div class="sheet">
-        <p class="eyebrow" id="result-eyebrow">REVIEW VERDICT</p>
-        <h2 id="result-title">—</h2>
-        <p id="result-body"></p>
-        <dl class="stats mono small" id="result-stats"></dl>
-        <p class="mono small dim" id="result-verify"></p>
-        <div class="row">
-          <button class="cta small" data-cmd="rerun-seed">RERUN SEED</button>
-          <button class="ghost" data-cmd="new-run">NEW RUN</button>
-          <button class="ghost" data-cmd="to-menu">CHANGE MODE</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="overlay" id="ov-reset" hidden role="dialog" aria-modal="true" aria-labelledby="reset-title">
-      <div class="sheet narrow">
-        <p class="eyebrow">LOCAL DATA</p>
-        <h2 id="reset-title">Reset local data?</h2>
-        <p>This clears every <code class="mono">axonos_nbg_v301_</code> key in this
-           browser: saved mode, difficulty and best results. Nothing leaves
-           your device either way.</p>
-        <div class="row">
-          <button class="cta small danger" data-cmd="reset-confirm">RESET</button>
-          <button class="ghost" data-cmd="close-modal">KEEP</button>
-        </div>
-      </div>
-    </div>
-
   </div>
+
+  <div id="live-region" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="overlay" id="ov-help" hidden role="dialog" aria-modal="true" aria-labelledby="help-h">
+    <div class="sheet">
+      <p class="eyebrow">FIELD MANUAL</p>
+      <h2 id="help-h">Hold the boundary</h2>
+      <div class="help-cols">
+        <div>
+          <h3>CONTROLS</h3>
+          <ul class="mono small">
+            <li><kbd>&#8593;/W</kbd> <kbd>&#8595;/S</kbd> lane &middot; 1 VALIDATE &middot; 2 CONVERT</li>
+            <li>3 QUARANTINE &middot; 4 CONSENT &middot; 5 EVIDENCE</li>
+            <li><kbd>&#9166;</kbd> RELEASE &middot; <kbd>P</kbd> pause &middot; <kbd>H</kbd> help</li>
+          </ul>
+        </div>
+        <div>
+          <h3>7 GATES</h3>
+          <ul class="mono small">
+            <li>P PRIVACY &middot; T TYPING &middot; C CONSENT</li>
+            <li>E EVIDENCE &middot; D DETERMINISM</li>
+            <li>V VAULT &middot; W WCET</li>
+          </ul>
+        </div>
+      </div>
+      <div class="row"><button class="cta small" data-cmd="close-modal">CLOSE</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-pause" hidden role="dialog" aria-modal="true" aria-labelledby="pause-h">
+    <div class="sheet narrow">
+      <p class="eyebrow">PAUSED</p>
+      <h2 id="pause-h">Membrane frozen</h2>
+      <div class="row">
+        <button class="cta small" data-cmd="resume">RESUME</button>
+        <button class="ghost" data-cmd="restart">RESTART</button>
+        <button class="ghost" data-cmd="menu">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-blocked" hidden role="dialog" aria-modal="true" aria-labelledby="blocked-h">
+    <div class="sheet narrow">
+      <p class="eyebrow">RELEASE BLOCKED</p>
+      <h2 id="blocked-h">Boundary stayed open</h2>
+      <ul class="mono small" id="blocked-list"></ul>
+      <div class="row"><button class="cta small" data-cmd="close-modal">CONTINUE</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-result" hidden role="dialog" aria-modal="true" aria-labelledby="result-h">
+    <div class="sheet">
+      <p class="eyebrow">BOUNDARY VERDICT</p>
+      <h2 id="result-h">&mdash;</h2>
+      <p id="result-body"></p>
+      <dl class="stats mono small" id="result-stats"></dl>
+      <p class="mono small dim" id="result-verify"></p>
+      <div class="row">
+        <button class="cta small" data-cmd="rerun">RERUN SEED</button>
+        <button class="ghost" data-cmd="new-run">NEW RUN</button>
+        <button class="ghost" data-cmd="menu">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-reset" hidden role="dialog" aria-modal="true" aria-labelledby="reset-h">
+    <div class="sheet narrow">
+      <p class="eyebrow">LOCAL DATA</p>
+      <h2 id="reset-h">Reset all local data?</h2>
+      <p>Clears every <code>axonos_nbg_v5512_</code> key. Nothing leaves your device.</p>
+      <div class="row">
+        <button class="cta small danger" data-cmd="reset-confirm">RESET</button>
+        <button class="ghost" data-cmd="close-modal">KEEP</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+  <script>setTimeout(function(){if(!document.documentElement.dataset.nbgBooted)document.getElementById('boot-error').hidden=false;},6000);</script>
 </body>
 </html>

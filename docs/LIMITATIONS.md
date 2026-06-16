@@ -1,31 +1,26 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # Limitations
 
-This repository is an educational technical demo.
+## What this game does not demonstrate
 
-This repository is, explicitly:
+- Real neural signal processing pipelines
+- Hardware latency or timing accuracy
+- Clinical or full BCI pipeline deployment
+- Regulatory compliance (FDA, MDR, etc.)
+- Formal verification of boundary properties
 
-- not a medical device;
-- not a clinical system;
-- not a safety-certified system;
-- not a real neural decoder;
-- not a stimulation controller;
-- not a security audit;
-- not a regulatory review;
-- not a production firmware system.
+## Technical limitations
 
-It does not process real signal data.
+- WASM is 45 kB; the full deterministic core, not a subset.
+- JavaScript and browser timing are not part of the trust model.
+- The 60 Hz tick rate is nominal; browser frame timing is approximate.
+- Local storage can be cleared by the browser at any time.
+- No offline service worker; the game requires an initial network load.
 
-It does not control stimulation hardware.
+## Browser support
 
-It demonstrates software boundary concepts through a deterministic game.
-
-Scope notes:
-
-- determinism is guaranteed for the simulation core and the replay vectors;
-  wall-clock frame pacing in a browser is best-effort (fixed-step with a
-  bounded catch-up of 6 steps per frame);
-- the difficulty model is a teaching curve, not a model of any real
-  signal-processing workload;
-- the boundary rule shown here is one architectural pattern, presented as a
-  game — adopting it in a real system requires the engineering work this
-  demo deliberately does not claim to replace.
+Any browser with WebAssembly and ES module support.
+BigInt is required for u64 score values.

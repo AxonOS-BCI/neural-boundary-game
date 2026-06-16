@@ -78,7 +78,6 @@ pub fn decide(sim: &Simulation, policy: Policy) -> Input {
         return Input::IDLE;
     }
     let snap = sim.snapshot();
-    let selected = snap.selected_lane;
 
     // Attempt release first when all gates pass.
     if snap.gate_mask == neural_boundary_core::ALL_GATES_MASK
@@ -164,7 +163,7 @@ fn frontmost(sim: &Simulation, lane: u8) -> Option<&neural_boundary_core::Entity
             continue;
         }
         let x = slot.logical_x();
-        if x < ACTION_WINDOW_START || x >= BOUNDARY_X {
+        if !(ACTION_WINDOW_START..BOUNDARY_X).contains(&x) {
             continue;
         }
         if best.map(|b| x > b.logical_x()).unwrap_or(true) {
@@ -197,7 +196,7 @@ pub fn run_policy(
         }
         sim.step(input);
         let new_epoch = sim.consent_epoch();
-        revocations += (new_epoch - prev_epoch) as u32;
+        revocations += new_epoch - prev_epoch;
         prev_epoch = new_epoch;
         if sim.status().is_terminal() {
             break;
@@ -256,7 +255,7 @@ pub fn replay_script(
         };
         sim.step(input);
         let new_epoch = sim.consent_epoch();
-        revocations += (new_epoch - prev_epoch) as u32;
+        revocations += new_epoch - prev_epoch;
         prev_epoch = new_epoch;
         if sim.status().is_terminal() {
             break;
@@ -265,23 +264,27 @@ pub fn replay_script(
     summarize(&sim, revocations)
 }
 
+pub struct SearchGoal {
+    pub from: u64,
+    pub to: u64,
+    pub want_reason: TerminalReason,
+    pub min_revocations: u32,
+    pub max_ticks: u32,
+}
+
 /// Search seeds for a run matching goal criteria.
 pub fn search_seed(
     mode: Mode,
     difficulty: Difficulty,
     policy: Policy,
-    from: u64,
-    to: u64,
-    want_reason: TerminalReason,
-    min_revocations: u32,
-    max_ticks: u32,
+    goal: SearchGoal,
 ) -> Option<(u64, RunResult)> {
-    for seed in from..=to {
-        let result = run_policy(mode, difficulty, seed, policy, max_ticks);
-        if result.summary.reason != want_reason {
+    for seed in goal.from..=goal.to {
+        let result = run_policy(mode, difficulty, seed, policy, goal.max_ticks);
+        if result.summary.reason != goal.want_reason {
             continue;
         }
-        if result.summary.revocations < min_revocations {
+        if result.summary.revocations < goal.min_revocations {
             continue;
         }
         return Some((seed, result));

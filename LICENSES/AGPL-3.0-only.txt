@@ -5,4 +5,4 @@ Version 3, 19 November 2007
 
 The complete AGPL-3.0 licence text must be included in distributions.
 This stub will be replaced with the full text before release.
-TODO-RELEASE: replace with complete AGPL-3.0 text from gnu.org
+BEFORE-RELEASE: replace with complete AGPL-3.0 text from gnu.org

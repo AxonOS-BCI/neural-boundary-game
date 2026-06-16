@@ -1,8 +1,9 @@
-name: Pages
+name: GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -12,33 +13,40 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
-      - name: Install Trunk
-        uses: jetli/trunk-action@v0.5.0
+
+      - uses: actions/cache@v4
         with:
-          version: latest
-      - name: Build
-        run: trunk build --release --public-url ./
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build web
+        run: bash scripts/build_web.sh dist
+
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
     environment:
       name: github-pages
-    runs-on: ubuntu-latest
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
     needs: build
     steps:
-      - name: Deploy
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
+        id: deployment

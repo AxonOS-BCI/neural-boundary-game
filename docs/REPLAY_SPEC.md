@@ -1,110 +1,79 @@
-# Replay Spec — neural-boundary-replay-v2.1.2
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-A replay vector pins one deterministic run of the core: seed, difficulty, the
-full input script, and the expected terminal state. `neural-boundary-cli
-verify` re-executes the script against `neural-boundary-core` and compares
-every expected field, including a 64-bit state hash.
+# Replay Specification — Neural Boundary Game v5.5.12
 
-Current schema:
+**Schema**: `neural-boundary-replay-v5.5.12`
+**Hash**: `fnv1a64-v1` · **RNG**: `xorshift64star-v1` · **ABI**: 1
 
-```text
-neural-boundary-replay-v2.1.2
-```
+## File format
 
-## File layout
+JSON object (deny-unknown-fields for verifier). Max 1 MiB. Max 10 000 input events.
+Inputs must have strictly increasing ticks. No duplicate (tick, action) pairs.
+
+## Required top-level fields
 
 ```json
 {
-  "schema": "neural-boundary-replay-v2.1.2",
-  "title": "Canonical clean run — boundary sealed",
-  "generated_by": "neural-boundary-cli record --policy clean --seed 58 --difficulty standard",
-  "seed": 58,
-  "difficulty": "standard",
-  "actions": [
-    { "tick": 130, "lane": 2, "action": "ConsentGate" }
-  ],
-  "expected": {
-    "final_tick": 1862,
-    "trust": 92,
-    "risk": 12,
-    "integrity": 88,
-    "evidence_level": "L3",
-    "raw_leaks": 0,
-    "gates_passed": 5,
-    "status": "victory",
-    "boundary": "SEALED",
-    "state_hash": "0x3385d1c44b271154"
-  }
+  "schema": "neural-boundary-replay-v5.5.12",
+  "product_version": "5.5.12",
+  "core_version": "5.5.12",
+  "abi_version": 1,
+  "hash_algorithm": "fnv1a64-v1",
+  "rng_algorithm": "xorshift64star-v1",
+  "tick_rate_hz": 60,
+  "mode": "STANDARD",
+  "difficulty": 1,
+  "seed": "000000000000001f",
+  "title": "...",
+  "generated_by": "...",
+  "inputs": [...],
+  "expected": {...}
 }
 ```
 
-Rules:
+`mode` is uppercase: GUIDED, STANDARD, AUDIT, GRAND, DAILY, PRIVACY_VAULT, KERNEL_TRIAL.
+`difficulty` is 0=Calm, 1=Standard, 2=Intense.
+`seed` is exactly 16 lowercase hex digits (no 0x prefix).
+Daily replays require a `date` field ("YYYY-MM-DD"); verifier recomputes seed.
 
-- `seed` is a positive integer; `difficulty` is `calm | standard | intense`.
-- `actions[*].tick` is strictly increasing, ≥ 1 and ≤ `expected.final_tick`;
-  `lane` is 0–4; `action` is one of `Validate`, `Convert`, `Quarantine`,
-  `ConsentGate`, `EvidenceGate`, `Release`.
-- `expected.boundary` is `SEALED` (victory), `BREACHED` (defeat) or `HOLDING`.
-- Defeat vectors may add `expected.cause`:
-  `integrity_collapse | risk_overflow | raw_leaks | direct_stim`.
-- `state_hash` is `0x` + 16 lowercase hex digits.
+## Input events
 
-## State hash
-
-FNV-1a (64-bit, offset basis `0xcbf29ce484222325`, prime `0x100000001b3`)
-over, in order: seed, difficulty code, RNG state, tick, status code, selected
-lane, trust, risk, integrity, evidence points, consent deadline, gate mask,
-raw leaks, validated/quarantined/delivered/reveal/miss/false-positive/breach
-counters, cooldown, spawn timer, spawn count, next id, and every entity slot
-(id, kind code, lane, x, speed, validated flag, concealed kind). Any
-divergence anywhere in the run changes the final hash.
-
-## Verifier semantics
-
-```bash
-cargo run -p neural-boundary-cli --release -- verify            # default vector
-cargo run -p neural-boundary-cli --release -- verify vectors/replay-breach-demo-v2.1.2.json
+```json
+{ "tick": 42, "lane": 2, "action": "VALIDATE" }
 ```
 
-On success the verifier prints exactly:
+Actions: VALIDATE, CONVERT, QUARANTINE, CONSENT, EVIDENCE, RELEASE.
+Lanes 0-4.
 
-```text
-Replay OK
-Final trust: 92
-Final risk: 12
-Final integrity: 88
-Boundary status: SEALED
+## Expected block
+
+```json
+"expected": {
+  "terminal_tick": 3408,
+  "status": "SEALED",
+  "terminal_reason": "SUCCESS_RELEASE",
+  "grade": "SEALED",
+  "trust": 742, "risk": 183, "integrity": 868,
+  "evidence_level": "L2",
+  "evidence_bits": 3,
+  "gate_mask": 127,
+  "gates_passed": 7,
+  "raw_leaks": 0,
+  "typed_intents": 5,
+  "quarantined": 12,
+  "wrong_actions": 0,
+  "score": 9322,
+  "best_combo": 8,
+  "revocations": 0,
+  "state_hash": "0x75bf9ada81839bc1"
+}
 ```
 
-On mismatch it prints `Replay FAILED` plus a field-by-field diff and exits 1.
+`state_hash` is `"0x"` + 16 lowercase hex digits.
 
-## Shipped vectors
+## Canonical vectors
 
-Both vectors use **seed 58**, standard difficulty — the same world twice:
-
-| Vector | Policy | Result |
-|---|---|---|
-| `replay-v2.1.2.json` | `clean` (38 actions) | victory at tick 1862 — trust 92, risk 12, integrity 88, L3, 5/5 gates, 0 leaks, `SEALED` |
-| `replay-breach-demo-v2.1.2.json` | `idle` (0 actions) | defeat at tick 948 — third raw leak crosses, `BREACHED` (`cause: raw_leaks`) |
-
-The only difference between the two runs is boundary discipline.
-
-## Regenerating vectors
-
-```bash
-cargo run -p neural-boundary-cli --release -- record \
-  --seed 58 --difficulty standard --policy clean \
-  --title "Canonical clean run — boundary sealed" \
-  --out vectors/replay-v2.1.2.json
-
-cargo run -p neural-boundary-cli --release -- record \
-  --seed 58 --difficulty standard --policy idle \
-  --out vectors/replay-breach-demo-v2.1.2.json
-
-cargo run -p neural-boundary-cli --release -- search \
-  --from 1 --to 30000 --difficulty standard --target 92,12,88
-```
-
-After regenerating, refresh `vectors/checksums.txt`
-(`sha256sum vectors/*.json`) and run `python3 tools/validate_replay.py`.
-Game-rule changes require new vectors and a schema bump.
+8 mandatory vectors in `vectors/`, verified by `vectors/checksums.sha256` (SHA-256 per file).
+Commands: `neural-boundary-cli verify-all` — checks checksums then replays all 8.

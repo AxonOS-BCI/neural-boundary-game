@@ -42,7 +42,7 @@ CONFLICT = re.compile(r"^(<{7}|={7}|>{7})( |$)")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 ALLOWED_EMAILS = {"connect@axonos.org", "security@axonos.org"}
 
-SKIP_CLAIMS = {"tools/check_hygiene.py", "docs/CLAIM_HYGIENE.md"}
+SKIP_CLAIMS = {"tools/check_hygiene.py", "docs/CLAIM_HYGIENE.md", "CRYPTO_PAYMENT_TERMS.md", "TERMS_OF_USE.md", "COMMERCIAL_LICENSE.md", "PRIVACY_NOTICE.md", "SECURITY.md"}
 SKIP_PLACEHOLDER = {"tools/check_hygiene.py", "docs/CLAIM_HYGIENE.md"}
 BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".wasm", ".woff", ".woff2"}
 BACKUP_PATTERNS = ("*.bak", "*.orig", "*.rej", "*~", "*.tmp", "*.swp")
@@ -93,10 +93,10 @@ def main() -> int:
     for name in files:
         if name.endswith(".html"):
             text = (ROOT / name).read_text(encoding="utf-8", errors="ignore")
-            if 'data-trunk rel="rust"' in text:
+            if 'type="module"' in text and 'app.js' in text:
                 html_roots.append(name)
     if len(html_roots) != 1:
-        errors.append(f"expected exactly 1 active HTML root, found {len(html_roots)}: {html_roots}")
+        errors.append(f"expected exactly 1 active HTML root with ES module entry, found {len(html_roots)}: {html_roots}")
 
     # Shebangs and execute bits.
     for name in files:

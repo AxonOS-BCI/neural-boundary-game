@@ -1,77 +1,31 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # GitHub Setup
 
-Repository:
+## Repository settings
 
-```text
-https://github.com/AxonOS-BCI/neural-boundary-game
-```
+1. **Branch protection on `main`**: require PRs, CI checks, signed commits.
+2. **Pages**: Source = GitHub Actions (build via `.github/workflows/pages.yml`).
+3. **Social preview**: upload `preview.png` (1280×720).
+4. **Topics**: `bci`, `rust`, `wasm`, `neural`, `boundary`, `axonos`, `game`.
 
-## About
+## Security settings
 
-Use:
+- Hardware-backed 2FA for all maintainers.
+- `CODEOWNERS` requires maintainer approval.
+- No force-push or branch deletion on `main`.
+- Release signing: `git tag -s v5.5.12`.
 
-```text
-Playable Rust/WASM demo of the core BCI safety rule: raw signal stays inside the device; apps receive typed intent only.
-```
+## Secrets
 
-## Website
+Repository secrets required for CI:
+- None for community edition (no signing key required for basic CI).
+- `PAGES_TOKEN` if using a deploy key instead of GitHub Actions default.
 
-After Pages deploy:
-
-```text
-https://axonos-bci.github.io/neural-boundary-game/
-```
-
-## Topics
-
-```text
-rust
-wasm
-webassembly
-no-std
-bci
-privacy
-embedded
-deterministic-game
-axonos
-neurotechnology
-```
-
-## Social preview
-
-Upload `preview.png`:
-
-```text
-Settings -> General -> Social preview
-```
-
-## Pages
-
-Use:
-
-```text
-Settings -> Pages -> Source: GitHub Actions
-```
-
-Then check:
-
-```text
-Actions -> Pages
-```
-
-## Release
-
-Create release:
-
-```text
-v2.1.2
-Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition
-```
-
-Tag from the command line:
+## After merge
 
 ```bash
-git tag -a v2.1.2 -m "Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition" && git push origin v2.1.2
+bash scripts/create_release_tag.sh
 ```
-
-Use `RELEASE_NOTES.md`.

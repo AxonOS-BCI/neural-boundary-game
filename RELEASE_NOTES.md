@@ -1,56 +1,48 @@
-# Neural Boundary Game v2.1.2 — Foundation Grande AxonOS Standard Edition
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-**Do not ship raw signal. Ship typed intent.**
+# Release Notes — Neural Boundary Game v5.5.12
 
-v2.1.2 turns the skeleton into the flagship: a complete deterministic
-review-conveyor game in `no_std` Rust, a strict replay verifier, pinned
-conformance vectors, and the full Foundation Grande stage in the browser.
+**Neural Boundary Game v5.5.12 — Production Grand AxonOS Standard Foundation**
 
-**Play:** <https://axonos-bci.github.io/neural-boundary-game/>
+**Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
 
-## Highlights
+## Summary
 
-- **Complete boundary mechanic.** Five lanes, 14 entity kinds, six actions,
-  five review gates, evidence levels, 25-second consent windows, and exact
-  win/lose conditions. Unsupported claims move faster than evidence
-  (`CLAIM_SPEED_BONUS`) — containment is a real-time discipline.
-- **Deterministic to the hash.** The core is `#![no_std]`,
-  `#![forbid(unsafe_code)]`, zero-allocation, fixed-step 60 Hz, with a 64-bit
-  FNV-1a hash over the entire simulation state.
-- **Seed 58, told twice.** The canonical clean run seals the boundary at tick
-  1862 (trust 92, risk 12, integrity 88, 5/5 gates, 0 leaks). The same seed
-  left idle breaches at tick 948 on the third raw leak. Same world — the only
-  difference is boundary discipline.
-- **CLI toolkit.** `verify`, `record` (clean/idle), `search`, `trace`;
-  integration tests run both shipped vectors through the release binary.
-- **Foundation Grande stage.** Fixed 1280×720 review console: status rail,
-  canvas membrane with gate window, boundary-principle panel, action bar,
-  menu/help/pause/end overlays — system fonts, canonical palette,
-  scale-to-fit.
-- **Release gates.** Replay/schema validation, negation-aware claim-hygiene
-  scan, full-tree version consistency check; CI caches via
-  `Swatinem/rust-cache@v2`, Pages builds with `jetli/trunk-action@v0.5.0`.
+Neural Boundary Game v5.5.12 is the Production Grand release. The deterministic
+Rust/WASM core is complete: 19 entity kinds, 7 review gates, Neural Permissions
+epoch model, Privacy Vault FSM, WCET timing budget, and 7 run modes including
+the Grand Run (four phases) and Kernel Trial (deadline pressure).
 
-## Verify it yourself
+The WASM ABI is flat (41 named exports, no wasm-bindgen). The JavaScript UI
+uses ES modules with a fixed-step RAF loop. Daily seed computation mirrors the
+Rust core in JavaScript for offline verification.
+
+The release includes 8 canonical replay vectors verified by SHA-256 and
+deterministic re-execution. Every vector is covered by 18 integration tests.
+
+## How to verify
 
 ```bash
-cargo run -p neural-boundary-cli --release -- verify
+cargo run -p neural-boundary-cli --release -- verify-all
+python3 tools/validate_replay.py
 ```
 
-```text
-Replay OK
-Final trust: 92
-Final risk: 12
-Final integrity: 88
-Boundary status: SEALED
-```
+## Known limitations
 
-## Documentation
+- Browser QA (Playwright) requires network access; BLOCKED in the Termux environment.
+  QA specs are in `qa/` for CI execution.
+- AGPL licence text files require the full GNU GPL text; stubs are present.
+- Commercial DOGE payments disabled pending Singapore MAS legal review.
 
-`docs/GAME_SPEC.md` · `docs/REPLAY_SPEC.md` · `docs/BCI_BOUNDARY.md` ·
-`docs/AXONOS_STANDARD_STYLE.md` · `docs/LIMITATIONS.md` ·
-`docs/CLAIM_HYGIENE.md` · `docs/COMMERCIAL_SERVICES.md`
+## Acceptance checklist (Denis Yermakou)
 
-This release is an educational technical demo of a software boundary
-principle; it does not process real signal data and does not control
-hardware.
+- [ ] Test DOGE transaction confirming wallet control (DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp)
+- [ ] Replace AGPL/CC licence stubs with full texts from gnu.org / creativecommons.org
+- [ ] Singapore legal review of DOGE commercial flow (MAS Payment Services Act)
+- [ ] Tag signature: `git tag -s v5.5.12 -m "..."`
+- [ ] Enable GitHub branch protection on main
+- [ ] Upload preview.png as GitHub repository social preview
+- [ ] Set Pages source to GitHub Actions (pages.yml)
+- [ ] Publish Article #39 on Medium (AxonOS–SYM.BOT collaboration)

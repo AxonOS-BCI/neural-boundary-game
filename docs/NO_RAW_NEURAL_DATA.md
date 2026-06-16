@@ -1,17 +1,19 @@
-# No Raw Signal Crossing
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-Raw signal data is sensitive. The demo encodes a simple software principle:
+# No Raw Neural Data
 
-- raw signal stays inside the device or trusted processing boundary;
-- application interfaces receive typed intent;
-- consent state, confidence, and evidence metadata travel with outputs;
-- claims must be scoped and evidence-backed.
+Neural Boundary Game v5.5.12 processes no real neural data.
 
-In game terms: a `RAW` card crossing the membrane costs integrity −10 and
-counts toward the three-leak defeat; a `STIM` crossing ends the run
-immediately; `Release` is rejected while the raw-leak counter is non-zero.
-The rule is not decoration — it is the win condition.
+- No EEG, ECoG, LFP, spike, or any other neural recording.
+- No stimulation parameters, waveforms or hardware commands.
+- No biometric data of any kind.
+- No sensor hardware is connected or required.
 
-This repository does not process real signal data. The cards are typed enum
-values in a `no_std` simulation; nothing here reads, stores, or transmits
-physiological measurements of any kind.
+The game entities (RawFrame, StimulationCommand, etc.) are abstract
+constructs that illustrate boundary enforcement concepts. They contain
+no actual signal data.
+
+All game state is local. Nothing is transmitted to any server during play.
+See `PRIVACY_NOTICE.md`.

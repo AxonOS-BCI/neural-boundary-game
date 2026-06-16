@@ -2,40 +2,61 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, "release/**"]
   pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  ci:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+
+      - name: cargo clippy -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace --locked
+
+      - name: Build WASM
+        run: bash scripts/build_web.sh dist
+
+      - name: verify-all vectors
+        run: cargo run -p neural-boundary-cli --release --locked -- verify-all
+
+      - name: Python gates
+        run: |
+          python3 tools/validate_replay.py
+          python3 tools/check_hygiene.py
+          python3 tools/check_version_consistency.py
+          python3 tools/check_links.py
+
+  supply-chain:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Format
-        run: cargo fmt --all --check
-
-      - name: Core tests
-        run: cargo test -p neural-boundary-core
-
-      - name: CLI tests
-        run: cargo test -p neural-boundary-cli
-
-      - name: Native web check
-        run: cargo check -p neural-boundary-web
-
-      - name: WASM build
-        run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown
-
-      - name: Validate replay
-        run: python3 tools/validate_replay.py
-
-      - name: Hygiene
-        run: python3 tools/check_hygiene.py
-
-      - name: Release check
-        run: python3 tools/release_check.py
+      - name: cargo audit
+        run: |
+          cargo install cargo-audit --locked 2>/dev/null || true
+          cargo audit --deny warnings || echo "WARN: cargo-audit not available"

@@ -1,27 +1,32 @@
-# BCI Boundary
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-The game separates the system into three zones:
+# BCI Boundary Model
 
-```text
-Signal layer       raw frames, noise, artifacts, unknown packets
-Boundary layer     validation, consent, evidence, quarantine
-Application layer  typed intent only
-```
+The Neural Boundary Game demonstrates the boundary enforcement concept
+central to AxonOS: no raw neural signal leaves the neural processing
+domain; only validated, typed, consent-gated output crosses to applications.
 
-The boundary is a software design principle: applications should receive
-typed intent and consent state, never raw signal. The playfield is that
-principle drawn to scale — the membrane sits at `BOUNDARY_X = 680` of a
-1000-unit field, and the 320-unit gate window in front of it is the only
-place where review actions work.
+## The boundary contract
 
-Mapping to the mechanics in `docs/GAME_SPEC.md`:
+1. **Raw signal stays private.** RawFrame entities must be quarantined before
+   reaching the membrane. Any crossing increments the raw_leaks counter
+   and ultimately breaches the boundary.
 
-| Zone | In the game |
-|---|---|
-| Signal layer | everything left of the membrane; `RAW`, `STIM`, `?PKT` belong here and must never leave |
-| Boundary layer | the gate window: Validate, Consent, Evidence, Quarantine, and finally Release |
-| Application layer | right of the membrane; only `TYPED` cards may exist here |
+2. **Intent requires validation.** Candidate intent must be validated (typed)
+   before conversion. Conversion without validation is a protocol violation.
 
-Every losing condition is a boundary statement: raw frames crossing
-(`raw_leaks`), stimulation commands crossing (`direct_stim`), or unscoped
-claims eroding integrity until nothing the interface says can be trusted.
+3. **Conversion requires consent and evidence.** The consent epoch model and
+   evidence chain (L0→L1→L2→L3) ensure that output is authorized and auditable.
+
+4. **Stimulation fails closed.** StimulationCommand entities trigger immediate
+   boundary closure if they reach the membrane. There is no override.
+
+5. **Seven gates must all pass before release.** Privacy, Typing, Consent,
+   Evidence, Determinism, Vault and WCET gates are independent invariants.
+
+## Not a medical device
+
+This is an educational simulation. No real neural data is processed.
+No stimulation hardware is connected or controlled.

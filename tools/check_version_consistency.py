@@ -55,21 +55,18 @@ def main() -> int:
     )
     expect(
         "crates/neural-boundary-core/src/lib.rs",
-        f'HASH_ALGORITHM: &str = "{manifest["hash_algorithm"]}"',
+        f'HASH_ALGORITHM: &str = "{manifest["state_hash_algorithm"]}"',
         "hash algorithm",
     )
-    expect(
-        "crates/neural-boundary-web/src/storage.rs",
-        f'NAMESPACE: &str = "{manifest["storage_namespace"]}"',
-        "storage namespace",
-    )
-    expect("web/index.html", display, "visible UI version")
+    expect("web/storage.js", f"NS = '{manifest['storage_namespace']}'", "storage namespace")
+    expect("web/index.html", "v5.5.12", "visible UI version")
     expect("README.md", display, "README version")
     expect("README.md", manifest["homepage"], "homepage link")
     expect("RELEASE_NOTES.md", manifest["release_title"], "release title")
     expect("CHANGELOG.md", f"## [{version}]", "changelog entry")
     expect("scripts/create_release_tag.sh", manifest["git_tag"], "release tag")
     expect("docs/GAME_SPEC.md", version, "game spec version")
+    expect("web/abi.js", "5<<16", "WASM product version check")
     expect("docs/REPLAY_SPEC.md", manifest["replay_schema"], "replay spec schema")
 
     # Vector schema fields.
@@ -80,7 +77,7 @@ def main() -> int:
             ("schema", manifest["replay_schema"]),
             ("product_version", version),
             ("core_version", version),
-            ("hash_algorithm", manifest["hash_algorithm"]),
+            ("hash_algorithm", manifest["state_hash_algorithm"]),
         ):
             if data.get(field) != expected:
                 errors.append(f"vectors/{vector.name}: {field} != {expected!r}")

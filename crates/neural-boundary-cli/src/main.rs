@@ -837,8 +837,8 @@ fn search_cmd(args: &[String]) -> i32 {
     let mut iter = args.iter();
     while let Some(flag) = iter.next() {
         match flag.as_str() {
-            "--from" => from = req(iter.next(), "--from").parse().unwrap_or(1),
-            "--to" => to = req(iter.next(), "--to").parse().unwrap_or(50_000),
+            "--from" => from = req(iter.next(), "--from").parse().unwrap_or(1u64),
+            "--to" => to = req(iter.next(), "--to").parse().unwrap_or(50_000u64),
             "--mode" => {
                 let raw = req(iter.next(), "--mode");
                 mode = Mode::from_name(&raw).unwrap_or(Mode::Standard);
@@ -880,11 +880,13 @@ fn search_cmd(args: &[String]) -> i32 {
         mode,
         difficulty,
         policy,
-        from,
-        to,
-        want,
-        min_revocations,
-        max_ticks,
+        bot::SearchGoal {
+            from,
+            to,
+            want_reason: want,
+            min_revocations,
+            max_ticks,
+        },
     ) {
         Some((seed, result)) => {
             let s = &result.summary;

@@ -1,171 +1,111 @@
-# Neural Boundary Game
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-**Do not ship raw signal. Ship typed intent.**
+# Neural Boundary Game v5.5.12
 
-[![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml)
-[![Pages](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/pages.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/pages.yml)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-1f6feb)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-no__std%20deterministic%20core-f74c00)](crates/neural-boundary-core/src/lib.rs)
+[![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
+[![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 
-[![Neural Boundary Game — Foundation Grande stage](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
+[![Play Neural Boundary Game v5.5.12](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
 
-Playable Rust/WASM demo of the core BCI safety rule: **raw signal stays
-inside the device; applications receive typed intent only.**
-
-**Play it now:** <https://axonos-bci.github.io/neural-boundary-game/>
-
-## What this demonstrates
-
-In a BCI-adjacent stack there is one boundary that decides whether the whole
-system is reviewable: the line between the signal layer and the application
-layer. This repository turns that line into a playfield. Entities stream
-toward a membrane across five lanes; you validate intent, gate consent, log
-evidence, quarantine hazards — and only then release. Raw frames must never
-cross. Unsupported claims move faster than evidence, because they always do.
-
-The game is also a deterministic reference implementation:
-
-- the simulation core is `#![no_std]` Rust with `#![forbid(unsafe_code)]`,
-  zero allocation, fixed entity pool, integer math, 60 Hz fixed step;
-- every run is reproducible from a seed and an input script;
-- shipped replay vectors pin the exact terminal state — down to a 64-bit
-  FNV-1a hash of the entire simulation — and CI re-verifies them on every
-  push.
-
-Win by sealing the boundary: `TRUST ≥ 90 · RISK ≤ 20 · INTEGRITY ≥ 80 ·
-EVIDENCE ≥ L2 · all 5 review gates · 0 raw leaks`. Lose when integrity
-collapses, risk overflows, a third raw frame leaks, or a stimulation command
-crosses. Full rules: [`docs/GAME_SPEC.md`](docs/GAME_SPEC.md).
-
-## Controls
-
-| Input | Effect |
-|---|---|
-| `↑ ↓` / `W S` / click a lane | select lane |
-| `1` Validate | type an `INTENT`, classify a `?PKT` |
-| `2` Convert | validated intent → `TYPED` (needs consent + evidence ≥ L1) |
-| `3` Quarantine | contain a hazard or claim |
-| `4` Consent | gate a `CONSENT` token (25 s window) |
-| `5` Evidence | log `EVIDENCE` / `CHECKSUM` / `CI TEST` |
-| `⏎` Release | seal the boundary |
-| `P` / `R` / `H` | pause / restart / help |
-
-## Workspace
-
-```text
-crates/
-  neural-boundary-core   #![no_std] deterministic simulation (game rules, RNG, state hash)
-  neural-boundary-cli    replay verifier + vector toolkit (verify / record / search / trace)
-  neural-boundary-web    wasm-bindgen front-end: canvas playfield + Foundation Grande stage
-vectors/                 pinned replay vectors + sha256 checksums
-docs/                    game spec, replay spec, boundary docs, style standard
-tools/                   replay validator, claim-hygiene gate, release gate, preview generator
-scripts/                 smoke check, Termux push, release tagging
-```
-
-## Deterministic replays
-
-Verify the canonical vector against the core:
-
-```bash
-cargo run -p neural-boundary-cli --release -- verify
-```
-
-```text
-Replay OK
-Final trust: 92
-Final risk: 12
-Final integrity: 88
-Boundary status: SEALED
-```
-
-Both shipped vectors use **seed 58** on standard difficulty — the same world
-twice. Played with boundary discipline (38 recorded actions), it ends at tick
-1862: trust 92, risk 12, integrity 88, five gates, zero leaks, `SEALED`. Left
-idle, the very same seed breaches at tick 948 when the third raw frame
-crosses:
-
-```bash
-cargo run -p neural-boundary-cli --release -- verify vectors/replay-breach-demo-v2.1.2.json
-```
-
-```text
-Replay OK
-Final trust: 47
-Final risk: 0
-Final integrity: 58
-Boundary status: BREACHED
-```
-
-The only difference between `SEALED` and `BREACHED` is what you do at the
-membrane. Schema, hash definition and regeneration commands:
-[`docs/REPLAY_SPEC.md`](docs/REPLAY_SPEC.md).
-
-## Build and run locally
-
-Prerequisites: stable Rust with the `wasm32-unknown-unknown` target, and
-[Trunk](https://trunkrs.dev) for the web stage.
-
-```bash
-rustup target add wasm32-unknown-unknown
-cargo install trunk
-
-trunk serve --open          # web stage at http://127.0.0.1:8080
-cargo test -p neural-boundary-core
-cargo test -p neural-boundary-cli
-```
-
-Push from Termux (runs every gate, commits, pushes):
-
-```bash
-bash scripts/termux_push.sh
-# default commit message:
-# feat: release Neural Boundary Game v2.1.2 Foundation Grande Edition
-```
-
-## Quality gates
-
-`bash scripts/smoke_check.sh` runs exactly what CI runs:
-
-```text
-cargo fmt --all --check
-cargo test -p neural-boundary-core
-cargo test -p neural-boundary-cli
-cargo check -p neural-boundary-web
-cargo build -p neural-boundary-web --target wasm32-unknown-unknown
-python3 tools/validate_replay.py     # vector schema + checksums
-python3 tools/check_hygiene.py       # forbidden capability claims
-python3 tools/release_check.py       # version consistency + release layout
-```
-
-## Repository presentation
-
-About, topics, website, social preview and release steps are documented in
-[`docs/GITHUB_SETUP.md`](docs/GITHUB_SETUP.md). The stage's visual tokens are
-normative: [`docs/AXONOS_STANDARD_STYLE.md`](docs/AXONOS_STANDARD_STYLE.md).
-
-## Scope and claims
-
-This is an educational technical demo of a software boundary principle. It
-does not process real signal data and does not control hardware — the full
-list is in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md), and
-[`docs/CLAIM_HYGIENE.md`](docs/CLAIM_HYGIENE.md) is enforced by CI. Boundary
-background: [`docs/BCI_BOUNDARY.md`](docs/BCI_BOUNDARY.md),
-[`docs/NO_RAW_NEURAL_DATA.md`](docs/NO_RAW_NEURAL_DATA.md).
-
-## Working with the author
-
-Repository review, `no_std` architecture, protocol boundaries, conformance
-vectors and reviewer-ready documentation:
-[`docs/COMMERCIAL_SERVICES.md`](docs/COMMERCIAL_SERVICES.md) ·
-[axonos.org](https://axonos.org) ·
-[medium.com/@AxonOS](https://medium.com/@AxonOS) · <connect@axonos.org>
-
-## License
-
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at
-your option.
+**[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game/)**
 
 ---
 
-`v2.1.2 • AxonOS Standard Foundation Grande Style • deterministic Rust core`
+A deterministic Rust/WASM game demonstrating the AxonOS neural boundary protocol.
+Raw signal stays private. Applications receive typed intent only.
+The Rust core is authoritative. The browser is never trusted.
+
+## 30-second walkthrough
+
+1. Select a lane (↑/↓ or click)
+2. **3** QUARANTINE raw frames, artifacts, stim commands and claims immediately
+3. **4** CONSENT — gate a token to open the conversion and release scope
+4. **5** EVIDENCE — register TRACE → CHECKSUM → CI in strict order
+5. **1** VALIDATE candidates and unknowns
+6. **2** CONVERT validated intent (requires active consent + L1 evidence)
+7. **⏎** RELEASE — all 7 gates must pass and release scope must be active
+
+## What this demonstrates
+
+- Raw-signal containment (PRIVACY gate): zero leaks required
+- Consent epoch model (CONSENT gate): revocation is immediate
+- Evidence chain L0→L1→L2→L3 (EVIDENCE gate): out-of-order proof is rejected
+- Stimulation fail-closed: `StimulationCommand` crossing terminates immediately
+- Privacy Vault FSM: raw vault records compromise the vault on escape
+- WCET gate: logical timing budget of 618 units enforced per tick
+- Determinism contract: same seed + same actions = identical hash, verified offline
+
+## Architecture
+
+45 kB Rust/WASM core. Flat C ABI (41 named exports, no wasm-bindgen).
+JavaScript UI. No runtime dependencies. No CDN. No telemetry.
+
+```
+neural-boundary-core/  # #![no_std] deterministic simulation, xorshift64star-v1 RNG
+neural-boundary-cli/   # replay verifier, 8 canonical vectors, SHA-256 in Rust
+neural-boundary-web/   # flat WASM ABI → web/*.js UI
+```
+
+## Build and verify
+
+```bash
+# Run the full gate
+bash scripts/verify_release.sh
+
+# Verify all 8 canonical replay vectors
+cargo run -p neural-boundary-cli --release -- verify-all
+
+# Build web to dist/
+bash scripts/build_web.sh
+
+# From Android Termux
+bash scripts/termux_push.sh
+```
+
+## Replay proof
+
+Every run produces a deterministic 64-bit state hash.
+Pin a world offline with:
+
+```bash
+cargo run -p neural-boundary-cli --release -- record \
+  --mode STANDARD --seed 0000000000000001 --difficulty 1 --policy clean \
+  --out my-run.json
+cargo run -p neural-boundary-cli --release -- verify my-run.json
+```
+
+## Intellectual Property and Licensing
+
+Neural Boundary Game is developed by AxonOS.
+
+The original software is available under a dual-licensing model:
+
+- AGPL-3.0-only for qualifying open-source use; or
+- a separate AxonOS Commercial License for proprietary and commercial use.
+
+AxonOS names, logos, product identity, visual assets and designated commercial
+materials are not licensed under the AGPL and remain protected intellectual property.
+
+See: `LICENSE` · `COMMERCIAL_LICENSE.md` · `IP_NOTICE.md` · `TRADEMARKS.md` · `THIRD_PARTY_NOTICES.md`
+
+## Support Development
+
+Dogecoin: `DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp`
+
+Verify the complete address before sending.
+
+Dogecoin contributions are voluntary and do not represent an investment,
+equity interest, token allocation, security, governance right or promise of financial return.
+AxonOS will never request your wallet seed phrase or private key.
+
+## Commercial deployment
+
+Build a private boundary demo or deterministic safety review: `connect@axonos.org`
+
+---
+
+*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v5.5.12 — Cognitive Sovereignty.*
+*Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
+*AxonOS™ and Neural Boundary Game™ are claimed trademarks.*

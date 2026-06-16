@@ -1,32 +1,27 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # Claim Hygiene
 
-Scoped language is a release gate, not a style preference. CI runs
-`tools/check_hygiene.py` over every tracked text file.
+All public statements about Neural Boundary Game and AxonOS must be
+accurate and substantiated.
 
-## Preferred wording
+## Forbidden claims
 
-- BCI-adjacent software boundary;
-- educational technical demo;
-- deterministic simulation;
-- typed intent model;
-- reviewer-safe public artifact.
+- "Clinical-grade" or "clinically proven"
+- "FDA approved" or "FDA ready"
+- "Regulatory compliant" (without specifying which regulation and evidence)
+- "Guaranteed safe" or "production BCI"
+- "Reads thoughts" or "mind control"
+- Any investment, equity or financial-return implication
 
-## Forbidden phrases
+## Permitted claims
 
-The checker fails the build on any of these, anywhere in the tree:
+- "Educational technical simulation"
+- "Demonstrates boundary enforcement concepts"
+- "Deterministic Rust/WASM core"
+- "Open-source under AGPL-3.0-only"
+- "Local-only, no telemetry"
 
-```text
-clinical-grade        fda-ready           guaranteed safe
-real brain control    mind control        regulatory compliant
-certified medical     reads thoughts      production bci
-medical device
-```
-
-Two escapes exist, both deliberate:
-
-1. **Negation in the same sentence fragment** — “this is *not* a medical
-   device” is exactly the kind of statement this repository should make.
-2. The literal marker `claims-ok` on a line, reserved for documentation that
-   must name the phrases themselves (this file is excluded by path instead).
-
-If you need a third escape, the claim is probably wrong.
+The `tools/check_hygiene.py` gate enforces these rules in CI.

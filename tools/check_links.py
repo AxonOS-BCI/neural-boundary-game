@@ -50,6 +50,8 @@ def heading_slugs(path: Path) -> set[str]:
 def main() -> int:
     errors: list[str] = []
     for source in tracked_markdown():
+        if not source.exists():
+            continue
         text = source.read_text(encoding="utf-8")
         for line_no, line in enumerate(text.splitlines(), start=1):
             for target in LINK.findall(line):
