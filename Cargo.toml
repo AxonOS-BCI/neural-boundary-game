@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "5.5.12"
+version = "7.3.0"
 edition = "2021"
 authors = ["Denis Yermakou <connect@axonos.org>"]
 license = "MIT OR Apache-2.0"
