@@ -1,392 +1,466 @@
-// SPDX-FileCopyrightText: 2026 Denis Yermakou
-// SPDX-FileContributor: AxonOS
+// Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+//
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.3.0).
+// See LICENSE and IP_NOTICE.md for details.
 
-//! Flat numeric WASM ABI (41 named exports, §26.1).
-//! Uses #[unsafe(no_mangle)] per Rust 1.82+ stable preferred syntax.
-//! The core crate retains #![forbid(unsafe_code)]; this shim does not.
+//! Flat WASM ABI v3 (§17). Eighty-plus C-ABI exports over the canonical core.
+//! No wasm-bindgen; `#[unsafe(no_mangle)] extern "C"` (stable since Rust 1.82).
+//! The core crate keeps `#![forbid(unsafe_code)]`; this thin ABI shim does not.
+//!
+//! Trust boundary (§16.2, §20): the browser reads state through these getters
+//! and never computes grade, score, or hash. All authoritative logic is in
+//! `neural-boundary-core`.
 
 #![allow(unsafe_code)]
 
+use core::cell::{Cell, RefCell};
 use neural_boundary_core::{
-    Difficulty, Entity, Grade, Input, Mode, Simulation, ABI_VERSION, BOUNDARY_X, CORE_VERSION,
-    ENTITY_CAPACITY, LANES, PRODUCT_VERSION_PACKED, REPLAY_SCHEMA, TICKS_PER_SECOND,
+    scenario_by_id, ActionResult, GameState, PlayerAction, VectorOutcome, ABI_VERSION,
+    BUILTIN_VECTORS, PRODUCT_VERSION_PACKED, SCENARIO_COUNT, TICK_RATE_HZ,
 };
-use std::cell::RefCell;
 
 thread_local! {
-    static STATE: RefCell<Option<Simulation>> = const { RefCell::new(None) };
+    static STATE: RefCell<Option<GameState>> = const { RefCell::new(None) };
+    static LAST: Cell<(u32, u64)> = const { Cell::new((1, 1)) };
+    static PENDING: Cell<u8> = const { Cell::new(0) };
+    static VECTOR: Cell<Option<VectorOutcome>> = const { Cell::new(None) };
 }
 
-fn with<R>(f: impl FnOnce(&Simulation) -> R) -> R {
-    STATE.with(|cell| f(cell.borrow().as_ref().expect("nbg_init not called")))
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+fn read<R>(default: R, f: impl FnOnce(&GameState) -> R) -> R {
+    STATE.with(|c| match c.borrow().as_ref() {
+        Some(g) => f(g),
+        None => default,
+    })
 }
 
-fn with_mut<R>(f: impl FnOnce(&mut Simulation) -> R) -> R {
-    STATE.with(|cell| f(cell.borrow_mut().as_mut().expect("nbg_init not called")))
+fn write<R>(default: R, f: impl FnOnce(&mut GameState) -> R) -> R {
+    STATE.with(|c| match c.borrow_mut().as_mut() {
+        Some(g) => f(g),
+        None => default,
+    })
 }
 
-// ── Static metadata ──────────────────────────────────────────────────────────
-// Exports 01-05
+#[allow(clippy::cast_possible_truncation)]
+fn ptr_of(s: &str) -> u32 {
+    s.as_ptr() as usize as u32
+}
 
-/// Export 01 — ABI version; must be 1.
+#[allow(clippy::cast_possible_truncation)]
+fn len_of(s: &str) -> u32 {
+    s.len() as u32
+}
+
+fn start(scenario_id: u32, seed: u64) -> u32 {
+    match GameState::new(scenario_id, seed) {
+        Some(g) => {
+            STATE.with(|c| *c.borrow_mut() = Some(g));
+            LAST.with(|l| l.set((scenario_id, seed)));
+            PENDING.with(|p| p.set(0));
+            1
+        }
+        None => 0,
+    }
+}
+
+// ── version / health (§17.3) ─────────────────────────────────────────────────
+
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_abi_version() -> u32 {
     ABI_VERSION
 }
-
-/// Export 02 — Product version packed: (major<<16)|(minor<<8)|patch.
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_product_version_packed() -> u32 {
     PRODUCT_VERSION_PACKED
 }
-
-/// Export 03 — Tick rate (60 Hz).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_tick_rate() -> u32 {
-    TICKS_PER_SECOND
-}
-
-/// Export 04 — Number of signal lanes (5).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_lane_count() -> u32 {
-    LANES as u32
-}
-
-/// Export 05 — Entity pool capacity (32).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_entity_capacity() -> u32 {
-    ENTITY_CAPACITY as u32
-}
-
-/// Export 06 — Logical boundary X coordinate (704).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_boundary_x() -> u32 {
-    BOUNDARY_X as u32
-}
-
-// ── Lifecycle ────────────────────────────────────────────────────────────────
-// Exports 07-10
-
-/// Export 07 — Initialise or re-initialise with a 64-bit seed.
-/// mode: 1=Guided 2=Standard 3=Audit 4=Grand 5=Daily 6=PrivacyVault 7=KernelTrial
-/// difficulty: 0=Calm 1=Standard 2=Intense
-/// Returns 0 on success, 1 on unknown mode/difficulty.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_init(mode: u8, seed_hi: u32, seed_lo: u32, difficulty: u8) -> u32 {
-    let Some(mode) = Mode::from_u8(mode) else {
-        return 1;
-    };
-    let Some(difficulty) = Difficulty::from_u8(difficulty) else {
-        return 1;
-    };
-    let seed = ((seed_hi as u64) << 32) | seed_lo as u64;
-    STATE.with(|cell| {
-        *cell.borrow_mut() = Some(Simulation::new(mode, difficulty, seed));
-    });
-    0
-}
-
-/// Export 08 — Reset to initial state keeping same config.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_reset() {
-    STATE.with(|cell| {
-        if let Some(sim) = cell.borrow().as_ref() {
-            let (m, d, s) = (sim.mode(), sim.difficulty(), sim.seed());
-            *cell.borrow_mut() = Some(Simulation::new(m, d, s));
-        }
-    });
-}
-
-/// Export 09 — Advance `ticks` steps with IDLE input. Returns actual steps taken.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_step(ticks: u32) -> u32 {
-    let mut done = 0;
-    for _ in 0..ticks {
-        if with(|s| s.status().is_terminal()) {
-            break;
-        }
-        with_mut(|s| s.step(Input::IDLE));
-        done += 1;
-    }
-    done
-}
-
-/// Export 10 — Apply a single action, then step one tick.
-/// Returns 0 success, 1 invalid action.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_apply_action(lane: u8, action_id: u8) -> u32 {
-    use neural_boundary_core::Action;
-    let action = Action::from_u8(action_id);
-    let (lane_opt, act_opt) = match action {
-        Some(a) => (if lane < LANES { Some(lane) } else { None }, Some(a)),
-        None => return 1,
-    };
-    with_mut(|s| {
-        s.step(Input {
-            lane: lane_opt,
-            action: act_opt,
-        })
-    });
-    0
-}
-
-// ── Pause/resume (presentation-only; core ticks only when JS calls step) ─────
-// Exports 11-13
-
-static PAUSED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-/// Export 11 — Signal pause intent to the ABI layer.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_pause() {
-    PAUSED.store(true, std::sync::atomic::Ordering::Relaxed);
-}
-
-/// Export 12 — Signal resume.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_resume() {
-    PAUSED.store(false, std::sync::atomic::Ordering::Relaxed);
-}
-
-/// Export 13 — Returns 1 if paused, 0 if running.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_is_paused() -> u32 {
-    PAUSED.load(std::sync::atomic::Ordering::Relaxed) as u32
-}
-
-// ── Lane control ─────────────────────────────────────────────────────────────
-// Exports 14-15
-
-static SELECTED_LANE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(2);
-
-/// Export 14 — Set the selected lane (0-4). Returns 1 if out of range.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_select_lane(lane: u8) -> u32 {
-    if lane >= LANES {
-        return 1;
-    }
-    SELECTED_LANE.store(lane, std::sync::atomic::Ordering::Relaxed);
-    0
-}
-
-/// Export 15 — Current selected lane.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_selected_lane() -> u32 {
-    SELECTED_LANE.load(std::sync::atomic::Ordering::Relaxed) as u32
-}
-
-// ── Simulation scalar state ───────────────────────────────────────────────────
-// Exports 16-41
-
-/// Export 16
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_phase() -> u32 {
-    with(|s| s.phase() as u32)
-}
-
-/// Export 17
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_mode() -> u32 {
-    with(|s| s.mode().code() as u32)
-}
-
-/// Export 18
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_tick() -> u32 {
-    with(|s| s.tick())
-}
-
-/// Export 19
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_score() -> u64 {
-    with(|s| s.score())
-}
-
-/// Export 20
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_trust() -> u32 {
-    with(|s| s.trust() as u32)
-}
-
-/// Export 21
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_risk() -> u32 {
-    with(|s| s.risk() as u32)
-}
-
-/// Export 22
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_integrity() -> u32 {
-    with(|s| s.integrity() as u32)
-}
-
-/// Export 23
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_evidence_level() -> u32 {
-    with(|s| s.evidence_level() as u32)
-}
-
-/// Export 24
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_evidence_bits() -> u32 {
-    with(|s| s.evidence_bits() as u32)
-}
-
-/// Export 25
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_gate_mask() -> u32 {
-    with(|s| s.gate_mask() as u32)
-}
-
-/// Export 26 — Blocker mask: bits of failing gates at current tick.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_blocker_mask() -> u32 {
-    with(|s| (!s.gate_mask() & 0x7F) as u32)
-}
-
-/// Export 27 — Consent scope bits (0 = no active consent).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_consent_scope() -> u32 {
-    with(|s| s.consent().scope_mask as u32)
-}
-
-/// Export 28 — Consent epoch.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_consent_epoch() -> u32 {
-    with(|s| s.consent_epoch())
-}
-
-/// Export 29 — Ticks remaining before consent expires (0 = no active consent).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_consent_expires_tick() -> u32 {
-    with(|s| s.consent_expires_tick())
-}
-
-/// Export 30 — Raw leak count.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_raw_leaks() -> u32 {
-    with(|s| s.raw_leaks() as u32)
-}
-
-/// Export 31 — Combo count.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_combo() -> u32 {
-    with(|s| s.combo())
-}
-
-/// Export 32 — Best combo this run.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_best_combo() -> u32 {
-    with(|s| s.best_combo())
-}
-
-/// Export 33 — Terminal status code (0=Running,1=Sealed,2=Breached,3=Unsafe,4=Aborted,5=FatalRuntime).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_terminal_status() -> u32 {
-    with(|s| s.status().code() as u32)
-}
-
-/// Export 34 — Terminal reason code.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_terminal_reason() -> u32 {
-    with(|s| s.reason().code() as u32)
-}
-
-/// Export 35 — Grade code: 0=Sovereign,1=Sealed,2=Reviewable,3=Degraded,4=Breached,5=Unsafe.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_grade() -> u32 {
-    with(|s| match s.grade() {
-        Grade::Sovereign => 0,
-        Grade::Sealed => 1,
-        Grade::Reviewable => 2,
-        Grade::Degraded => 3,
-        Grade::Breached => 4,
-        Grade::Unsafe => 5,
-    })
-}
-
-/// Export 36 — State hash high 32 bits.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_state_hash_hi() -> u32 {
-    with(|s| (s.state_hash() >> 32) as u32)
-}
-
-/// Export 37 — State hash low 32 bits.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_state_hash_lo() -> u32 {
-    with(|s| s.state_hash() as u32)
-}
-
-// ── Entity pool getters (slot: 0..ENTITY_CAPACITY) ───────────────────────────
-// Exports 38-41. Returns 0xFFFFFFFF for an empty slot.
-
-/// Export 38 — Entity kind code for slot (0xFFFFFFFF = empty).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_entity_kind(slot: u32) -> u32 {
-    get_entity(slot)
-        .map(|e| e.kind.code() as u32)
-        .unwrap_or(0xFFFF_FFFF)
-}
-
-/// Export 39 — Entity lane for slot.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_entity_lane(slot: u32) -> u32 {
-    get_entity(slot)
-        .map(|e| e.lane as u32)
-        .unwrap_or(0xFFFF_FFFF)
-}
-
-/// Export 40 — Entity X position (Q24.8) for slot.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_entity_x(slot: u32) -> u32 {
-    get_entity(slot).map(|e| e.x_q8).unwrap_or(0xFFFF_FFFF)
-}
-
-/// Export 41 — Entity flags for slot.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_entity_flags(slot: u32) -> u32 {
-    get_entity(slot)
-        .map(|e| e.flags as u32)
-        .unwrap_or(0xFFFF_FFFF)
-}
-
-fn get_entity(slot: u32) -> Option<Entity> {
-    if slot as usize >= ENTITY_CAPACITY {
-        return None;
-    }
-    with(|s| s.pool()[slot as usize])
-}
-
-// ── String table accessors (returns static byte slices via ptr+len) ───────────
-
-/// Pointer to the WASM linear memory start of the core version string.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_schema_version_ptr() -> u32 {
-    REPLAY_SCHEMA.as_ptr() as u32
-}
-
-/// Length of the schema version string.
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_schema_version_len() -> u32 {
-    REPLAY_SCHEMA.len() as u32
-}
-
-/// WASM memory export (required by JS runtime for ArrayBuffer views).
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_core_version_ptr() -> u32 {
-    CORE_VERSION.as_ptr() as u32
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn nbg_core_version_len() -> u32 {
-    CORE_VERSION.len() as u32
-}
-
-// ── Initialisation sentinel — called at WASM module start ────────────────────
-
-/// Called by the JS runtime immediately after instantiation to confirm the
-/// module is healthy. Returns PRODUCT_VERSION_PACKED or 0 on failure.
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_health_check() -> u32 {
     PRODUCT_VERSION_PACKED
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_tick_rate() -> u32 {
+    TICK_RATE_HZ
+}
+
+// ── lifecycle ────────────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_new(scenario_id: u32, seed_hi: u32, seed_lo: u32) -> u32 {
+    let seed = ((seed_hi as u64) << 32) | (seed_lo as u64);
+    start(scenario_id, seed)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_reset() -> u32 {
+    let (sid, seed) = LAST.with(|l| l.get());
+    start(sid, seed)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_reset_with_seed(seed_hi: u32, seed_lo: u32) -> u32 {
+    let sid = LAST.with(|l| l.get().0);
+    let seed = ((seed_hi as u64) << 32) | (seed_lo as u64);
+    start(sid, seed)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_set_scenario(scenario_id: u32) -> u32 {
+    let seed = LAST.with(|l| l.get().1);
+    start(scenario_id, seed)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_is_initialized() -> u32 {
+    read(0, |_| 1)
+}
+
+// ── tick / action ────────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_set_action(action_code: u32) -> u32 {
+    let code = u8::try_from(action_code).ok().filter(|c| *c <= 7).unwrap_or(0);
+    PENDING.with(|p| p.set(code));
+    1
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_pending_action() -> u32 {
+    PENDING.with(|p| p.get()) as u32
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_tick() -> u32 {
+    let code = PENDING.with(|p| {
+        let c = p.get();
+        p.set(0);
+        c
+    });
+    let action = PlayerAction::from_u8(code).unwrap_or(PlayerAction::None);
+    write(ActionResult::NoOp.code() as u32, |g| g.advance(action).code() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_step(action_code: u32) -> u32 {
+    let action = u8::try_from(action_code)
+        .ok()
+        .and_then(PlayerAction::from_u8)
+        .unwrap_or(PlayerAction::None);
+    write(ActionResult::NoOp.code() as u32, |g| g.advance(action).code() as u32)
+}
+
+// ── status / grade ───────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_status() -> u32 {
+    read(0, |g| g.status().code() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_is_terminal() -> u32 {
+    read(0, |g| g.status().is_terminal() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_grade() -> u32 {
+    read(0, |g| g.grade().code() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_end_reason() -> u32 {
+    read(0, |g| g.end_reason().code() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_score() -> i32 {
+    read(0, |g| g.score())
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_tick_count() -> u32 {
+    read(0, |g| g.tick())
+}
+
+// ── metrics ──────────────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_boundary_integrity() -> u32 {
+    read(0, |g| g.metrics().boundary_integrity as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_consent_coherence() -> u32 {
+    read(0, |g| g.metrics().consent_coherence as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_vault_integrity() -> u32 {
+    read(0, |g| g.metrics().vault_integrity as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_cognitive_flow() -> u32 {
+    read(0, |g| g.metrics().cognitive_flow as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_raw_leak_risk() -> u32 {
+    read(0, |g| g.metrics().raw_leak_risk as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_stimulation_risk() -> u32 {
+    read(0, |g| g.metrics().stimulation_risk as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_latency_pressure() -> u32 {
+    read(0, |g| g.metrics().latency_pressure as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_audit_confidence() -> u32 {
+    read(0, |g| g.metrics().audit_confidence as u32)
+}
+
+// ── active event (focused) ───────────────────────────────────────────────────
+
+const NO_EVENT: u32 = 0xFFFF_FFFF;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_count() -> u32 {
+    read(0, |g| g.active_event_count() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_present() -> u32 {
+    read(0, |g| g.focused_event().is_some() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_id() -> u32 {
+    read(NO_EVENT, |g| g.focused_event().map(|e| e.id).unwrap_or(NO_EVENT))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_kind() -> u32 {
+    read(NO_EVENT, |g| g.focused_event().map(|e| e.kind.code() as u32).unwrap_or(NO_EVENT))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_severity() -> u32 {
+    read(0, |g| g.focused_event().map(|e| e.severity as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_visible_risk() -> u32 {
+    read(0, |g| g.focused_event().map(|e| e.visible_risk as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_perceived_risk() -> u32 {
+    read(0, |g| g.focused_event().map(|e| e.perceived_risk() as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_scope() -> u32 {
+    read(0, |g| g.focused_event().map(|e| e.permission_scope.bits() as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_requires_audit() -> u32 {
+    read(0, |g| g.focused_event().map(|e| e.requires_audit as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_audited() -> u32 {
+    read(0, |g| g.focused_event().map(|e| e.audited as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_expires_at() -> u32 {
+    read(0, |g| g.focused_event().map(|e| e.expires_at_tick).unwrap_or(0))
+}
+
+// ── permission / vault / stimulation ─────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_permission_scopes() -> u32 {
+    read(0, |g| g.permissions.active_scopes.bits() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_permission_count() -> u32 {
+    read(0, |g| g.permissions.count as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_permission_sensitive() -> u32 {
+    read(0, |g| g.permissions.has_sensitive() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_vault_sealed() -> u32 {
+    read(0, |g| g.vault.sealed as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_vault_capacity() -> u32 {
+    read(0, |g| g.vault.capacity as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_stimulation_level() -> u32 {
+    read(0, |g| g.stimulation.level as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_stimulation_throttled() -> u32 {
+    read(0, |g| g.stimulation.throttled as u32)
+}
+
+// ── release / action gate ────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_release_available() -> u32 {
+    read(0, |g| g.release_available() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_release_blockers() -> u32 {
+    read(0, |g| g.release_blockers() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_last_action_result() -> u32 {
+    read(ActionResult::NoOp.code() as u32, |g| g.last_action_result().code() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_gate_last_action_tick() -> u32 {
+    read(0, |g| g.gate.last_action_tick)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_gate_accepted_this_tick() -> u32 {
+    read(0, |g| g.gate.accepted_actions_this_tick as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_gate_rejected_total() -> u32 {
+    read(0, |g| g.gate.rejected_actions_total)
+}
+
+// ── hash / seed ──────────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_state_hash_hi() -> u32 {
+    read(0, |g| (g.state_hash() >> 32) as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_state_hash_lo() -> u32 {
+    read(0, |g| (g.state_hash() & 0xFFFF_FFFF) as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_seed_hi() -> u32 {
+    read(0, |g| (g.seed >> 32) as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_seed_lo() -> u32 {
+    read(0, |g| (g.seed & 0xFFFF_FFFF) as u32)
+}
+
+// ── labels (ptr/len into wasm memory) ────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_grade_label_ptr() -> u32 {
+    ptr_of(read("", |g| g.grade().label()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_grade_label_len() -> u32 {
+    len_of(read("", |g| g.grade().label()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_grade_public_label_ptr() -> u32 {
+    ptr_of(read("", |g| g.grade().public_label()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_grade_public_label_len() -> u32 {
+    len_of(read("", |g| g.grade().public_label()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_end_reason_label_ptr() -> u32 {
+    ptr_of(read("", |g| g.end_reason().label()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_end_reason_label_len() -> u32 {
+    len_of(read("", |g| g.end_reason().label()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_status_label_ptr() -> u32 {
+    ptr_of(read("", |g| g.status().as_str()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_status_label_len() -> u32 {
+    len_of(read("", |g| g.status().as_str()))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_label_ptr() -> u32 {
+    ptr_of(read("", |g| g.focused_event().map(|e| e.kind.label()).unwrap_or("")))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_active_event_label_len() -> u32 {
+    len_of(read("", |g| g.focused_event().map(|e| e.kind.label()).unwrap_or("")))
+}
+
+// ── scenario metadata ────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_id() -> u32 {
+    read(0, |g| g.scenario_id)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_count() -> u32 {
+    SCENARIO_COUNT
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_difficulty() -> u32 {
+    read(0, |g| g.scenario().difficulty.code() as u32)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_max_ticks() -> u32 {
+    read(0, |g| g.scenario().max_ticks)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_name_ptr(scenario_id: u32) -> u32 {
+    ptr_of(scenario_by_id(scenario_id).map(|s| s.name).unwrap_or(""))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_name_len(scenario_id: u32) -> u32 {
+    len_of(scenario_by_id(scenario_id).map(|s| s.name).unwrap_or(""))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_objective_ptr(scenario_id: u32) -> u32 {
+    ptr_of(scenario_by_id(scenario_id).map(|s| s.objective).unwrap_or(""))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_objective_len(scenario_id: u32) -> u32 {
+    len_of(scenario_by_id(scenario_id).map(|s| s.objective).unwrap_or(""))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_scenario_difficulty_by_id(scenario_id: u32) -> u32 {
+    scenario_by_id(scenario_id).map(|s| s.difficulty.code() as u32).unwrap_or(NO_EVENT)
+}
+
+// ── replay / vector ──────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_builtin_vector_count() -> u32 {
+    BUILTIN_VECTORS.len() as u32
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_run_builtin_vector(index: u32) -> u32 {
+    let idx = index as usize;
+    match neural_boundary_core::run_builtin(idx) {
+        Some(o) => {
+            VECTOR.with(|v| v.set(Some(o)));
+            o.grade.code() as u32
+        }
+        None => {
+            VECTOR.with(|v| v.set(None));
+            NO_EVENT
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_vector_hash_hi() -> u32 {
+    VECTOR.with(|v| v.get().map(|o| (o.state_hash >> 32) as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_vector_hash_lo() -> u32 {
+    VECTOR.with(|v| v.get().map(|o| (o.state_hash & 0xFFFF_FFFF) as u32).unwrap_or(0))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_vector_score() -> i32 {
+    VECTOR.with(|v| v.get().map(|o| o.score).unwrap_or(0))
+}
+
+// ── performance counters ─────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_counter_unresolved_critical() -> u32 {
+    read(0, |g| g.counters.unresolved_critical_events)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_counter_unsafe_actions() -> u32 {
+    read(0, |g| g.counters.unsafe_actions)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_counter_successful_audits() -> u32 {
+    read(0, |g| g.counters.successful_audits)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn nbg_counter_correct_revocations() -> u32 {
+    read(0, |g| g.counters.correct_revocations)
 }
