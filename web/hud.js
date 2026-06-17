@@ -1,161 +1,189 @@
-/*
- * SPDX-FileCopyrightText: 2026 Denis Yermakou
- * SPDX-FileContributor: AxonOS
- * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
- */
-// hud.js — DOM metrics mirror, feedback grammar, result screen
+// Copyright (c) 2026 Denis Yermakou / AxonOS
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.3.0).
+//
+// HUD binding (§8). Pure presentation over engine getters.
 
-import { abi, GATE, GATE as G, GRADE_NAME, STATUS_NAME, REASON_NAME, MODE_NAME, KIND_LABEL } from './abi.js';
-import { announce } from './a11y.js';
-
-const GATE_NAMES = ['PRIVACY','TYPING','CONSENT','EVIDENCE','DETERMINISM','VAULT','WCET'];
-const MODE_BLURB = {
-  1: 'A 60-second coaching run. Each boundary action demonstrated once before it matters.',
-  2: 'Canonical run. Gate all 7 reviews. Trust≥750, Risk≤250, Integrity≥750, leaks=0 for SEALED.',
-  3: 'Stricter evidence (L3), consent ceiling and tighter risk budget. One raw leak ends the run.',
-  4: 'Four phases. Signal Integrity → Consent & Evidence → Release Under Pressure → Boundary Review. Release blocked until phase 4.',
-  5: 'Deterministic daily seed from "NBG|5.5.12|YYYY-MM-DD|DAILY". Same UTC date, same world, no backend.',
-  6: 'Raw frames, vault records and export requests are heavy. Contain the vault or it compromises permanently.',
-  7: 'Missed deadline hazards accumulate; three misses end the run. Constant time-pressure.'
+const RISK_METRICS = new Set(["raw_leak_risk", "stimulation_risk", "latency_pressure"]);
+const METRIC_LABELS = {
+  boundary_integrity: "Boundary Integrity",
+  consent_coherence: "Consent Coherence",
+  vault_integrity: "Vault Integrity",
+  cognitive_flow: "Cognitive Flow",
+  raw_leak_risk: "Raw Leak Risk",
+  stimulation_risk: "Stimulation Risk",
+  latency_pressure: "Latency Pressure",
+  audit_confidence: "Audit Confidence",
 };
+const RECOMMEND = {
+  BENIGN_FLOW: "Authorize — safe flow.",
+  CONSENT_REQUEST: "Authorize to keep consent coherent.",
+  PERMISSION_ESCALATION: "Audit first, then Revoke if unjustified.",
+  RAW_SIGNAL_EXPOSURE: "Seal Vault or Audit before it leaks.",
+  STIMULATION_REQUEST: "Throttle before authorizing.",
+  UNSAFE_STIMULATION: "Throttle now — never authorize blind.",
+  LATENCY_SPIKE: "Quarantine to relieve latency.",
+  ADVERSARIAL_PROBE: "Audit, then Quarantine.",
+  VAULT_PRESSURE: "Quarantine or Seal Vault.",
+  AUDIT_CHECKPOINT: "Audit to raise confidence.",
+};
+const BLOCKERS = [
+  "Wait — minimum run time not yet elapsed",
+  "Resolve the active critical event",
+  "Boundary Integrity must rise",
+  "Consent Coherence must be \u2265 65",
+  "Vault Integrity must be \u2265 65",
+  "Raw Leak Risk must be \u2264 35",
+  "Stimulation Risk must be \u2264 35",
+  "Latency Pressure must come down",
+];
 
-const $ = id => document.getElementById(id);
-
-function bar(id, v, max = 1000) {
-  const el = $(id);
-  if (el) el.style.width = Math.max(0, Math.min(100, v / max * 100)) + '%';
+function band(name, v) {
+  const risk = RISK_METRICS.has(name);
+  const good = risk ? 100 - v : v;
+  if (good >= 65) return "ok";
+  if (good >= 40) return "warn";
+  return "danger";
 }
 
-export function update() {
-  const tick = abi.tick(), tickRate = abi.tickRate();
-  const elapsed = Math.floor(tick / tickRate);
-  const mm = String(Math.floor(elapsed / 60)).padStart(2,'0');
-  const ss = String(elapsed % 60).padStart(2,'0');
+function scopeText(bits) {
+  const parts = [];
+  if (bits & 1) parts.push("flow");
+  if (bits & 2) parts.push("stim");
+  if (bits & 4) parts.push("raw");
+  if (bits & 8) parts.push("admin");
+  return parts.length ? parts.join("+") : "none";
+}
 
-  const trust = abi.trust(), risk = abi.risk(), integrity = abi.integrity();
-  const score = abi.score(); // BigInt
-  const combo = abi.combo();
-  const ev = abi.evidenceLevel();
-  const evBits = abi.evidenceBits();
-  const gates = abi.gateMask();
-  const leaks = abi.rawLeaks();
-  const consent = abi.consentScope();
-  const expiry = abi.consentExpiresTick();
-  const phase = abi.phase();
-  const mode = abi.mode();
+export class Hud {
+  constructor(doc) {
+    this.d = doc;
+    this.metricsEl = doc.getElementById("metrics");
+    this._builtMetrics = false;
+  }
 
-  setText('hud-trust', trust);
-  setText('hud-risk', risk);
-  setText('hud-integrity', integrity);
-  setText('hud-score', score.toString());
-  setText('hud-combo', combo > 0 ? `×${combo}` : '—');
-  setText('hud-evidence', ['L0','L1','L2','L3'][ev] + ' (' + evBitStr(evBits) + ')');
-  setText('hud-leaks', leaks);
-  setText('hud-time', `${mm}:${ss}`);
-  bar('bar-trust', trust); bar('bar-risk', risk); bar('bar-integrity', integrity);
+  topbar(engine) {
+    this.d.getElementById("meta-scenario").textContent =
+      engine.scenarioId() + " · " + engine.scenarioName(engine.scenarioId());
+    this.d.getElementById("meta-seed").textContent = engine.seedHex();
+    this.d.getElementById("meta-hash").textContent = engine.hashHex();
+    this.d.getElementById("mission-objective").textContent =
+      engine.scenarioObjective(engine.scenarioId());
+  }
 
-  const consentEl = $('hud-consent');
-  if (consentEl) {
-    if (consent === 0) { consentEl.textContent = 'INACTIVE'; consentEl.className = 'hud-v'; }
-    else {
-      const rem = Math.max(0, expiry - tick);
-      consentEl.textContent = `ACTIVE ${Math.ceil(rem / abi.tickRate())}s`;
-      consentEl.className = 'hud-v consent-on';
+  _buildMetrics() {
+    this.metricsEl.innerHTML = "";
+    for (const key of Object.keys(METRIC_LABELS)) {
+      const el = document.createElement("div");
+      el.className = "metric";
+      el.dataset.key = key;
+      el.dataset.risk = RISK_METRICS.has(key) ? "true" : "false";
+      el.innerHTML =
+        '<div class="metric-row"><span class="metric-name"></span><span class="metric-val mono"></span></div>' +
+        '<div class="bar"><i></i></div>';
+      el.querySelector(".metric-name").textContent = METRIC_LABELS[key];
+      this.metricsEl.appendChild(el);
+    }
+    this._builtMetrics = true;
+  }
+
+  metrics(m) {
+    if (!this._builtMetrics) this._buildMetrics();
+    for (const el of this.metricsEl.children) {
+      const key = el.dataset.key;
+      const v = m[key];
+      el.dataset.band = band(key, v);
+      el.querySelector(".metric-val").textContent = v;
+      el.querySelector(".bar > i").style.width = v + "%";
     }
   }
 
-  // Gate row
-  const gateEl = $('hud-gates');
-  if (gateEl) {
-    let html = '';
-    for (let g = 0; g < 7; g++) {
-      const pass = (gates >> g) & 1;
-      html += `<span class="gate ${pass?'pass':'fail'}" title="${GATE_NAMES[g]}">${GATE_NAMES[g][0]}</span>`;
+  eventCard(ev, tick) {
+    const card = this.d.getElementById("event-card");
+    if (!ev) {
+      card.className = "event-card";
+      card.innerHTML = '<p class="event-empty">No active event. Watch the field and stabilise.</p>';
+      return;
     }
-    gateEl.innerHTML = html;
+    const hazard = [2, 3, 5, 7].includes(ev.kindCode);
+    card.className = "event-card active" + (ev.kindCode === 5 ? " unsafe" : hazard ? " hazard" : "");
+    const secs = Math.max(0, (ev.expiresAt - tick) / 20).toFixed(1);
+    const auditTxt = ev.requiresAudit
+      ? (ev.audited ? '<span class="event-audit-ok">complete</span>' : '<span class="event-audit-bad">incomplete</span>')
+      : "n/a";
+    card.innerHTML =
+      '<p class="event-kind">' + ev.kind.replace(/_/g, " ") + "</p>" +
+      '<div class="event-row"><span>Severity</span><b>' + ev.severity + "</b></div>" +
+      '<div class="event-row"><span>Visible risk</span><b>' + ev.perceivedRisk + "</b></div>" +
+      '<div class="event-row"><span>Scope</span><b>' + scopeText(ev.scope) + "</b></div>" +
+      '<div class="event-row"><span>Audit</span><b>' + auditTxt + "</b></div>" +
+      '<div class="event-row"><span>Expires in</span><b>' + secs + "s</b></div>" +
+      '<p class="event-rec">Recommended: ' + (RECOMMEND[ev.kind] || "Assess and respond.") + "</p>";
   }
 
-  // Phase (Grand only)
-  const phaseEl = $('hud-phase');
-  if (phaseEl) {
-    const PHASE_NAME = ['Signal Integrity','Consent & Evidence','Release Under Pressure','Boundary Review'];
-    phaseEl.hidden = mode !== 4;
-    if (mode === 4) phaseEl.textContent = `PHASE ${phase+1}: ${PHASE_NAME[phase]||''}`;
-  }
-}
-
-function setText(id, v) { const el = $(id); if (el) el.textContent = v; }
-
-function evBitStr(bits) {
-  return (bits & 1 ? 'T' : '·') + (bits & 2 ? 'C' : '·') + (bits & 4 ? 'I' : '·');
-}
-
-export function setFeedback(text, tone = 'neutral') {
-  const el = $('feedback');
-  if (!el) return;
-  el.textContent = text;
-  el.className = `feedback ${tone}`;
-}
-
-export function setModeBlurb(mode) {
-  const el = $('mode-blurb');
-  if (el) el.textContent = MODE_BLURB[mode] || '';
-}
-
-export function fillResult(seed, date, mode, difficulty) {
-  const tick = abi.tick(), status = abi.terminalStatus(), reason = abi.terminalReason();
-  const grade = abi.grade(), gates = abi.gateMask();
-  const trust = abi.trust(), risk = abi.risk(), integrity = abi.integrity();
-  const score = abi.score();
-
-  const TITLES = ['SOVEREIGN BOUNDARY','BOUNDARY SEALED','UNDER REVIEW','DEGRADED BOUNDARY','BOUNDARY BREACHED','UNSAFE TERMINATION'];
-  const CLASSES = ['sovereign','sealed','reviewable','degraded','breached','unsafe'];
-  const BODIES = [
-    'Raw signal stayed private. Applications received typed intent only. All 7 gates passed.',
-    'Boundary released. Not all excellence thresholds were met, but the run sealed.',
-    'Horizon reached. The boundary held but the release was never completed.',
-    'Some gates passed, but the run degraded before a clean seal.',
-    'The boundary was breached. Contain hazards and manage consent before attempting release.',
-    'An unsafe condition terminated the run unconditionally. Stimulation or determinism fault.'
-  ];
-
-  setText('result-title', TITLES[grade] || 'RUN ENDED');
-  const titleEl = $('result-title');
-  if (titleEl) titleEl.className = CLASSES[grade] || '';
-  setText('result-body', BODIES[grade] || REASON_NAME[reason]);
-
-  const statsEl = $('result-stats');
-  if (statsEl) {
-    const pairs = [
-      ['GRADE', GRADE_NAME[grade]], ['STATUS', STATUS_NAME[status]], ['REASON', REASON_NAME[reason]],
-      ['SCORE', score.toString()], ['TRUST', trust], ['RISK', risk], ['INTEGRITY', integrity],
-      ['EVIDENCE', ['L0','L1','L2','L3'][abi.evidenceLevel()]], ['GATES', gates.toString(2).padStart(7,'0')],
-      ['RAW LEAKS', abi.rawLeaks()], ['BEST COMBO', abi.bestCombo()],
-      ['MODE', MODE_NAME[mode]], ['SEED', seed.toString(16).padStart(16,'0').toUpperCase()],
-      ['TICK', tick], ['HASH', abi.stateHashHex()],
-    ];
-    statsEl.innerHTML = pairs.map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  defenses(d) {
+    const ul = this.d.getElementById("defenses");
+    ul.innerHTML =
+      '<li><span>Privacy Vault</span><b>' + (d.vaultSealed ? "sealed" : "open") + " (" + d.vaultCapacity + " left)</b></li>" +
+      '<li><span>Permissions</span><b>' + scopeText(d.scopes) + (d.sensitive ? " \u26a0" : "") + "</b></li>" +
+      '<li><span>Stimulation</span><b>' + (d.throttled ? "throttled" : "open") + "</b></li>";
   }
 
-  const verifyEl = $('result-verify');
-  if (verifyEl) {
-    const modeStr = MODE_NAME[mode]?.toLowerCase() || 'standard';
-    if (mode === 5 && date) {
-      verifyEl.textContent = `Verify offline: neural-boundary-cli record --mode DAILY --date ${date} --difficulty ${difficulty} --policy clean → verify-all`;
+  release(rel, terminal) {
+    const btn = this.d.getElementById("btn-release");
+    const why = this.d.getElementById("release-why");
+    if (terminal) {
+      btn.dataset.state = "complete";
+      btn.textContent = "Run Sealed";
+      btn.disabled = true;
+      why.textContent = "";
+      return;
+    }
+    if (rel.available) {
+      btn.dataset.state = "available";
+      btn.textContent = "Release Sovereignty";
+      btn.disabled = false;
+      why.textContent = "";
     } else {
-      verifyEl.textContent = `Verify offline: neural-boundary-cli record --mode ${modeStr.toUpperCase()} --seed ${seed.toString(16).padStart(16,'0')} --difficulty ${difficulty} → verify-all`;
+      const blockers = [];
+      for (let i = 0; i < BLOCKERS.length; i++) {
+        if (rel.blockers & (1 << i)) blockers.push("\u2022 " + BLOCKERS[i]);
+      }
+      const nearly = blockers.length <= 2;
+      btn.dataset.state = nearly ? "nearly" : "locked";
+      btn.textContent = nearly ? "Stabilize Before Release" : "Release Locked";
+      btn.disabled = true;
+      why.textContent = blockers.length ? "Release locked:\n" + blockers.join("\n") : "";
     }
   }
-}
 
-export function fillBlocked() {
-  const mask = abi.blockerMask();
-  const list = $('blocked-list');
-  if (!list) return;
-  let html = '';
-  for (let g = 0; g < 7; g++) {
-    if ((mask >> g) & 1) html += `<li>▢ ${GATE_NAMES[g]} gate not satisfied</li>`;
+  status(engine) {
+    const pill = this.d.getElementById("status-pill");
+    const grade = engine.grade();
+    if (engine.terminal()) {
+      pill.dataset.grade = grade;
+      pill.textContent = engine.gradePublicLabel();
+    } else {
+      pill.dataset.grade = "";
+      pill.textContent = "Running";
+    }
+    this.d.getElementById("tick-readout").textContent = "t=" + engine.tickCount();
   }
-  if (!(abi.consentScope() & 0x02)) html += `<li>▢ RELEASE scope not in active consent</li>`;
-  list.innerHTML = html || '<li>Gates pass but consent is missing — gate a ConsentGrant first</li>';
+
+  missionHint(ev) {
+    const hint = this.d.getElementById("mission-hint");
+    hint.textContent = ev ? (RECOMMEND[ev.kind] || "Assess the active event.") : "Stable. Stabilise further or release when unlocked.";
+  }
+
+  lastAction(result) {
+    const el = this.d.getElementById("last-action");
+    const MAP = {
+      ACCEPTED: "", NO_OP: "",
+      REJECTED_COOLDOWN: "Too fast — one action per tick.",
+      REJECTED_TERMINAL_STATE: "Run has ended.",
+      REJECTED_INVALID_FOR_EVENT: "No valid target for that action.",
+      REJECTED_RELEASE_LOCKED: "Release is still locked.",
+    };
+    el.textContent = MAP[result] || "";
+  }
 }

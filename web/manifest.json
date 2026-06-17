@@ -1,0 +1,16 @@
+{
+  "name": "Neural Boundary Game",
+  "short_name": "Neural Boundary",
+  "description": "A deterministic Rust/WASM game about defending cognitive sovereignty in a brain–computer interface.",
+  "id": "/?source=pwa",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050608",
+  "theme_color": "#050608",
+  "categories": ["games", "education"],
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
