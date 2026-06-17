@@ -1,19 +1,11 @@
-<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
-SPDX-FileContributor: AxonOS
-SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
-
 # No Raw Neural Data
 
-Neural Boundary Game v7.3.0 processes no real neural data.
+This repository is a deterministic simulation.
 
-- No EEG, ECoG, LFP, spike, or any other neural recording.
-- No stimulation parameters, waveforms or hardware commands.
-- No biometric data of any kind.
-- No sensor hardware is connected or required.
+It does not ingest real neural data.
+It does not process clinical data.
+It does not control BCI hardware.
+It does not control stimulation hardware.
+It does not provide medical-device functionality.
 
-The game entities (RawFrame, StimulationCommand, etc.) are abstract
-constructs that illustrate boundary enforcement concepts. They contain
-no actual signal data.
-
-All game state is local. Nothing is transmitted to any server during play.
-See `PRIVACY_NOTICE.md`.
+Terms such as RAW, INTENT, CONSENT, EVIDENCE and STIM are simulated event classes used for a browser-playable boundary model.
