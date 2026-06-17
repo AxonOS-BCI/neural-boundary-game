@@ -103,7 +103,7 @@ _Generated {now} by `tools/build_evidence_report.py`._
 |---|---|
 | Git tip | {git('rev-parse', '--short', 'HEAD')} |
 | Tip subject | {git('log', '-1', '--pretty=%s')} |
-| Author | {git('log', '-1', '--pretty=%an <%ae>')} |
+| Author | {git('log', '-1', '--pretty=%an')} |
 | Commits on branch | {git('rev-list', '--count', 'HEAD')} |
 | Source manifest aggregate | {sm_agg} |
 | Toolchain | stable Rust (no RUSTC_BOOTSTRAP in project; CI: dtolnay/rust-toolchain@stable) |

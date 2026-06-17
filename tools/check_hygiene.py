@@ -83,7 +83,8 @@ def main() -> int:
 
     # Committed build output.
     for name in files:
-        if name.startswith(("target/", "dist/")) or name.endswith(".wasm"):
+        shipped_wasm = name == "web/neural_boundary_web.wasm"  # served runtime artifact
+        if name.startswith(("target/", "dist/")) or (name.endswith(".wasm") and not shipped_wasm):
             errors.append(f"{name}: committed build output")
         if FORBIDDEN_NAMES.search(name):
             errors.append(f"{name}: forbidden duplicate-root filename")

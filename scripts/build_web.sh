@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Neural Boundary Game v5.5.12 — Web build script (§36.3).
+# Neural Boundary Game v7.3.0 — Web build script (§36.3).
 # Produces a self-contained dist/ directory: WASM + static assets.
 # No Trunk, no bundler, no runtime dependencies.
 set -euo pipefail

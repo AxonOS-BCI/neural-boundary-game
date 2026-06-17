@@ -1,6 +1,6 @@
 # Evidence Report — Neural Boundary Game v7.3.0
 
-_Generated 2026-06-17 09:37 UTC by `tools/build_evidence_report.py`._
+_Generated 2026-06-17 21:43 UTC by `tools/build_evidence_report.py`._
 
 ## Identity (§17.1)
 | Field | Value |
@@ -20,17 +20,17 @@ _Generated 2026-06-17 09:37 UTC by `tools/build_evidence_report.py`._
 ## Build provenance
 | Field | Value |
 |---|---|
-| Git tip | e7c4c4c |
-| Tip subject | style(abi): apply rustfmt to the ABI crate |
-| Author | Denis Yermakou <denissmartrich@gmail.com> |
-| Commits on branch | 24 |
+| Git tip | 36cf54f |
+| Tip subject | docs: restore Quick Launch in README |
+| Author | Denis Yermakou |
+| Commits on branch | 60 |
 | Source manifest aggregate | 419e558feed2a1f7… |
 | Toolchain | stable Rust (no RUSTC_BOOTSTRAP in project; CI: dtolnay/rust-toolchain@stable) |
 
 ## Verified facts (run by this tool)
 - **Scenarios:** 9 (§7)
 - **Replay vectors:** 16 (§19.3)
-- **verify-all:** PASS — verify-all OK: 16 vector(s) · schema neural-boundary-replay-v3
+- **verify-all:** not run — CLI binary not built
 - **WASM ABI exports:** 83 `nbg_*` functions (floor 64, §17.2)
 
 ## Gates enforced in CI

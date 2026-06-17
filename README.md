@@ -2,91 +2,110 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Neural Boundary Game v5.5.12
+# Neural Boundary Game v7.3.0 — Cognitive Sovereignty Console
 
 [![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
 [![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
+[![Style: AxonOS Standard Foundation Grande Elite](https://img.shields.io/badge/style-AxonOS%20Grande%20Elite-C8A96A)](docs/UX_STANDARD.md)
 
-[![Play Neural Boundary Game v5.5.12](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
+[![Play Neural Boundary Game v7.3.0](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
 
 **[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game/)**
 
+**Elite AxonOS Standard Foundation Grande Style.**
+> Do not ship raw signal. Ship typed intent.
+
 ---
 
-A deterministic Rust/WASM game demonstrating the AxonOS neural boundary protocol.
-Raw signal stays private. Applications receive typed intent only.
-The Rust core is authoritative. The browser is never trusted.
+A deterministic Rust/WASM game about defending **cognitive sovereignty** at the
+brain–computer boundary. Raw signal stays inside the device; applications
+receive typed intent only. The Rust core is authoritative; the browser is never
+trusted and fails closed.
 
 ## 30-second walkthrough
 
-1. Select a lane (↑/↓ or click)
-2. **3** QUARANTINE raw frames, artifacts, stim commands and claims immediately
-3. **4** CONSENT — gate a token to open the conversion and release scope
-4. **5** EVIDENCE — register TRACE → CHECKSUM → CI in strict order
-5. **1** VALIDATE candidates and unknowns
-6. **2** CONVERT validated intent (requires active consent + L1 evidence)
-7. **⏎** RELEASE — all 7 gates must pass and release scope must be active
+You defend the Boundary Field against a timed schedule of neural events. Each
+tick you may take **one** action (20 Hz core clock):
+
+| Key | Action | Use it to |
+|---|---|---|
+| **D** | Audit | raise audit confidence; required before authorising escalations |
+| **A** | Authorize | accept a safe, consented request |
+| **R** | Revoke | cut a stale or unjustified permission immediately |
+| **Q** | Quarantine | contain an exposure, probe, or latency spike |
+| **S** | Seal Vault | seal the Privacy Vault before raw signal can leak |
+| **T** | Throttle | clamp stimulation before it turns unsafe |
+| **Enter** | Release | release sovereignty once every gate is satisfied |
+| **Space** | Pause | freeze the field (presentation only) |
+
+Mobile: tap the bottom action bar. Reduced-motion and mute toggles are honoured.
 
 ## What this demonstrates
 
-- Raw-signal containment (PRIVACY gate): zero leaks required
-- Consent epoch model (CONSENT gate): revocation is immediate
-- Evidence chain L0→L1→L2→L3 (EVIDENCE gate): out-of-order proof is rejected
-- Stimulation fail-closed: `StimulationCommand` crossing terminates immediately
-- Privacy Vault FSM: raw vault records compromise the vault on escape
-- WCET gate: logical timing budget of 618 units enforced per tick
-- Determinism contract: same seed + same actions = identical hash, verified offline
+- **Raw-signal containment** — `RAW_SIGNAL_EXPOSURE` must be vaulted or quarantined before Raw Leak Risk saturates.
+- **Privacy Vault** — seal before authorising raw access; the vault fails the run if it collapses while raw is exposed.
+- **Consent coherence** — sensitive permissions must be revoked promptly or consent collapses.
+- **Stimulation fail-closed** — unsafe stimulation authorised blind ends the run; throttle first.
+- **Deterministic replay** — same seed + same actions ⇒ identical 64-bit state hash, verified offline.
+
+Eight live metrics (0–100): Boundary Integrity, Consent Coherence, Vault
+Integrity, Cognitive Flow, Raw Leak Risk, Stimulation Risk, Latency Pressure,
+Audit Confidence. Nine scenarios. Final grade: **Sealed · Reviewable ·
+Breached · Unsafe**.
 
 ## Architecture
 
-45 kB Rust/WASM core. Flat C ABI (41 named exports, no wasm-bindgen).
-JavaScript UI. No runtime dependencies. No CDN. No telemetry.
+50 kB Rust/WASM core. Flat C ABI v3 (**83 named exports, no `wasm-bindgen`**).
+Vanilla ES-module UI. No runtime dependencies. No CDN. No telemetry.
 
 ```
-neural-boundary-core/  # #![no_std] deterministic simulation, xorshift64star-v1 RNG
-neural-boundary-cli/   # replay verifier, 8 canonical vectors, SHA-256 in Rust
-neural-boundary-web/   # flat WASM ABI → web/*.js UI
+crates/
+  neural-boundary-core   #![no_std] #![forbid(unsafe_code)] deterministic engine
+  neural-boundary-cli    replay verifier + bot, 16 canonical vectors, SHA-256
+  neural-boundary-web     flat WASM ABI v3 (cdylib) → web/*.js UI
+web/                       13-file Grande Style Elite UI + Boundary Field + PWA
+vectors/                   16 replay vectors + checksums (neural-boundary-replay-v3)
 ```
+
+Identity: ABI v3 · product version packed `0x070300` · replay schema
+`neural-boundary-replay-v3` · hash `fnv1a64-v1` · RNG `xorshift64star-v1` ·
+20 Hz tick.
 
 ## Build and verify
 
 ```bash
-# Run the full gate
+rustup target add wasm32-unknown-unknown
+
+# Full gate (fmt, clippy -D warnings, tests, wasm build, verify-all, Python gates)
 bash scripts/verify_release.sh
 
-# Verify all 8 canonical replay vectors
+# Verify all 16 canonical replay vectors
 cargo run -p neural-boundary-cli --release -- verify-all
 
-# Build web to dist/
+# Build the web bundle
 bash scripts/build_web.sh
-
-# From Android Termux
-bash scripts/termux_push.sh
 ```
 
 ## Replay proof
 
-Every run produces a deterministic 64-bit state hash.
-Pin a world offline with:
+Every run produces a deterministic 64-bit state hash. Pin a world offline:
 
 ```bash
 cargo run -p neural-boundary-cli --release -- record \
-  --mode STANDARD --seed 0000000000000001 --difficulty 1 --policy clean \
-  --out my-run.json
-cargo run -p neural-boundary-cli --release -- verify my-run.json
+  --scenario 1 --seed 0000000000000001 --policy clean --out my-run.json
+cargo run -p neural-boundary-cli --release -- run-vector my-run.json
 ```
 
 ## Intellectual Property and Licensing
 
-Neural Boundary Game is developed by AxonOS.
+Developed by AxonOS under a dual-licensing model:
 
-The original software is available under a dual-licensing model:
+- **AGPL-3.0-only** for qualifying open-source use; or
+- a separate **AxonOS Commercial License** for proprietary and commercial use.
 
-- AGPL-3.0-only for qualifying open-source use; or
-- a separate AxonOS Commercial License for proprietary and commercial use.
-
-AxonOS names, logos, product identity, visual assets and designated commercial
-materials are not licensed under the AGPL and remain protected intellectual property.
+Documentation is CC-BY-NC-ND-4.0. AxonOS names, logos, product identity and
+designated commercial materials are not licensed under the AGPL and remain
+protected intellectual property.
 
 See: `LICENSE` · `COMMERCIAL_LICENSE.md` · `IP_NOTICE.md` · `TRADEMARKS.md` · `THIRD_PARTY_NOTICES.md`
 
@@ -94,11 +113,10 @@ See: `LICENSE` · `COMMERCIAL_LICENSE.md` · `IP_NOTICE.md` · `TRADEMARKS.md` �
 
 Dogecoin: `DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp`
 
-Verify the complete address before sending.
-
-Dogecoin contributions are voluntary and do not represent an investment,
-equity interest, token allocation, security, governance right or promise of financial return.
-AxonOS will never request your wallet seed phrase or private key.
+Verify the complete address before sending. Dogecoin contributions are voluntary
+and do not represent an investment, equity interest, token allocation, security,
+governance right or promise of financial return. AxonOS will never request your
+wallet seed phrase or private key.
 
 ## Commercial deployment
 
@@ -106,7 +124,7 @@ Build a private boundary demo or deterministic safety review: `connect@axonos.or
 
 ---
 
-*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v5.5.12 — Cognitive Sovereignty.*
+*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v7.3.0 — Cognitive Sovereignty Console.*
 *Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
 *AxonOS™ and Neural Boundary Game™ are claimed trademarks.*
 
@@ -121,11 +139,7 @@ bash scripts/build_web.sh
 python3 -m http.server -d dist 8080
 ```
 
-Then open:
-
-```text
-http://127.0.0.1:8080/
-```
+Then open `http://127.0.0.1:8080/`.
 
 Verification:
 

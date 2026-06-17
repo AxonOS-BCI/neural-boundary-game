@@ -6,6 +6,27 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
 All notable changes to Neural Boundary Game follow [Keep a Changelog](https://keepachangelog.com/).
 
+## [7.3.0] — 2026-06-17
+
+**AxonOS Standard Foundation Grande Style Elite — Cognitive Sovereignty Console**
+
+### Changed
+
+- Game model reworked to the Cognitive Sovereignty Console: 7 actions (Audit,
+  Authorize, Revoke, Quarantine, Seal Vault, Throttle, Release), one action per
+  tick; 8 metrics (0–100); 9 scenarios; grades Sealed / Reviewable / Breached / Unsafe.
+- Flat WASM ABI v3 — 83 named exports, no wasm-bindgen, `#[unsafe(no_mangle)]`.
+- Replay schema `neural-boundary-replay-v3`; 16 canonical vectors; 20 Hz tick;
+  `fnv1a64-v1` state hash; `xorshift64star-v1` RNG; daily-seed cross-check.
+- 13-file Grande Style Elite web UI: Boundary Field renderer, PWA, fail-closed fallback.
+- CI Python gates retargeted to v7.3.0 + `check_abi_exports`, `check_pwa_cache`,
+  `generate_manifest`, `build_evidence_report`; `EVIDENCE_REPORT.md` + `SOURCE_MANIFEST.sha256`.
+
+### Fixed
+
+- README / LICENSE / CHANGELOG / Cargo license / Trunk aligned to v7.3.0 (were
+  stale v5.5.12); Cargo license corrected to `AGPL-3.0-only OR LicenseRef-AxonOS-Commercial`.
+
 ## [5.5.12] — 2026-06-15
 
 **Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
