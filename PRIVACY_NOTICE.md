@@ -2,13 +2,13 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Privacy Notice — Neural Boundary Game v5.5.12
+# Privacy Notice — Neural Boundary Game v7.3.0
 
 **Data minimisation by architecture. No accounts. No telemetry. Local-only.**
 
 ## What this game does not collect
 
-Neural Boundary Game v5.5.12 (community edition) does not intentionally collect:
+Neural Boundary Game v7.3.0 (community edition) does not intentionally collect:
 
 - Account data or email addresses
 - Real names or location data
