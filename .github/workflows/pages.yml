@@ -21,7 +21,8 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Build static Pages artifact
         env:
@@ -87,24 +88,24 @@ jobs:
 JS
 
           python3 - <<'PY'
-from pathlib import Path
+          from pathlib import Path
 
-p = Path("dist/index.html")
-s = p.read_text(encoding="utf-8", errors="ignore")
+          p = Path("dist/index.html")
+          s = p.read_text(encoding="utf-8", errors="ignore")
 
-s = s.replace("AxonOS Boundary Console v7.3.0 RC1", "AxonOS Boundary Console v7.3.0 RC1")
-s = s.replace("AXONOS BOUNDARY CONSOLE · v7.3.0 RC1", "AXONOS BOUNDARY CONSOLE · v7.3.0 RC1")
-s = s.replace("Neural Boundary Game", "AxonOS Boundary Console")
+          s = s.replace("Neural Boundary Game v3.0.0", "AxonOS Boundary Console v7.3.0 RC1")
+          s = s.replace("SOVEREIGN BOUNDARY SIMULATION · v3.0.0", "AXONOS BOUNDARY CONSOLE · v7.3.0 RC1")
+          s = s.replace("Neural Boundary Game", "AxonOS Boundary Console")
 
-if "cache-reset.js" not in s:
-    s = s.replace("</body>", '<script src="./cache-reset.js?v=703003"></script>\n</body>')
+          if "cache-reset.js" not in s:
+              s = s.replace("</body>", '<script src="./cache-reset.js?v=703004"></script>\n</body>')
 
-s = s.replace('src="./web/app.js"', 'src="./web/app.js?v=703003"')
-s = s.replace('src="web/app.js"', 'src="web/app.js?v=703003"')
-s = s.replace('href="./web/styles.css"', 'href="./web/styles.css?v=703003"')
-s = s.replace('href="web/styles.css"', 'href="web/styles.css?v=703003"')
+          s = s.replace('src="./web/app.js"', 'src="./web/app.js?v=703004"')
+          s = s.replace('src="web/app.js"', 'src="web/app.js?v=703004"')
+          s = s.replace('href="./web/styles.css"', 'href="./web/styles.css?v=703004"')
+          s = s.replace('href="web/styles.css"', 'href="web/styles.css?v=703004"')
 
-p.write_text(s, encoding="utf-8")
+          p.write_text(s, encoding="utf-8")
 PY
 
           echo "Artifact surface:"
