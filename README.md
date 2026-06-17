@@ -9,9 +9,9 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 [![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
 [![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 
-[![Play Neural Boundary Game v7.3.0](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
+[![Play Neural Boundary Game v7.3.0](preview.png)](https://axonos-bci.github.io/neural-boundary-game-play/)
 
-**[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game/)**
+**[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game-play/)**
 
 ---
 
