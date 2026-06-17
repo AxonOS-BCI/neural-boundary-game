@@ -2,44 +2,20 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# AxonOS Boundary Console v7.3.0 RC1
-
-### Cognitive Sovereignty Runtime for neural boundary systems.
+# Neural Boundary Game v5.5.12
 
 [![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
-[![Release](https://img.shields.io/badge/release-v7.3.0--rc.1-black)](https://github.com/AxonOS-BCI/neural-boundary-game/releases)
-[![License](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
+[![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 
-**Run the console:** build locally from this source repository, or deploy a public artifact build. See [DEPLOYMENT.md](DEPLOYMENT.md).
+[![Play Neural Boundary Game v5.5.12](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
 
----
-
-AxonOS Boundary Console is a deterministic Rust/WASM simulator for cognitive sovereignty and neural privacy boundaries.
-
-It demonstrates the operating principle of AxonOS: raw neural signal remains private, applications receive typed intent only, and the boundary runtime remains deterministic, replayable, and evidence-driven.
-
-This repository is a public release-candidate surface for the Boundary Console. The canonical AxonOS kernel line remains the hard real-time Rust microkernel work under AxonOS.
-
-## Release posture
-
-- **Version:** v7.3.0 RC1
-- **Runtime:** Rust core + WASM boundary ABI
-- **Verification:** replay vectors, source manifest, evidence report, Foundation CI gates
-- **Status:** public release candidate, not a medical device, not a clinical system
-- **Commercial posture:** AGPL-3.0-only OR AxonOS Commercial license
-
-## Technical surface
-
-- deterministic cognitive sovereignty engine
-- flat WASM ABI v3 with 83 exports
-- 16 canonical replay vectors
-- replay/conformance CLI
-- Grande Style Elite web console
-- PWA/fail-closed fallback surface
-- evidence report and source manifest
-- 37 Foundation CI gates
+**[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game/)**
 
 ---
+
+A deterministic Rust/WASM game demonstrating the AxonOS neural boundary protocol.
+Raw signal stays private. Applications receive typed intent only.
+The Rust core is authoritative. The browser is never trusted.
 
 ## 30-second walkthrough
 
@@ -63,7 +39,7 @@ This repository is a public release-candidate surface for the Boundary Console. 
 
 ## Architecture
 
-45 kB Rust/WASM core. Flat WASM ABI v3 (83 exports), deterministic Rust core, no telemetry.
+45 kB Rust/WASM core. Flat C ABI (41 named exports, no wasm-bindgen).
 JavaScript UI. No runtime dependencies. No CDN. No telemetry.
 
 ```
@@ -78,7 +54,7 @@ neural-boundary-web/   # flat WASM ABI → web/*.js UI
 # Run the full gate
 bash scripts/verify_release.sh
 
-# Verify all 16 canonical replay vectors
+# Verify all 8 canonical replay vectors
 cargo run -p neural-boundary-cli --release -- verify-all
 
 # Build web to dist/
@@ -130,14 +106,6 @@ Build a private boundary demo or deterministic safety review: `connect@axonos.or
 
 ---
 
-*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v7.3.0 — Cognitive Sovereignty.*
+*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v5.5.12 — Cognitive Sovereignty.*
 *Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
 *AxonOS™ and Neural Boundary Game™ are claimed trademarks.*
-
-## Public distribution
-
-Canonical public demo URL:
-
-https://axonos-bci.github.io/neural-boundary-game/
-
-The Pages deployment is built from this repository through `.github/workflows/pages.yml`.

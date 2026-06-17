@@ -3,6 +3,7 @@ name: GitHub Pages
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -11,78 +12,41 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
+  group: pages
   cancel-in-progress: false
 
 jobs:
   build:
-    name: Foundation Pages / build AxonOS Boundary Console
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build static Pages artifact
-        env:
-          DIST_DIR: dist
-        run: |
-          set -euo pipefail
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
-          rm -rf dist
-          mkdir -p dist
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-          if [ -x scripts/build_web.sh ]; then
-            bash scripts/build_web.sh || {
-              echo "WARN: build_web.sh failed; using static fallback."
-              rm -rf dist
-              mkdir -p dist
-            }
-          fi
+      - name: Build web
+        run: bash scripts/build_web.sh dist
 
-          if [ ! -s dist/index.html ]; then
-            test -s index.html
-            cp index.html dist/index.html
-
-            if [ -d web ]; then
-              cp -R web dist/web
-            fi
-
-            for f in *.js *.css *.json *.png *.svg *.ico; do
-              [ -f "$f" ] && cp "$f" dist/ || true
-            done
-          fi
-
-          test -s dist/index.html
-          cp dist/index.html dist/404.html
-          touch dist/.nojekyll
-
-          BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
-          printf '%s\n' "$BUILD_ID" > dist/build-id.txt
-
-          echo "## Pages artifact" >> "$GITHUB_STEP_SUMMARY"
-          echo "- product: AxonOS Boundary Console" >> "$GITHUB_STEP_SUMMARY"
-          echo "- version: v7.3.0 RC1" >> "$GITHUB_STEP_SUMMARY"
-          echo "- build-id: $BUILD_ID" >> "$GITHUB_STEP_SUMMARY"
-          find dist -maxdepth 3 -type f | sort | sed 's#^#- #' >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    name: Foundation Pages / deploy AxonOS Boundary Console
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    needs: build
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
+    runs-on: ubuntu-24.04
+    needs: build
     steps:
-      - name: Deploy Pages artifact
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
         id: deployment

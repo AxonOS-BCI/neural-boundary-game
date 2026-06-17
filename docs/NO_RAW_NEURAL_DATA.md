@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
 # No Raw Neural Data
 
-Neural Boundary Game v7.3.0 processes no real neural data.
+Neural Boundary Game v5.5.12 processes no real neural data.
 
 - No EEG, ECoG, LFP, spike, or any other neural recording.
 - No stimulation parameters, waveforms or hardware commands.

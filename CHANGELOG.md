@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
 All notable changes to Neural Boundary Game follow [Keep a Changelog](https://keepachangelog.com/).
 
-## [7.3.0] — 2026-06-15
+## [5.5.12] — 2026-06-15
 
 **Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
 
@@ -29,16 +29,16 @@ All notable changes to Neural Boundary Game follow [Keep a Changelog](https://ke
 - PRIVACY_NOTICE.md, TERMS_OF_USE.md, CRYPTO_PAYMENT_TERMS.md, SECURITY.md
 - LICENSES/ directory with 4 SPDX licence files
 - 8 canonical replay vectors with SHA-256 checksums, verify-all in CLI
-- Daily seed: "NBG|7.3.0|YYYY-MM-DD|DAILY" via FNV-1a + one xorshift round
+- Daily seed: "NBG|5.5.12|YYYY-MM-DD|DAILY" via FNV-1a + one xorshift round
 - xorshift64star-v1 RNG with seed-0 remap to 0x9E3779B97F4A7C15
 - 17 core unit tests + 18 CLI integration tests; pseudo-fuzz (60 seeds)
 
 ### Changed
 
-- Replay schema: v7.3.0 → v7.3.0; seed field now 16 hex digits; difficulty as u8; abi_version field
+- Replay schema: v3.0.1 → v5.5.12; seed field now 16 hex digits; difficulty as u8; abi_version field
 - Storage namespace: axonos_nbg_v301_ → axonos_nbg_v5512_
 - Build pipeline: Trunk removed; replaced with scripts/build_web.sh (no bundler)
-- Version 7.3.0 → 7.3.0
+- Version 3.0.1 → 5.5.12
 
 ## [2.1.2] — 2026-05-01
 

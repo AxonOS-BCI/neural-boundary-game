@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Denis Yermakou
 # SPDX-FileContributor: AxonOS
 # SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-"""Generate 1280x720 preview.png for Neural Boundary Game v7.3.0."""
+"""Generate 1280x720 preview.png for Neural Boundary Game v5.5.12."""
 import sys
 from pathlib import Path
 
@@ -86,7 +86,7 @@ def main() -> int:
         kc = (214,185,107) if lb=="RELEASE" else (121,222,245)
         draw.text((bx+6,dy+7), k, fill=kc, font=mf)
         draw.text((bx+4,dy+28), lb, fill=(130,140,155), font=sf)
-    draw.text((W-260,H-18), "v7.3.0 · COGNITIVE SOVEREIGNTY", fill=(45,55,70), font=sf)
+    draw.text((W-260,H-18), "v5.5.12 · COGNITIVE SOVEREIGNTY", fill=(45,55,70), font=sf)
     out = ROOT / "preview.png"
     img.save(out, "PNG", optimize=True)
     print(f"preview.png: {W}×{H}, {out.stat().st_size:,} bytes")

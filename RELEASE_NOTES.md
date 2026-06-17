@@ -2,15 +2,15 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Release Notes — Neural Boundary Game v7.3.0
+# Release Notes — Neural Boundary Game v5.5.12
 
-**Neural Boundary Game v7.3.0 — Production Grand AxonOS Standard Foundation**
+**Neural Boundary Game v5.5.12 — Production Grand AxonOS Standard Foundation**
 
 **Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
 
 ## Summary
 
-Neural Boundary Game v7.3.0 is the Production Grand release. The deterministic
+Neural Boundary Game v5.5.12 is the Production Grand release. The deterministic
 Rust/WASM core is complete: 19 entity kinds, 7 review gates, Neural Permissions
 epoch model, Privacy Vault FSM, WCET timing budget, and 7 run modes including
 the Grand Run (four phases) and Kernel Trial (deadline pressure).
@@ -41,7 +41,7 @@ python3 tools/validate_replay.py
 - [ ] Test DOGE transaction confirming wallet control (DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp)
 - [ ] Replace AGPL/CC licence stubs with full texts from gnu.org / creativecommons.org
 - [ ] Singapore legal review of DOGE commercial flow (MAS Payment Services Act)
-- [ ] Tag signature: `git tag -s v7.3.0 -m "..."`
+- [ ] Tag signature: `git tag -s v5.5.12 -m "..."`
 - [ ] Enable GitHub branch protection on main
 - [ ] Upload preview.png as GitHub repository social preview
 - [ ] Set Pages source to GitHub Actions (pages.yml)

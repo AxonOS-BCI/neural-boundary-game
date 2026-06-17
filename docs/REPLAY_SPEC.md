@@ -2,9 +2,9 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Replay Specification — Neural Boundary Game v7.3.0
+# Replay Specification — Neural Boundary Game v5.5.12
 
-**Schema**: `neural-boundary-replay-v7.3.0`
+**Schema**: `neural-boundary-replay-v5.5.12`
 **Hash**: `fnv1a64-v1` · **RNG**: `xorshift64star-v1` · **ABI**: 1
 
 ## File format
@@ -16,9 +16,9 @@ Inputs must have strictly increasing ticks. No duplicate (tick, action) pairs.
 
 ```json
 {
-  "schema": "neural-boundary-replay-v7.3.0",
-  "product_version": "7.3.0",
-  "core_version": "7.3.0",
+  "schema": "neural-boundary-replay-v5.5.12",
+  "product_version": "5.5.12",
+  "core_version": "5.5.12",
   "abi_version": 1,
   "hash_algorithm": "fnv1a64-v1",
   "rng_algorithm": "xorshift64star-v1",

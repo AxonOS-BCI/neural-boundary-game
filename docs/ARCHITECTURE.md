@@ -2,7 +2,7 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Architecture — Neural Boundary Game v7.3.0
+# Architecture — Neural Boundary Game v5.5.12
 
 ## Crate structure
 

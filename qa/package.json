@@ -1,6 +1,6 @@
 {
   "name": "neural-boundary-game-qa",
-  "version": "7.3.0",
+  "version": "5.5.12",
   "private": true,
   "scripts": {
     "test": "playwright test",

@@ -6,7 +6,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-COMMIT_MSG="${COMMIT_MSG:-chore(release): finalize Neural Boundary Game v7.3.0}"
+COMMIT_MSG="${COMMIT_MSG:-chore(release): finalize Neural Boundary Game v3.0.1}"
 BRANCH="$(git branch --show-current)"
 
 bash scripts/verify_release.sh
