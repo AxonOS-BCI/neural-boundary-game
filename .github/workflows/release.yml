@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   release:
-    name: release
+    name: Foundation Release / manual final gate
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Release workflow is manual-only until final signed v7.3.0."
+      - run: echo "Manual-only. Use final signed v7.3.0 after audit closure."

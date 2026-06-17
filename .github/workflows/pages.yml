@@ -16,27 +16,31 @@ concurrency:
 
 jobs:
   build:
-    name: build
+    name: Foundation Pages / build AxonOS Boundary Console
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate static web surface
+      - name: Prepare Pages artifact
         run: |
+          set -euo pipefail
           test -f web/index.html
           test -f web/manifest.json
-          cp web/index.html web/404.html
-          touch web/.nojekyll
-          ls -lah web
+          rm -rf dist
+          mkdir -p dist
+          cp -a web/. dist/
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          find dist -maxdepth 2 -type f | sort
 
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web
+          path: dist
 
   deploy:
-    name: deploy
+    name: Foundation Pages / deploy public RC surface
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

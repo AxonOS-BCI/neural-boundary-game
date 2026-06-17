@@ -2,31 +2,44 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Neural Boundary Game v7.3.0
+# AxonOS Boundary Console v7.3.0 RC1
 
-### Cognitive Sovereignty Console
+### Cognitive Sovereignty Runtime for neural boundary systems.
 
 [![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
-[![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v7.3.0--rc.1-black)](https://github.com/AxonOS-BCI/neural-boundary-game/releases)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 
-[![Play Neural Boundary Game v7.3.0](preview.png)](https://axonos-bci.github.io/neural-boundary-game-play/)
-
-**[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game-play/)**
+**Run the console:** https://axonos-bci.github.io/neural-boundary-game/
 
 ---
 
-A deterministic Rust/WASM game demonstrating the AxonOS neural boundary protocol:
-raw signal stays private, applications receive typed intent only, and the Rust core remains authoritative.
+AxonOS Boundary Console is a deterministic Rust/WASM simulator for cognitive sovereignty and neural privacy boundaries.
 
-v7.3.0 includes:
+It demonstrates the operating principle of AxonOS: raw neural signal remains private, applications receive typed intent only, and the boundary runtime remains deterministic, replayable, and evidence-driven.
 
-- deterministic cognitive sovereignty engine;
-- flat WASM ABI v3 with 83 exports;
-- 16 canonical replay vectors;
-- CLI conformance toolkit;
-- Grande Style Elite web UI;
-- PWA/fail-closed fallback surface;
-- evidence report and source manifest.
+This repository is a public release-candidate surface for the Boundary Console. The canonical AxonOS kernel line remains the hard real-time Rust microkernel work under AxonOS.
+
+## Release posture
+
+- **Version:** v7.3.0 RC1
+- **Runtime:** Rust core + WASM boundary ABI
+- **Verification:** replay vectors, source manifest, evidence report, Foundation CI gates
+- **Status:** public release candidate, not a medical device, not a clinical system
+- **Commercial posture:** AGPL-3.0-only OR AxonOS Commercial license
+
+## Technical surface
+
+- deterministic cognitive sovereignty engine
+- flat WASM ABI v3 with 83 exports
+- 16 canonical replay vectors
+- replay/conformance CLI
+- Grande Style Elite web console
+- PWA/fail-closed fallback surface
+- evidence report and source manifest
+- 37 Foundation CI gates
+
+---
 
 ## 30-second walkthrough
 
