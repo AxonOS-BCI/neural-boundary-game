@@ -25,7 +25,7 @@ jobs:
           bash scripts/build_web.sh
           test -s dist/index.html
           test -s dist/404.html
-          test -f dist/.nojekyll
+          grep -q "Press Run Boundary" dist/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
