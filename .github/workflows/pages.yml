@@ -30,23 +30,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Repository surface:"
-          find . -maxdepth 3 -type f | sort | grep -E '(^./index.html|^./web/|scripts/build_web.sh|Cargo.toml|VERSION)' || true
-
           rm -rf dist
           mkdir -p dist
 
           if [ -x scripts/build_web.sh ]; then
-            echo "Using scripts/build_web.sh"
             bash scripts/build_web.sh || {
-              echo "WARN: scripts/build_web.sh failed; falling back to static copy."
+              echo "WARN: build_web.sh failed; using static fallback."
               rm -rf dist
               mkdir -p dist
             }
           fi
 
           if [ ! -s dist/index.html ]; then
-            echo "Static fallback copy"
             test -s index.html
             cp index.html dist/index.html
 
@@ -60,56 +55,11 @@ jobs:
           fi
 
           test -s dist/index.html
-
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
 
           BUILD_ID="$(date -u +%Y%m%d%H%M%S)"
           printf '%s\n' "$BUILD_ID" > dist/build-id.txt
-
-          cat > dist/cache-reset.js <<'JS'
-          (() => {
-            try {
-              for (const key of Object.keys(localStorage)) {
-                if (
-                  key.startsWith("axonos_nbg_v300_") ||
-                  key.startsWith("axonos_nbg_v730_") ||
-                  key.startsWith("axonos_boundary_v730_")
-                ) localStorage.removeItem(key);
-              }
-            } catch (_) {}
-
-            if ("serviceWorker" in navigator) {
-              navigator.serviceWorker.getRegistrations()
-                .then((regs) => Promise.all(regs.map((r) => r.unregister())))
-                .catch(() => {});
-            }
-          })();
-JS
-
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("dist/index.html")
-          s = p.read_text(encoding="utf-8", errors="ignore")
-
-          s = s.replace("Neural Boundary Game v3.0.0", "AxonOS Boundary Console v7.3.0 RC1")
-          s = s.replace("SOVEREIGN BOUNDARY SIMULATION · v3.0.0", "AXONOS BOUNDARY CONSOLE · v7.3.0 RC1")
-          s = s.replace("Neural Boundary Game", "AxonOS Boundary Console")
-
-          if "cache-reset.js" not in s:
-              s = s.replace("</body>", '<script src="./cache-reset.js?v=703004"></script>\n</body>')
-
-          s = s.replace('src="./web/app.js"', 'src="./web/app.js?v=703004"')
-          s = s.replace('src="web/app.js"', 'src="web/app.js?v=703004"')
-          s = s.replace('href="./web/styles.css"', 'href="./web/styles.css?v=703004"')
-          s = s.replace('href="web/styles.css"', 'href="web/styles.css?v=703004"')
-
-          p.write_text(s, encoding="utf-8")
-PY
-
-          echo "Artifact surface:"
-          find dist -maxdepth 3 -type f | sort
 
           echo "## Pages artifact" >> "$GITHUB_STEP_SUMMARY"
           echo "- product: AxonOS Boundary Console" >> "$GITHUB_STEP_SUMMARY"
