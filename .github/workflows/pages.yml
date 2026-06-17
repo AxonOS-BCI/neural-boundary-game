@@ -3,7 +3,6 @@ name: GitHub Pages
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -12,41 +11,32 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: github-pages
   cancel-in-progress: false
 
 jobs:
   build:
+    name: Build playable Pages artifact
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build web
-        run: bash scripts/build_web.sh dist
-
-      - uses: actions/configure-pages@v4
+      - name: Build
+        run: |
+          bash scripts/build_web.sh
+          test -s dist/index.html
+          test -s dist/404.html
+          test -f dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
+    name: Deploy playable Pages artifact
+    runs-on: ubuntu-24.04
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    needs: build
     steps:
       - uses: actions/deploy-pages@v4
         id: deployment
