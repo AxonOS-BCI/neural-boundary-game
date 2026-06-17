@@ -109,3 +109,27 @@ Build a private boundary demo or deterministic safety review: `connect@axonos.or
 *© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v5.5.12 — Cognitive Sovereignty.*
 *Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
 *AxonOS™ and Neural Boundary Game™ are claimed trademarks.*
+
+## Quick Launch
+
+**Run the console:** https://axonos-bci.github.io/neural-boundary-game/
+
+```bash
+git clone https://github.com/AxonOS-BCI/neural-boundary-game.git
+cd neural-boundary-game
+bash scripts/build_web.sh
+python3 -m http.server -d dist 8080
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080/
+```
+
+Verification:
+
+```bash
+bash scripts/verify_release.sh
+cargo run -p neural-boundary-cli --release -- verify-all
+```
