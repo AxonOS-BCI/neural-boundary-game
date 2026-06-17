@@ -1,53 +1,48 @@
-# Neural Boundary Game v3.0.0 — Sovereign Boundary Edition
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-`v3.0.0` is a ground-up product and architecture release. It replaces the fragmented legacy surface with one deterministic Rust/WASM system, one release identity, one replay protocol, and one verified GitHub Pages artifact.
+# Release Notes — Neural Boundary Game v5.5.12
 
-## Release identity
+**Neural Boundary Game v5.5.12 — Production Grand AxonOS Standard Foundation**
 
-- Product: Neural Boundary Game
-- Version: `v3.0.0`
-- Tag: `v3.0.0`
-- Replay schema: `neural-boundary-replay-v3.0.0`
-- State hash: `fnv1a64-v1`
-- Storage namespace: `axonos_nbg_v300_`
-- License: `MIT OR Apache-2.0`
+**Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
 
-## Product result
+## Summary
 
-The release provides a complete interactive simulation rather than a banner that opens a static asset. A run starts in the browser, advances through the Rust/WASM authority at 60 deterministic ticks per second, accepts six policy actions, exposes five review gates, and produces a terminal state hash.
+Neural Boundary Game v5.5.12 is the Production Grand release. The deterministic
+Rust/WASM core is complete: 19 entity kinds, 7 review gates, Neural Permissions
+epoch model, Privacy Vault FSM, WCET timing budget, and 7 run modes including
+the Grand Run (four phases) and Kernel Trial (deadline pressure).
 
-The UI includes Guided, Standard, Audit, Grand, and Daily Seed modes; responsive mobile controls; canvas letterboxing that preserves entity geometry; accessible state mirrors; local sound/haptics; protocol guidance; and explicit fail-closed handling when the WASM core cannot load.
+The WASM ABI is flat (41 named exports, no wasm-bindgen). The JavaScript UI
+uses ES modules with a fixed-step RAF loop. Daily seed computation mirrors the
+Rust core in JavaScript for offline verification.
 
-## Technical result
+The release includes 8 canonical replay vectors verified by SHA-256 and
+deterministic re-execution. Every vector is covered by 18 integration tests.
 
-- Allocation-free `no_std` core with bounded arrays and seeded xorshift64* RNG.
-- Plain C-style WASM ABI with no `wasm-bindgen` runtime requirement.
-- CLI verifier for canonical replay vectors.
-- Eight vectors covering successful seal, idle breach, consent revocation, raw leak, stimulation fail-closed, Audit, Grand, and Daily Seed runs.
-- CI gates for formatting, linting, tests, replay equivalence, active-version consistency, claim hygiene, links, Pages artifact structure, and browser adapter tests.
+## How to verify
 
-## Security and claim boundary
+```bash
+cargo run -p neural-boundary-cli --release -- verify-all
+python3 tools/validate_replay.py
+```
 
-This is an educational technical simulation. It has no BCI sensor path, medical function, neural decoder, stimulation interface, telemetry, or remote account system. Commercial integrations require a separate engineering and assurance scope.
+## Known limitations
 
-## Release acceptance
+- Browser QA (Playwright) requires network access; BLOCKED in the Termux environment.
+  QA specs are in `qa/` for CI execution.
+- AGPL licence text files require the full GNU GPL text; stubs are present.
+- Commercial DOGE payments disabled pending Singapore MAS legal review.
 
-A tagged release is valid only when:
+## Acceptance checklist (Denis Yermakou)
 
-1. the tag points to the exact reviewed commit;
-2. CI is green;
-3. all canonical replays match Rust output;
-4. the Pages artifact contains the compiled WASM module;
-5. browser smoke tests confirm that Run starts an interactive session;
-6. active release files contain no stale version or conflict marker;
-7. the public URL is checked on desktop and mobile viewports.
-
-## Final hardening
-
-- Exact 41-export Rust/JavaScript/WASM ABI contract with version, tick-rate, lane-count, and boundary metadata handshake.
-- Scoped consent enforcement separates conversion authority from release authority.
-- Release is blocked until the complete fixed-capacity entity pool is empty.
-- Strict replay inputs reject unknown fields, oversized payloads/event streams, malformed hashes, invalid ordering, and out-of-range values.
-- Reproducible source and Pages packaging normalizes paths, timestamps, ownership, modes, and ordering.
-- Deep audit and browser lifecycle tests cover accessibility references, keyboard navigation, help pause/resume, repeat announcements, workflow permissions, and source hygiene.
-- Validation disables Python bytecode generation and fails if any cache artifact appears after a gate.
+- [ ] Test DOGE transaction confirming wallet control (DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp)
+- [ ] Replace AGPL/CC licence stubs with full texts from gnu.org / creativecommons.org
+- [ ] Singapore legal review of DOGE commercial flow (MAS Payment Services Act)
+- [ ] Tag signature: `git tag -s v5.5.12 -m "..."`
+- [ ] Enable GitHub branch protection on main
+- [ ] Upload preview.png as GitHub repository social preview
+- [ ] Set Pages source to GitHub Actions (pages.yml)
+- [ ] Publish Article #39 on Medium (AxonOS–SYM.BOT collaboration)

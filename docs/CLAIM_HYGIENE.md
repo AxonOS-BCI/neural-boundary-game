@@ -1,25 +1,27 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # Claim Hygiene
 
-## Allowed public statements
+All public statements about Neural Boundary Game and AxonOS must be
+accurate and substantiated.
 
-- deterministic Rust/WASM educational simulation;
-- `no_std` core with fixed-capacity state;
-- seeded reproducible runs and replay vectors;
-- local-only public browser build;
-- explicit consent, evidence, quarantine, and release mechanics;
-- architecture concept for releasing typed intent instead of raw signal.
+## Forbidden claims
 
-## Statements requiring evidence or qualification
+- "Clinical-grade" or "clinically proven"
+- "FDA approved" or "FDA ready"
+- "Regulatory compliant" (without specifying which regulation and evidence)
+- "Guaranteed safe" or "production BCI"
+- "Reads thoughts" or "mind control"
+- Any investment, equity or financial-return implication
 
-- “real-time” must distinguish fixed simulation ticks from certified hard real time;
-- “zero-copy” must identify the exact boundary and benchmark;
-- “constant-time” must specify operation and adversary model;
-- “secure” must name controls and threat model;
-- “accessible” must name tested criteria and tools;
-- “production-ready” requires deployment evidence, operations, support, and security review.
+## Permitted claims
 
-## Prohibited unsupported statements
+- "Educational technical simulation"
+- "Demonstrates boundary enforcement concepts"
+- "Deterministic Rust/WASM core"
+- "Open-source under AGPL-3.0-only"
+- "Local-only, no telemetry"
 
-Do not claim FDA/CE approval, medical efficacy, clinical validation, neural-reading capability, stimulation safety, certified WCET, formal verification, perfect privacy, unhackability, regulatory compliance, or hardware compatibility unless a separately published evidence package supports the exact statement.
-
-Roadmap work must be labelled as planned, experimental, proposed, or under evaluation. It must never be written as an implemented feature.
+The `tools/check_hygiene.py` gate enforces these rules in CI.

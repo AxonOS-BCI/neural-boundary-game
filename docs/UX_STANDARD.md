@@ -1,42 +1,48 @@
-# UX Standard
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-## Aesthetic
+# UX Standard — Neural Boundary Game v5.5.12
 
-The product uses restrained digital luxury: dark mineral surfaces, precise spacing, high-contrast typography, fine rules, minimal chromatic noise, and deliberate motion. Decoration must reinforce hierarchy, not imitate a generic sci-fi dashboard.
+## Design tokens
 
-## Field geometry
-
-- Logical field remains `1200 × 640`.
-- Canvas scales with preserved aspect ratio.
-- Circular entities remain circular.
-- The membrane position and lane spacing remain visually stable.
-- No content may collapse into the upper-left corner during resize or orientation changes.
-
-## Mobile
-
-- Primary controls remain inside safe-area insets.
-- Tap targets are at least 44 CSS pixels in their smallest dimension.
-- The control deck does not require hover.
-- Portrait and landscape both expose metrics, field, lane selection, and all six actions.
-- Text remains readable without browser zoom.
-
-## Motion and feedback
-
-- Motion is functional and bounded.
-- Reduced-motion preference removes nonessential transitions.
-- Correct, blocked, incorrect, breach, and seal outcomes use distinct visual and textual feedback.
-- Audio and haptics are optional, local, and muted by default.
+| Token | Value |
+|-------|-------|
+| --bg-0 | #030507 |
+| --bg-1 | #080d12 |
+| --sf1 | #0d141b |
+| --ac (cyan) | #79def5 |
+| --gold | #d6b96b |
+| --safe | #78e6ad |
+| --danger | #ff7186 |
+| --purple | #a993ff |
 
 ## Accessibility
 
-- Every action is keyboard reachable.
-- Focus indicators are visible.
-- Canvas state has a semantic DOM mirror.
-- Important state changes are announced through a polite live region.
-- Color is not the only signal for state.
-- Dialogs have labels, descriptions, explicit return actions, and predictable cancel behavior.
-- Opening protocol help pauses an active run; closing it resumes only the run that the dialog paused.
-- Mode selection implements arrow, Home, and End navigation with a single roving tab stop.
-- Repeated feedback after an intervening neutral state is announced again rather than being suppressed as a duplicate.
+WCAG 2.2 AA. Skip link. Landmarks. Live regions (aria-live=polite) for
+boundary events. No hover-only information. Escape closes modals (except
+terminal result). Focus trapped in open modal. Reduced motion respected.
 
-Manual review is required with representative Android and desktop browsers and at least one screen reader before publishing a formal conformance claim.
+## Responsive breakpoints
+
+- ≥760 px: 10-column HUD, 6-action deck
+- <760 px: 5-column HUD, 3+3 deck
+- Landscape <480 px tall: HUD hidden, compact layout
+
+## Target sizes
+
+- Primary CTA: 56 px min-height
+- Action deck buttons: 60 px min-height (52 px mobile landscape)
+- Lane selection: 44 px min-height
+
+## State communication
+
+State is never communicated by colour alone. Entity symbols (§9) are
+visible at all scales. Gate status uses letter codes (P/T/C/E/D/V/W)
+alongside colour.
+
+## Honesty line
+
+Every landing screen must display:
+> Educational technical simulation. No sensor, no real neural data,
+> no stimulation hardware. Local-only.

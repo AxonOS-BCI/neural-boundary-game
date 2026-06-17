@@ -1,24 +1,24 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # Commercial Services
 
-The open-source game is a public technical demonstration. AxonOS may provide separately scoped commercial engineering around the underlying boundary pattern.
+Neural Boundary Game is available for commercial deployment
+under the AxonOS Commercial License.
 
-## Engagement categories
+## Available services
 
-- private or air-gapped deployment;
-- customer-specific policy and permission models;
-- neural-signal gateway and device adapter engineering;
-- typed-intent schema design;
-- consent, revocation, provenance, and audit architecture;
-- deterministic conformance suites and test vectors;
-- Rust/WASM performance engineering;
-- security and privacy architecture review;
-- evidence pipelines, release controls, and operational support;
-- branded training or research simulations.
-
-## What a commercial engagement is not
-
-Purchasing engineering services does not convert this game into a medical device or automatically establish regulatory compliance, clinical validity, hardware safety, or production certification. Those outcomes require explicit scope, evidence, independent review, and jurisdiction-specific work.
+- **White-label edition** — branded deployment for organisations
+- **Enterprise deployment** — private hosting, compliance exports
+- **BCI partner integration** — engine integration into proprietary systems
+- **Custom scenario packs** — domain-specific boundary scenarios
+- **Security audit services** — boundary model review
+- **Engineering support** — implementation and integration support
 
 ## Contact
 
-Use `connect@axonos.org` with the deployment context, target environment, threat model, latency constraints, data classification, and expected assurance level.
+`connect@axonos.org`
+
+Commercial payments use invoice-based confirmation (SGD or USD default).
+DOGE voluntary support: `DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp`

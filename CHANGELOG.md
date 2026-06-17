@@ -1,42 +1,49 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # Changelog
 
-All notable changes are documented here. This project follows semantic versioning for the public product surface and replay protocol compatibility.
+All notable changes to Neural Boundary Game follow [Keep a Changelog](https://keepachangelog.com/).
 
-## [3.0.0] — 2026-06-11
+## [5.5.12] — 2026-06-15
+
+**Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
 
 ### Added
 
-- Clean-room `no_std` deterministic Rust simulation core.
-- Five run modes: Guided, Standard, Audit, Grand, and UTC Daily Seed.
-- Fixed-rate 60 Hz simulation, seeded RNG, integer-only authoritative state, bounded entity storage, and canonical FNV-1a state hashing.
-- Explicit consent, evidence, privacy, type-safety, and determinism review gates.
-- Fail-closed terminal handling for raw leaks, stimulation crossing, integrity collapse, risk overflow, expiry, and invariant failure.
-- Plain numeric WebAssembly ABI with no JavaScript policy fallback.
-- Responsive digital-luxury browser interface for desktop and mobile.
-- Keyboard, pointer, touch, reduced-motion, high-contrast, semantic and live-region accessibility paths.
-- Canonical replay schema `neural-boundary-replay-v3.0.0` and eight conformance vectors.
-- CLI replay verifier, trace, record, seed-search, and schema commands.
-- Version consistency, repository hygiene, link, structure, and replay validation gates.
-- GitHub Actions workflows for CI, Pages deployment, and tagged source release.
-- Termux-safe release helper and deterministic build scripts.
-- Exact 41-function WASM ABI handshake with runtime metadata validation.
-- Strict replay parser limits, unknown-field rejection, and independent reference validation.
-- Reproducible ZIP/TAR.GZ packaging and annotated-tag provenance checks.
-- Deep source audit covering text encoding, HTML/ARIA references, workflows, images, scripts, and ABI parity.
-- Bytecode-free Python validation so successful gates cannot contaminate the reviewed source tree.
+- 19-kind entity taxonomy with stable IDs (DEADLINE_HAZARD, VAULT_RECORD, RAW_EXPORT_REQUEST)
+- 7 review gates: PRIVACY, TYPING, CONSENT, EVIDENCE, DETERMINISM, VAULT, WCET
+- Neural Permissions epoch model: CONSENT_GRANT/REVOKE entities, scope bits, immediate revocation
+- Privacy Vault FSM: EMPTY → SEALING → SEALED / COMPROMISED on escape
+- WCET logical budget (618 units/tick): base + entity + action costs; gate fails on overage
+- 7 run modes: Guided, Standard, Audit, Grand (4 phases), Daily, Privacy Vault, Kernel Trial
+- Metrics 0..1000 (was 0..100); initial values per mode
+- Scoring formula with safety_margin and combo_percent multiplier
+- Grade model: Sovereign, Sealed, Reviewable, Degraded, Breached, Unsafe
+- Flat WASM ABI: 41 named exports, no wasm-bindgen, #[unsafe(no_mangle)]
+- JavaScript UI: ES modules, RAF fixed-step loop, daily seed mirror in JS
+- AGPL-3.0-only OR LicenseRef-AxonOS-Commercial dual licensing
+- IP_NOTICE.md, TRADEMARKS.md (7 claimed marks), CONTRIBUTOR_LICENSE_AGREEMENT.md
+- PAYMENT_CONFIG.json: canonical DOGE DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp
+- PRIVACY_NOTICE.md, TERMS_OF_USE.md, CRYPTO_PAYMENT_TERMS.md, SECURITY.md
+- LICENSES/ directory with 4 SPDX licence files
+- 8 canonical replay vectors with SHA-256 checksums, verify-all in CLI
+- Daily seed: "NBG|5.5.12|YYYY-MM-DD|DAILY" via FNV-1a + one xorshift round
+- xorshift64star-v1 RNG with seed-0 remap to 0x9E3779B97F4A7C15
+- 17 core unit tests + 18 CLI integration tests; pseudo-fuzz (60 seeds)
 
 ### Changed
 
-- Rebuilt the product surface as one coherent `v3.0.0` release rather than preserving conflicted legacy UI and metadata.
-- Consolidated release identity in `release.toml`.
-- Reframed product claims as an educational boundary simulation with explicit limitations.
-- Required separate conversion/release consent scopes and an empty authoritative entity pool before sealing.
-- Hardened dialog lifecycle, keyboard mode navigation, repeated live-region feedback, and numeric ABI conversions.
+- Replay schema: v3.0.1 → v5.5.12; seed field now 16 hex digits; difficulty as u8; abi_version field
+- Storage namespace: axonos_nbg_v301_ → axonos_nbg_v5512_
+- Build pipeline: Trunk removed; replaced with scripts/build_web.sh (no bundler)
+- Version 3.0.1 → 5.5.12
 
-### Removed
+## [2.1.2] — 2026-05-01
 
-- Conflicting active-version metadata.
-- Merge-conflict residue.
-- Image-only or video-only demo behavior.
-- Any browser-side substitute for the authoritative Rust core.
-- Remote runtime dependencies, analytics, telemetry, and third-party fonts.
+Neural Boundary Game v2.1.2 Foundation Grande Edition — baseline Rust/WASM release.
+
+## [2.0.0] — 2026-04-15
+
+Initial public release.

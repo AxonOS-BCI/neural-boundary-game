@@ -1,182 +1,111 @@
-<p align="center">
-  <a href="https://axonos-bci.github.io/neural-boundary-game/" aria-label="Run Neural Boundary Game v3.0.0">
-    <img src="preview.png" alt="Neural Boundary Game v3.0.0 — Sovereign Boundary Edition" width="100%">
-  </a>
-</p>
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-<h1 align="center">Neural Boundary Game v3.0.0</h1>
-<p align="center"><strong>Sovereign Boundary Edition</strong></p>
-<p align="center">Keep raw signal private. Release typed intent only.</p>
+# Neural Boundary Game v5.5.12
 
-<p align="center">
-  <a href="https://axonos-bci.github.io/neural-boundary-game/"><strong>RUN THE GAME</strong></a>
-  · <a href="docs/GAME_SPEC.md">Game specification</a>
-  · <a href="docs/ARCHITECTURE.md">Architecture</a>
-  · <a href="docs/REPLAY_SPEC.md">Replay protocol</a>
-  · <a href="docs/COMMERCIAL_SERVICES.md">Commercial deployment</a>
-</p>
+[![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
+[![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 
-> **Status:** source-complete release candidate for `v3.0.0`. The browser experience requires the Rust/WASM build produced by `scripts/build_web.sh`; the interface deliberately refuses to substitute a JavaScript simulation when the WASM core is unavailable.
+[![Play Neural Boundary Game v5.5.12](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
 
-## What this is
+**[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game/)**
 
-Neural Boundary Game is an **Educational technical simulation** of a privacy boundary between a private signal domain and an application domain. The player classifies packets, converts validated intent, applies scoped consent, registers evidence, quarantines unsafe objects, and seals the boundary only when every release invariant is satisfied.
+---
 
-It is not a medical device, BCI driver, clinical system, diagnostic tool, stimulation controller, or representation of production neural decoding accuracy. It connects to no sensor and processes no neural data.
+A deterministic Rust/WASM game demonstrating the AxonOS neural boundary protocol.
+Raw signal stays private. Applications receive typed intent only.
+The Rust core is authoritative. The browser is never trusted.
 
-## Product thesis
+## 30-second walkthrough
 
-A trusted cognitive stack must not expose raw signal as an application primitive. The application-facing unit should be a typed, consented, evidence-backed intent with explicit provenance and revocation semantics.
+1. Select a lane (↑/↓ or click)
+2. **3** QUARANTINE raw frames, artifacts, stim commands and claims immediately
+3. **4** CONSENT — gate a token to open the conversion and release scope
+4. **5** EVIDENCE — register TRACE → CHECKSUM → CI in strict order
+5. **1** VALIDATE candidates and unknowns
+6. **2** CONVERT validated intent (requires active consent + L1 evidence)
+7. **⏎** RELEASE — all 7 gates must pass and release scope must be active
 
-The game turns that boundary contract into an executable deterministic system:
+## What this demonstrates
 
-- **Raw frames and artifacts remain private.** They must be quarantined.
-- **Unknown packets require classification.** A validated intent still cannot cross directly.
-- **Conversion requires active scoped consent and evidence.** The transition is policy-gated.
-- **Revocation is immediate.** A revoked capability cannot be treated as stale authorization.
-- **Unsafe stimulation commands fail closed.** Crossing the membrane terminates the run.
-- **Release is an invariant check, not a score button.** Five review gates and quantitative thresholds must all pass.
-
-## Run modes
-
-| Mode | Purpose | Character |
-|---|---|---|
-| Guided | Learn the policy | Scripted pacing and wider decision windows |
-| Standard | Canonical public run | Balanced deterministic challenge |
-| Audit | Adversarial review | Higher density, unsafe claims, stricter evidence pressure |
-| Grand | Full boundary review | Extended multi-phase run |
-| Daily Seed | Shared UTC challenge | Same calendar date, same deterministic world, no backend |
-
-## Release invariants
-
-A release may seal only when all of the following are true:
-
-- trust is at least `90`;
-- risk is at most `20`;
-- integrity is at least `80`;
-- evidence is at least `L2`;
-- type-safety, consent, evidence, privacy, and determinism gates are closed;
-- scoped consent is active, unexpired, and grants both conversion and release scopes;
-- raw leak count is zero;
-- no active entity remains unresolved anywhere in the fixed-capacity pool;
-- the mode-specific minimum review interval has elapsed.
-
-The authoritative implementation is in `crates/neural-boundary-core`. Browser code only renders state and submits explicit input events.
+- Raw-signal containment (PRIVACY gate): zero leaks required
+- Consent epoch model (CONSENT gate): revocation is immediate
+- Evidence chain L0→L1→L2→L3 (EVIDENCE gate): out-of-order proof is rejected
+- Stimulation fail-closed: `StimulationCommand` crossing terminates immediately
+- Privacy Vault FSM: raw vault records compromise the vault on escape
+- WCET gate: logical timing budget of 618 units enforced per tick
+- Determinism contract: same seed + same actions = identical hash, verified offline
 
 ## Architecture
 
-```text
-keyboard / touch / pointer
-          │
-          ▼
-      web/app.js                 presentation, accessibility, audio, canvas
-          │ plain numeric ABI
-          ▼
-neural-boundary-web.wasm         C-compatible adapter, no policy logic
-          │
-          ▼
-neural-boundary-core             no_std deterministic authority
-          │
-          ├── fixed 60 Hz ticks
-          ├── seeded RNG
-          ├── consent/evidence policy
-          ├── terminal conditions
-          └── canonical FNV-1a state hash
+45 kB Rust/WASM core. Flat C ABI (41 named exports, no wasm-bindgen).
+JavaScript UI. No runtime dependencies. No CDN. No telemetry.
+
+```
+neural-boundary-core/  # #![no_std] deterministic simulation, xorshift64star-v1 RNG
+neural-boundary-cli/   # replay verifier, 8 canonical vectors, SHA-256 in Rust
+neural-boundary-web/   # flat WASM ABI → web/*.js UI
 ```
 
-There is no second JavaScript game engine. Missing or incompatible WASM produces a visible fail-closed error.
-
-## Repository map
-
-```text
-crates/neural-boundary-core/   allocation-free deterministic state machine
-crates/neural-boundary-web/    dependency-light WebAssembly ABI
-crates/neural-boundary-cli/    replay verifier and vector tooling
-web/                           browser presentation and tests
-vectors/                       canonical replay conformance vectors
-docs/                          protocol, architecture, UX, safety and release docs
-tools/                         version, hygiene and replay gates
-scripts/                       build, smoke, local serve and Termux release helpers
-.github/workflows/             CI, Pages and tagged-release automation
-```
-
-## Build and run
-
-Requirements:
-
-- Rust `1.81.0` with `wasm32-unknown-unknown`;
-- Python `3.11+`;
-- Node.js `20+` for browser adapter tests;
-- a static HTTP server for local WASM loading.
+## Build and verify
 
 ```bash
-rustup target add wasm32-unknown-unknown
-./scripts/verify_release.sh --full
-./scripts/build_web.sh
-./scripts/serve_dist.sh
+# Run the full gate
+bash scripts/verify_release.sh
+
+# Verify all 8 canonical replay vectors
+cargo run -p neural-boundary-cli --release -- verify-all
+
+# Build web to dist/
+bash scripts/build_web.sh
+
+# From Android Termux
+bash scripts/termux_push.sh
 ```
 
-Open the local URL printed by the server. Direct `file://` loading is not supported because browsers restrict WebAssembly module loading.
+## Replay proof
 
-### Deterministic verification
+Every run produces a deterministic 64-bit state hash.
+Pin a world offline with:
 
 ```bash
-cargo run --locked -p neural-boundary-cli -- verify-all
-python3 tools/validate_replay.py
-python3 tools/check_version_consistency.py
-python3 tools/check_hygiene.py
-python3 tools/deep_audit.py
+cargo run -p neural-boundary-cli --release -- record \
+  --mode STANDARD --seed 0000000000000001 --difficulty 1 --policy clean \
+  --out my-run.json
+cargo run -p neural-boundary-cli --release -- verify my-run.json
 ```
 
-Canonical replay schema: `neural-boundary-replay-v3.0.0`
+## Intellectual Property and Licensing
 
-State hash: `fnv1a64-v1`
-Tick rate: `60 Hz`
+Neural Boundary Game is developed by AxonOS.
 
-## Controls
+The original software is available under a dual-licensing model:
 
-| Input | Action |
-|---|---|
-| `W/S` or arrows | Select lane |
-| `1` | Validate |
-| `2` | Convert |
-| `3` | Quarantine |
-| `4` | Consent |
-| `5` | Evidence |
-| `Enter` | Release / seal attempt |
-| `P` or `Space` | Pause |
-| `R` | Restart current run |
-| `H` | Open protocol reference |
+- AGPL-3.0-only for qualifying open-source use; or
+- a separate AxonOS Commercial License for proprietary and commercial use.
 
-Touch controls expose the same six actions and lane selection without hover-dependent affordances.
+AxonOS names, logos, product identity, visual assets and designated commercial
+materials are not licensed under the AGPL and remain protected intellectual property.
 
-## Privacy and security posture
+See: `LICENSE` · `COMMERCIAL_LICENSE.md` · `IP_NOTICE.md` · `TRADEMARKS.md` · `THIRD_PARTY_NOTICES.md`
 
-The public build is local-only. It contains no analytics SDK, ad network, remote font, telemetry endpoint, account system, cookie, wallet connection, or neural-data ingestion path. Browser persistence is namespaced under `axonos_nbg_v300_` and can be deleted from the UI.
+## Support Development
 
-The Content Security Policy limits runtime resources to the same origin. Production deployments should additionally set equivalent HTTP response headers; HTML meta policy is defense in depth, not a replacement for server headers.
+Dogecoin: `DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp`
 
-See [SECURITY.md](SECURITY.md), [Threat Model](docs/THREAT_MODEL.md), [No Raw Neural Data](docs/NO_RAW_NEURAL_DATA.md), and [BCI Boundary](docs/BCI_BOUNDARY.md).
+Verify the complete address before sending.
+
+Dogecoin contributions are voluntary and do not represent an investment,
+equity interest, token allocation, security, governance right or promise of financial return.
+AxonOS will never request your wallet seed phrase or private key.
 
 ## Commercial deployment
 
-The open-source edition demonstrates the boundary model and deterministic verification surface. AxonOS commercial work may include private deployment, customer-specific policy packs, hardware gateway integration, conformance engineering, security review, evidence pipelines, and support. Commercial services do not change the open-source license or imply that this educational game is a medical product.
+Build a private boundary demo or deterministic safety review: `connect@axonos.org`
 
-See [Commercial Services](docs/COMMERCIAL_SERVICES.md).
+---
 
-## Release integrity
-
-`release.toml` is the canonical release identity. CI rejects divergent versions, stale active version strings, unresolved merge markers, remote runtime assets, invalid replay vectors, broken internal links, and incomplete release surfaces.
-
-The ABI is documented in [docs/ABI_CONTRACT.md](docs/ABI_CONTRACT.md). The release sequence is documented in [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md). Do not tag `v3.0.0` until the exact commit passes CI and Pages smoke tests.
-
-## License
-
-Licensed under either of:
-
-- Apache License, Version 2.0; or
-- MIT License
-
-at your option: **MIT OR Apache-2.0**.
-
-AxonOS names, logos, and product marks are not granted by the code license. See the license files for terms.
+*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v5.5.12 — Cognitive Sovereignty.*
+*Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
+*AxonOS™ and Neural Boundary Game™ are claimed trademarks.*

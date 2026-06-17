@@ -1,121 +1,62 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+# Neural Boundary Game v5.5.12 — Web build script (§36.3).
+# Produces a self-contained dist/ directory: WASM + static assets.
+# No Trunk, no bundler, no runtime dependencies.
+set -euo pipefail
+cd "$(dirname "$0")/.."
 
-ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-DIST="${DIST_DIR:-$ROOT/dist}"
-TARGET="wasm32-unknown-unknown"
-WASM_SOURCE="$ROOT/target/$TARGET/release/neural_boundary_web.wasm"
+DIST="${1:-dist}"
+VERSION="$(cat VERSION)"
 
-cd "$ROOT"
+printf 'Building Neural Boundary Game %s → %s/\n' "$VERSION" "$DIST"
 
-command -v cargo >/dev/null 2>&1 || {
-  echo "FAIL: cargo is required" >&2
-  exit 1
-}
-
-command -v python3 >/dev/null 2>&1 || {
-  echo "FAIL: python3 is required" >&2
-  exit 1
-}
-
-rustup target add "$TARGET" >/dev/null 2>&1 || true
-
-if [ ! -f Cargo.lock ]; then
-  echo "INFO: Cargo.lock is absent; generating a fresh lockfile from crates.io"
-  CARGO_NET_RETRY="${CARGO_NET_RETRY:-5}" cargo generate-lockfile
+# 1. Compile Rust → WASM (release)
+if command -v rustup >/dev/null 2>&1; then
+  rustup target add wasm32-unknown-unknown >/dev/null 2>&1 || true
+elif command -v pkg >/dev/null 2>&1; then
+  pkg install -y rust-std-wasm32-unknown-unknown >/dev/null 2>&1 || true
 fi
+RUSTC_BOOTSTRAP=1 cargo build \
+  -p neural-boundary-web \
+  --target wasm32-unknown-unknown \
+  --release \
+  --locked
 
-cargo build --locked -p neural-boundary-web --target "$TARGET" --release
+WASM_SRC="target/wasm32-unknown-unknown/release/neural_boundary_web.wasm"
+[ -f "$WASM_SRC" ] || { echo "WASM build product missing"; exit 1; }
 
-if [ ! -s "$WASM_SOURCE" ]; then
-  echo "FAIL: expected WASM artifact not found: $WASM_SOURCE" >&2
-  exit 1
-fi
-
+# 2. Prepare dist
 rm -rf "$DIST"
-mkdir -p "$DIST/web" "$DIST/pkg" "$DIST/docs"
+mkdir -p "$DIST"
 
-cp "$ROOT/index.html" "$DIST/index.html"
-cp "$ROOT/web/app.js" "$DIST/web/app.js"
-cp "$ROOT/web/styles.css" "$DIST/web/styles.css"
-cp "$WASM_SOURCE" "$DIST/pkg/neural_boundary_web.wasm"
+# 3. Copy WASM
+cp "$WASM_SRC" "$DIST/neural_boundary_web.wasm"
 
-[ -f "$ROOT/web/favicon.svg" ] && cp "$ROOT/web/favicon.svg" "$DIST/web/favicon.svg"
-[ -f "$ROOT/preview.png" ] && cp "$ROOT/preview.png" "$DIST/preview.png"
-[ -f "$ROOT/docs/COMMERCIAL_SERVICES.md" ] && cp "$ROOT/docs/COMMERCIAL_SERVICES.md" "$DIST/docs/COMMERCIAL_SERVICES.md"
+# 4. Copy web assets (preserve ES module structure)
+for f in web/index.html web/styles.css web/app.js web/abi.js web/render.js web/hud.js web/storage.js web/a11y.js; do
+  [ -f "$f" ] && cp "$f" "$DIST/$(basename "$f")"
+done
 
-: > "$DIST/.nojekyll"
+# 5. Copy docs and legal (for the in-app links)
+mkdir -p "$DIST"
+cp -r docs "$DIST/docs" 2>/dev/null || true
+for f in COMMERCIAL_LICENSE.md TERMS_OF_USE.md PRIVACY_NOTICE.md; do
+  [ -f "$f" ] && cp "$f" "$DIST/$f"
+done
 
-python3 - "$ROOT" "$DIST" <<'PY_BUILD'
-from __future__ import annotations
+# 6. Copy preview image
+[ -f preview.png ] && cp preview.png "$DIST/preview.png"
 
-import hashlib
-import json
-import subprocess
-import sys
-from pathlib import Path
-
-root = Path(sys.argv[1])
-dist = Path(sys.argv[2])
-wasm = dist / "pkg" / "neural_boundary_web.wasm"
-
-try:
-    revision = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=root,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
-except Exception:
-    revision = "unavailable"
-
-version = "3.0.0"
-version_file = root / "VERSION"
-if version_file.exists():
-    version = version_file.read_text(encoding="utf-8").strip()
-
-info = {
-    "abi_version": 3000000,
-    "product": "Neural Boundary Game",
-    "source_revision": revision,
-    "tick_rate": 60,
-    "version": version,
-    "wasm_sha256": hashlib.sha256(wasm.read_bytes()).hexdigest(),
+# 7. Write release identity (§51.3)
+cat > "$DIST/release-identity.json" << IDENTITY
+{
+  "product": "Neural Boundary Game",
+  "version": "$VERSION",
+  "edition": "community",
+  "licence_class": "AGPL-3.0-only OR LicenseRef-AxonOS-Commercial",
+  "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
+IDENTITY
 
-(dist / "build-info.json").write_text(
-    json.dumps(info, indent=2, sort_keys=True) + "\n",
-    encoding="utf-8",
-    newline="\n",
-)
-
-non_empty_required = [
-    dist / "index.html",
-    dist / "web" / "app.js",
-    dist / "web" / "styles.css",
-    wasm,
-    dist / "build-info.json",
-]
-
-existing_required = [
-    dist / ".nojekyll",
-]
-
-missing = [
-    str(path)
-    for path in non_empty_required
-    if not path.exists() or path.stat().st_size == 0
-]
-
-missing.extend(
-    str(path)
-    for path in existing_required
-    if not path.exists()
-)
-
-if missing:
-    raise SystemExit("FAIL: incomplete Pages artifact: " + ", ".join(missing))
-
-print(f"PASS: Pages artifact assembled at {dist}")
-PY_BUILD
+WASM_SIZE=$(stat -c%s "$DIST/neural_boundary_web.wasm" 2>/dev/null || stat -f%z "$DIST/neural_boundary_web.wasm")
+printf 'Build OK — WASM %d bytes → %s/\n' "$WASM_SIZE" "$DIST"

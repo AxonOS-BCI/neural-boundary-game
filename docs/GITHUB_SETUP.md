@@ -1,34 +1,31 @@
-# GitHub Repository Setup
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-## Required settings
+# GitHub Setup
 
-- Default branch: `main`.
-- Protect `main`: require pull request, passing CI, conversation resolution, and branch freshness.
-- Block force-push and branch deletion.
-- Enable GitHub Pages with **GitHub Actions** as the source.
-- Set Actions workflow permissions to read repository contents by default.
-- Permit `pages: write` and `id-token: write` only in the Pages workflow.
-- Permit `contents: write` only in the tagged release job.
+## Repository settings
 
-## Suggested required checks
+1. **Branch protection on `main`**: require PRs, CI checks, signed commits.
+2. **Pages**: Source = GitHub Actions (build via `.github/workflows/pages.yml`).
+3. **Social preview**: upload `preview.png` (1280×720).
+4. **Topics**: `bci`, `rust`, `wasm`, `neural`, `boundary`, `axonos`, `game`.
 
-- `rust-and-protocol`
-- `browser-adapter`
-- `repository-gates`
-- `pages-build`
+## Security settings
 
-## About and social preview
+- Hardware-backed 2FA for all maintainers.
+- `CODEOWNERS` requires maintainer approval.
+- No force-push or branch deletion on `main`.
+- Release signing: `git tag -s v5.5.12`.
 
-Description:
+## Secrets
 
-> Deterministic Rust/WASM boundary simulation: keep raw signal private; release typed intent only.
+Repository secrets required for CI:
+- None for community edition (no signing key required for basic CI).
+- `PAGES_TOKEN` if using a deploy key instead of GitHub Actions default.
 
-Website:
+## After merge
 
-> https://axonos-bci.github.io/neural-boundary-game/
-
-Use `preview.png` as the repository social preview. Do not present a static screenshot as the interactive demo target.
-
-## Tag protection
-
-Protect `v*` tags where available. Create `v3.0.0` only after the release commit is merged and all acceptance gates pass.
+```bash
+bash scripts/create_release_tag.sh
+```

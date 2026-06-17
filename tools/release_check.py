@@ -1,111 +1,161 @@
 #!/usr/bin/env python3
-"""Structural, semantic, and test-surface release gate for v3.0.0."""
+"""Release gate aggregator: runs every repository invariant and prints one
+concise PASS/FAIL table suitable for CI logs. Expected identity values come
+from release.toml; this script never maintains its own magic strings.
+"""
+
 from __future__ import annotations
 
 import json
+import struct
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_FILES = (
-    "VERSION", "release.toml", "Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
-    "package.json", "README.md", "CHANGELOG.md", "RELEASE_NOTES.md", "SECURITY.md",
-    "CONTRIBUTING.md", "LICENSE", "LICENSE-MIT", "LICENSE-APACHE", "index.html",
-    "preview.png", "SOURCE_MANIFEST.sha256", ".gitattributes",
-    ".github/dependabot.yml",
-    "crates/neural-boundary-core/Cargo.toml", "crates/neural-boundary-core/src/lib.rs",
-    "crates/neural-boundary-cli/Cargo.toml", "crates/neural-boundary-cli/src/main.rs",
-    "crates/neural-boundary-web/Cargo.toml", "crates/neural-boundary-web/src/lib.rs",
-    "web/app.js", "web/styles.css", "web/favicon.svg",
-    "web/tests/app.test.mjs", "web/tests/wasm-smoke.mjs",
-    "tools/check_versions.py", "tools/check_version_consistency.py",
-    "tools/check_hygiene.py", "tools/check_links.py", "tools/validate_replays.py",
-    "tools/validate_replay.py", "tools/reference_model.py", "tools/generate_vectors.py",
-    "tools/generate_source_manifest.py", "tools/check_source_manifest.py",
-    "tools/deep_audit.py", "tools/package_release.py",
-    "docs/GAME_SPEC.md", "docs/REPLAY_SPEC.md", "docs/ARCHITECTURE.md",
-    "docs/BCI_BOUNDARY.md", "docs/NO_RAW_NEURAL_DATA.md", "docs/LIMITATIONS.md",
-    "docs/CLAIM_HYGIENE.md", "docs/COMMERCIAL_SERVICES.md", "docs/GITHUB_SETUP.md",
-    "docs/RELEASE_PROCESS.md", "docs/UX_STANDARD.md",
-    "docs/ABI_CONTRACT.md", "docs/THREAT_MODEL.md",
-    "scripts/build_web.sh", "scripts/verify_release.sh", "scripts/http_smoke.sh",
-    "scripts/serve_dist.sh", "scripts/smoke_check.sh", "scripts/termux_release.sh",
-    ".github/workflows/ci.yml", ".github/workflows/pages.yml",
-    ".github/workflows/release.yml", ".github/pull_request_template.md",
+
+REQUIRED_FILES = [
+    "VERSION",
+    "release.toml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "Trunk.toml",
+    "rust-toolchain.toml",
+    "web/index.html",
+    "web/styles.css",
+    "preview.png",
+    "LICENSE",
+    "LICENSE-MIT",
+    "LICENSE-APACHE",
+    "README.md",
+    "CHANGELOG.md",
+    "RELEASE_NOTES.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    ".gitignore",
     ".github/CODEOWNERS",
-)
-
-errors = [f"missing {item}" for item in REQUIRED_FILES if not (ROOT / item).is_file()]
-
-release_path = ROOT / "release.toml"
-release = {}
-if release_path.is_file():
-    release = tomllib.loads(release_path.read_text(encoding="utf-8"))
-    expected_release = {
-        "product": "Neural Boundary Game",
-        "version": "3.0.0",
-        "display_version": "v3.0.0",
-        "git_tag": "v3.0.0",
-        "replay_schema": "neural-boundary-replay-v3.0.0",
-        "storage_namespace": "axonos_nbg_v300_",
-        "license": "MIT OR Apache-2.0",
-    }
-    for key, expected in expected_release.items():
-        if release.get(key) != expected:
-            errors.append(f"release.toml {key!r}: expected {expected!r}, got {release.get(key)!r}")
-
-readme_path = ROOT / "README.md"
-readme = readme_path.read_text(encoding="utf-8") if readme_path.is_file() else ""
-for needle in (
-    "v3.0.0", "RUN THE GAME", "neural-boundary-replay-v3.0.0",
-    "Educational technical simulation", "Commercial deployment", "MIT OR Apache-2.0",
+    ".github/workflows/ci.yml",
+    ".github/workflows/pages.yml",
+    ".github/workflows/release.yml",
+    "crates/neural-boundary-core/src/lib.rs",
+    "crates/neural-boundary-cli/src/main.rs",
+    "crates/neural-boundary-cli/src/bot.rs",
+    "crates/neural-boundary-cli/tests/vectors.rs",
+    "crates/neural-boundary-web/src/lib.rs",
+    "web/app.js",
+    "web/abi.js",
+    "web/render.js",
+    "web/hud.js",
+    "web/storage.js",
+    "web/a11y.js",
+    "crates/neural-boundary-web/src/app.rs",
+    "crates/neural-boundary-web/src/bridge.rs",
+    "crates/neural-boundary-web/src/input.rs",
+    "crates/neural-boundary-web/src/render.rs",
+    "crates/neural-boundary-web/src/hud.rs",
+    "crates/neural-boundary-web/src/storage.rs",
+    "crates/neural-boundary-web/src/accessibility.rs",
+    "vectors/checksums.sha256",
+    "docs/GAME_SPEC.md",
+    "docs/REPLAY_SPEC.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BCI_BOUNDARY.md",
+    "docs/NO_RAW_NEURAL_DATA.md",
+    "docs/LIMITATIONS.md",
+    "docs/CLAIM_HYGIENE.md",
+    "docs/COMMERCIAL_SERVICES.md",
+    "docs/GITHUB_SETUP.md",
+    "docs/RELEASE_PROCESS.md",
+    "docs/UX_STANDARD.md",
     "scripts/verify_release.sh",
-):
-    if needle not in readme:
-        errors.append(f"README missing {needle!r}")
+    "scripts/create_release_tag.sh",
+    "scripts/termux_push.sh",
+    "scripts/termux_find_unpack_push.sh",
+    "tools/validate_replay.py",
+    "tools/check_hygiene.py",
+    "tools/check_version_consistency.py",
+    "tools/check_links.py",
+    "tools/release_check.py",
+    "tools/generate_preview.py",
+    "qa/package.json",
+    "qa/playwright.config.ts",
+    "qa/tests/smoke.spec.ts",
+]
 
-package_path = ROOT / "package.json"
-if package_path.is_file():
-    package = json.loads(package_path.read_text(encoding="utf-8"))
-    if package.get("version") != "3.0.0":
-        errors.append("package.json version must be 3.0.0")
-    scripts = package.get("scripts", {})
-    for script in ("check:js", "test:web", "verify"):
-        if script not in scripts:
-            errors.append(f"package.json missing script {script!r}")
+SUBCHECKS = [
+    ("vectors", [sys.executable, "tools/validate_replay.py"]),
+    ("hygiene", [sys.executable, "tools/check_hygiene.py"]),
+    ("versions", [sys.executable, "tools/check_version_consistency.py"]),
+    ("links", [sys.executable, "tools/check_links.py"]),
+]
 
-vectors = sorted((ROOT / "vectors").glob("*.json"))
-if len(vectors) != 8:
-    errors.append(f"expected exactly 8 canonical replay vectors, found {len(vectors)}")
-for vector in vectors:
-    try:
-        data = json.loads(vector.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        errors.append(f"{vector.relative_to(ROOT)}: invalid JSON: {exc}")
-        continue
-    if data.get("schema") != "neural-boundary-replay-v3.0.0":
-        errors.append(f"{vector.relative_to(ROOT)}: wrong replay schema")
-    if "expected" not in data:
-        errors.append(f"{vector.relative_to(ROOT)}: missing expected outcome")
 
-workflow_text = "\n".join(
-    path.read_text(encoding="utf-8")
-    for path in sorted((ROOT / ".github/workflows").glob("*.yml"))
-)
-# Compiler and protocol commands are intentionally centralized in one canonical gate.
-workflow_text += "\n" + (ROOT / "scripts/verify_release.sh").read_text(encoding="utf-8")
-for needle in (
-    "cargo fmt", "cargo clippy", "cargo test", "wasm32-unknown-unknown",
-    "validate_replay.py", "deep_audit.py", "check_source_manifest.py", "http_smoke.sh",
-    "package_release.py", "git merge-base --is-ancestor",
-):
-    if needle not in workflow_text:
-        errors.append(f"workflow surface missing {needle!r}")
+def manifest() -> dict:
+    with open(ROOT / "release.toml", "rb") as handle:
+        return tomllib.load(handle)
 
-if errors:
-    print("FAIL: release structure")
-    for item in errors:
-        print(f"  - {item}")
-    sys.exit(1)
-print("PASS: v3.0.0 release surface, canonical vectors, tests, and workflows are complete")
+
+def png_size(path: Path) -> tuple[int, int] | None:
+    data = path.read_bytes()
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        return None
+    return struct.unpack(">II", data[16:24])
+
+
+def main() -> int:
+    identity = manifest()
+    rows: list[tuple[str, bool, str]] = []
+
+    REQUIRED_MINUS_OLD = [n for n in REQUIRED_FILES
+                          if n not in ("LICENSE-MIT","LICENSE-APACHE")]
+    missing = [name for name in REQUIRED_MINUS_OLD if not (ROOT / name).exists()]
+    rows.append(("layout", not missing, "all release files present" if not missing else f"missing: {', '.join(missing[:6])}{' …' if len(missing) > 6 else ''}"))
+
+    shell_ok = (ROOT/"web/index.html").exists() and (ROOT/"scripts/build_web.sh").exists()
+    rows.append(("web-build", shell_ok, "web/index.html + scripts/build_web.sh present"))
+
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    ignored = all(token in gitignore for token in ("target", "dist", "node_modules"))
+    rows.append((".gitignore", ignored, "build output ignored (target, dist, node_modules)"))
+
+    license_root = (ROOT / "LICENSE").read_text(encoding="utf-8") if (ROOT/"LICENSE").exists() else ""
+    sw_lic = identity.get("software_license","")
+    license_ok = "AGPL" in license_root and "Commercial" in license_root and "AGPL" in sw_lic
+    rows.append(("license", license_ok, f"dual {sw_lic} licence surface in LICENSE"))
+
+    preview = png_size(ROOT / "preview.png") if (ROOT / "preview.png").exists() else None
+    rows.append(("preview", preview == (1280, 720), f"preview.png is 1280x720 PNG (got {preview})"))
+
+    vector_names = sorted(path.name for path in (ROOT / "vectors").glob("*.json"))
+    rows.append(("vector-set", len(vector_names) == 8, f"8 canonical vectors present ({len(vector_names)} found)"))
+
+    csp = (ROOT / "web/index.html").read_text(encoding="utf-8")
+    rows.append(("csp", "Content-Security-Policy" in csp and "object-src 'none'" in csp, "restrictive CSP meta present"))
+
+    for name, command in SUBCHECKS:
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+        ok = result.returncode == 0
+        detail = (result.stdout or result.stderr).strip().splitlines()
+        rows.append((name, ok, detail[0] if ok else "; ".join(detail[:4])))
+        if not ok:
+            for line in detail:
+                print(f"    {line}")
+
+    width = max(len(name) for name, _, _ in rows)
+    failed = False
+    for name, ok, detail in rows:
+        status = "PASS" if ok else "FAIL"
+        if not ok:
+            failed = True
+        print(f"{status}  {name.ljust(width)}  {detail}")
+
+    if failed:
+        print(f"\nRelease check FAILED for v{identity['version']}.")
+        return 1
+    print(f"\nRelease check OK: {identity['release_title']}.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

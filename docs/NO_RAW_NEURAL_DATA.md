@@ -1,9 +1,19 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # No Raw Neural Data
 
-The public application has no input for EEG, ECoG, EMG, neural implant telemetry, biometric streams, medical records, or user-uploaded signal files.
+Neural Boundary Game v5.5.12 processes no real neural data.
 
-The phrase “raw frame” is a synthetic game entity generated from a deterministic seed. It contains no biological measurement and is not derived from a person.
+- No EEG, ECoG, LFP, spike, or any other neural recording.
+- No stimulation parameters, waveforms or hardware commands.
+- No biometric data of any kind.
+- No sensor hardware is connected or required.
 
-The browser build performs no telemetry and no background upload. Local preferences and best-run summaries use a release-specific namespace and can be cleared from the footer.
+The game entities (RawFrame, StimulationCommand, etc.) are abstract
+constructs that illustrate boundary enforcement concepts. They contain
+no actual signal data.
 
-A future real hardware gateway would be a separate product and threat model. It must not be inferred from this repository.
+All game state is local. Nothing is transmitted to any server during play.
+See `PRIVACY_NOTICE.md`.

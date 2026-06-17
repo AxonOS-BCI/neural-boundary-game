@@ -1,9 +1,9 @@
-name: Pages
+name: GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -13,70 +13,40 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
-    name: Build static WASM site
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Install Rust 1.81.0
-        uses: dtolnay/rust-toolchain@1.81.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/cache@v4
         with:
-          python-version: "3.11"
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Reset Cargo registry cache
-        run: |
-          rm -rf ~/.cargo/registry/cache
-          rm -rf ~/.cargo/registry/src
-          rm -rf ~/.cargo/git/checkouts
-          rm -rf ~/.cargo/git/db
-          cargo --version
-          rustc --version
+      - name: Build web
+        run: bash scripts/build_web.sh dist
 
-      - name: Build Pages artifact
-        env:
-          CARGO_NET_RETRY: "5"
-        run: |
-          chmod +x scripts/build_web.sh
-          ./scripts/build_web.sh
-
-          test -s dist/index.html
-          test -s dist/web/app.js
-          test -s dist/web/styles.css
-          test -s dist/pkg/neural_boundary_web.wasm
-          test -s dist/build-info.json
-          test -f dist/.nojekyll
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    name: Deploy GitHub Pages
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    needs: build
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
+    runs-on: ubuntu-24.04
+    needs: build
     steps:
-      - name: Deploy
+      - uses: actions/deploy-pages@v4
         id: deployment
-        uses: actions/deploy-pages@v4

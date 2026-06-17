@@ -1,72 +1,38 @@
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
 # Release Process
 
-## 1. Prepare one release identity
-
-Update `release.toml` first, then synchronize every checked identity in Cargo metadata, package metadata, UI, replay schema, vectors, release notes, storage namespace, and tag name. Never hand-edit generated checksums after this point.
-
-## 2. Run the static gate
+## Pre-release gate
 
 ```bash
-./scripts/verify_release.sh --static
+bash scripts/verify_release.sh
 ```
 
-This gate requires no Rust installation. It validates UTF-8 and newline hygiene, exact Rust/JavaScript ABI parity, HTML/ARIA references, scripts and workflows, version identity, strict replay parsing, source checksums, links, JavaScript syntax/tests, TOML/YAML/JSON, and repository debris.
+All steps must pass: fmt, clippy -D warnings, test workspace,
+wasm build, verify-all, Python gates (validate_replay, check_hygiene,
+check_version_consistency, check_links, release_check).
 
-## 3. Run the full compiler gate
-
-```bash
-./scripts/verify_release.sh --full
-```
-
-The full gate additionally requires the pinned Rust toolchain and executes formatting, workspace tests, Clippy, native replay verification, the release WASM build, exact built-module ABI smoke tests, and HTTP/subpath smoke tests. Missing Rust or a missing WASM target is a blocked release, never a pass.
-
-## 4. Prove reproducible source archives
-
-```bash
-SOURCE_DATE_EPOCH=946684800 python3 tools/package_release.py --output /tmp/nbg-a
-SOURCE_DATE_EPOCH=946684800 python3 tools/package_release.py --output /tmp/nbg-b
-cmp /tmp/nbg-a/neural-boundary-game-v3.0.0-source.zip /tmp/nbg-b/neural-boundary-game-v3.0.0-source.zip
-cmp /tmp/nbg-a/neural-boundary-game-v3.0.0-source.tar.gz /tmp/nbg-b/neural-boundary-game-v3.0.0-source.tar.gz
-```
-
-Packaging rejects symbolic links, normalizes ordering, timestamps, ownership, and modes, and excludes build/cache/VCS state.
-
-## 5. Review the exact diff
-
-```bash
-git diff --check
-git status --short
-git diff --stat
-```
-
-Review dependency changes, workflow permissions/timeouts, CSP, replay changes, ABI changes, and generated source manifest. Any deterministic change requires explicit replay compatibility review.
-
-## 6. Build and inspect Pages
-
-```bash
-./scripts/build_web.sh
-./scripts/http_smoke.sh dist
-./scripts/serve_dist.sh
-```
-
-Verify root and repository-subpath loading, real WASM startup, desktop/mobile controls, dialog lifecycle, restart/exit, no horizontal overflow, no console errors, and no unexpected network requests.
-
-## 7. Merge without rewriting history
-
-Use a reviewed pull request into protected `main`. Require CI before merge. Do not force-push a release commit and do not tag an unmerged branch.
-
-## 8. Create an annotated tag from `main`
+## Merge and tag
 
 ```bash
 git switch main
-git pull --ff-only origin main
-git status --short
-git tag -s v3.0.0 -m "Neural Boundary Game v3.0.0 — Sovereign Boundary Edition"
-git push origin v3.0.0
+git merge release/v5.5.12 --no-ff -m "chore(release): merge v5.5.12"
+git tag -a v5.5.12 -m "Neural Boundary Game v5.5.12 — Cognitive Sovereignty"
+git push origin main v5.5.12
 ```
 
-The Release workflow rejects a lightweight tag, a mismatched version, or a tag whose commit is not an ancestor of `origin/main`. Signed tags are preferred; the workflow currently proves annotation and provenance, not cryptographic trust-chain validity.
+## From Android Termux
 
-## 9. Verify and retain rollback material
+```bash
+bash scripts/termux_push.sh
+```
 
-Confirm CI, Pages, GitHub Release assets, `SHA256SUMS`, public desktop/mobile interaction, and absence of stale cached UI. Retain the pre-release backup branch or Git bundle until the release is independently verified. A green badge alone is not proof that the live game works.
+## GitHub Release
+
+Create a GitHub Release from tag `v5.5.12`. Attach:
+- `neural-boundary-game-v5.5.12.tar.gz` (source archive)
+- `vectors/checksums.sha256`
+
+Pages deploys automatically from the `pages.yml` workflow.

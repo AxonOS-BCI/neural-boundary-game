@@ -1,8 +1,2 @@
-* @wiser1707
-
-/crates/neural-boundary-core/ @wiser1707
-/crates/neural-boundary-web/ @wiser1707
-/vectors/ @wiser1707
-/.github/workflows/ @wiser1707
-/release.toml @wiser1707
-/rust-toolchain.toml @wiser1707
+# AxonOS code owners
+* @AxonOS-BCI

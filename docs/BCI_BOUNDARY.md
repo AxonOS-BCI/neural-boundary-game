@@ -1,9 +1,32 @@
-# BCI Boundary
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-Neural Boundary Game represents an architectural boundary concept. It does not implement a BCI transport, acquisition driver, neural decoder, classifier trained on biological data, implant protocol, or stimulation path.
+# BCI Boundary Model
 
-In an actual cognitive system, a comparable boundary would need separate layers for acquisition, signal quality, artifact rejection, feature extraction, model inference, intent typing, consent/capability enforcement, provenance, revocation, audit, application policy, safety monitoring, and hardware isolation.
+The Neural Boundary Game demonstrates the boundary enforcement concept
+central to AxonOS: no raw neural signal leaves the neural processing
+domain; only validated, typed, consent-gated output crosses to applications.
 
-The game deliberately collapses those concerns into symbolic entities so the user can reason about one principle: **raw signal is not an application API**.
+## The boundary contract
 
-No game outcome should be interpreted as evidence of clinical efficacy, neural-decoding accuracy, regulatory compliance, hardware safety, or production readiness.
+1. **Raw signal stays private.** RawFrame entities must be quarantined before
+   reaching the membrane. Any crossing increments the raw_leaks counter
+   and ultimately breaches the boundary.
+
+2. **Intent requires validation.** Candidate intent must be validated (typed)
+   before conversion. Conversion without validation is a protocol violation.
+
+3. **Conversion requires consent and evidence.** The consent epoch model and
+   evidence chain (L0→L1→L2→L3) ensure that output is authorized and auditable.
+
+4. **Stimulation fails closed.** StimulationCommand entities trigger immediate
+   boundary closure if they reach the membrane. There is no override.
+
+5. **Seven gates must all pass before release.** Privacy, Typing, Consent,
+   Evidence, Determinism, Vault and WCET gates are independent invariants.
+
+## Not a medical device
+
+This is an educational simulation. No real neural data is processed.
+No stimulation hardware is connected or controlled.

@@ -1,57 +1,79 @@
-# Replay Protocol
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-## Identity
+# Replay Specification — Neural Boundary Game v5.5.12
 
-- Schema: `neural-boundary-replay-v3.0.0`
-- Product/core version: `3.0.0`
-- Hash algorithm: `fnv1a64-v1`
-- Tick rate: `60`
+**Schema**: `neural-boundary-replay-v5.5.12`
+**Hash**: `fnv1a64-v1` · **RNG**: `xorshift64star-v1` · **ABI**: 1
 
-## Purpose
+## File format
 
-A replay is a deterministic conformance artifact, not a screen recording. It contains initial conditions, an ordered input stream, and expected terminal state. Native and WASM implementations of the same core must resolve it identically.
+JSON object (deny-unknown-fields for verifier). Max 1 MiB. Max 10 000 input events.
+Inputs must have strictly increasing ticks. No duplicate (tick, action) pairs.
 
-## Required envelope
+## Required top-level fields
 
 ```json
 {
-  "schema": "neural-boundary-replay-v3.0.0",
-  "product_version": "3.0.0",
-  "core_version": "3.0.0",
+  "schema": "neural-boundary-replay-v5.5.12",
+  "product_version": "5.5.12",
+  "core_version": "5.5.12",
+  "abi_version": 1,
   "hash_algorithm": "fnv1a64-v1",
-  "tick_rate": 60,
-  "name": "clean-sealed",
-  "mode": "guided",
-  "difficulty": "standard",
-  "seed": 58,
-  "initial_config": {
-    "max_ticks": 3600,
-    "raw_leak_limit": 3
-  },
-  "events": [
-    {"tick": 100, "lane": 2, "action": "validate"}
-  ],
-  "expected": {
-    "terminal_tick": 3250,
-    "status": "sealed",
-    "reason": "released",
-    "state_hash": "39654c8608a5cc3f"
-  }
+  "rng_algorithm": "xorshift64star-v1",
+  "tick_rate_hz": 60,
+  "mode": "STANDARD",
+  "difficulty": 1,
+  "seed": "000000000000001f",
+  "title": "...",
+  "generated_by": "...",
+  "inputs": [...],
+  "expected": {...}
 }
 ```
 
-Canonical vectors include additional expected metrics. Consumers must reject incompatible schema, core version, hash algorithm, tick rate, unknown envelope/config/event/expected fields, duplicate or missing required fields, files over 1 MiB, more than 10,000 events, configurations over 100,000 ticks, summaries over 4,096 UTF-8 bytes, unsorted events, out-of-range ticks, invalid lanes, unknown actions, malformed lowercase hashes, and mismatched expected state.
+`mode` is uppercase: GUIDED, STANDARD, AUDIT, GRAND, DAILY, PRIVACY_VAULT, KERNEL_TRIAL.
+`difficulty` is 0=Calm, 1=Standard, 2=Intense.
+`seed` is exactly 16 lowercase hex digits (no 0x prefix).
+Daily replays require a `date` field ("YYYY-MM-DD"); verifier recomputes seed.
 
-## Event ordering
+## Input events
 
-Events are ordered by nondecreasing tick. Multiple events at the same tick retain JSON array order. The verifier advances the simulation to each event tick, applies the event, then continues to terminal or expected terminal tick.
+```json
+{ "tick": 42, "lane": 2, "action": "VALIDATE" }
+```
 
-## Hash scope
+Actions: VALIDATE, CONVERT, QUARANTINE, CONSENT, EVIDENCE, RELEASE.
+Lanes 0-4.
 
-The canonical hash includes all state needed to detect behavioral divergence: configuration, tick, RNG state, metrics, consent, evidence, gates, terminal state, feedback, spawn counters, selection, and every fixed entity slot in stable order.
+## Expected block
 
-The hash is a deterministic integrity identifier, not a cryptographic commitment. Do not use FNV-1a for authentication, signatures, adversarial collision resistance, or secret protection.
+```json
+"expected": {
+  "terminal_tick": 3408,
+  "status": "SEALED",
+  "terminal_reason": "SUCCESS_RELEASE",
+  "grade": "SEALED",
+  "trust": 742, "risk": 183, "integrity": 868,
+  "evidence_level": "L2",
+  "evidence_bits": 3,
+  "gate_mask": 127,
+  "gates_passed": 7,
+  "raw_leaks": 0,
+  "typed_intents": 5,
+  "quarantined": 12,
+  "wrong_actions": 0,
+  "score": 9322,
+  "best_combo": 8,
+  "revocations": 0,
+  "state_hash": "0x75bf9ada81839bc1"
+}
+```
 
-## Compatibility
+`state_hash` is `"0x"` + 16 lowercase hex digits.
 
-Patch releases may remain schema-compatible only when replay output and strict parser semantics are unchanged. Any intentional change to RNG consumption, spawn schedule, transition rules, terminal checks, state serialization, or hash scope requires explicit compatibility review and normally a new replay schema identifier.
+## Canonical vectors
+
+8 mandatory vectors in `vectors/`, verified by `vectors/checksums.sha256` (SHA-256 per file).
+Commands: `neural-boundary-cli verify-all` — checks checksums then replays all 8.

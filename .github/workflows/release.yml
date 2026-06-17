@@ -2,49 +2,46 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: Verify and publish v3.0.0
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          node-version: "22"
-      - uses: actions/setup-python@v6
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/cache@v4
         with:
-          python-version: "3.13"
-      - name: Verify annotated tag identity and main ancestry
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Full gate
+        run: bash scripts/verify_release.sh
+
+      - name: Package source archive
         run: |
-          test "${GITHUB_REF_NAME}" = "v$(cat VERSION)"
-          test "$(git cat-file -t "${GITHUB_REF_NAME}")" = "tag"
-          git fetch origin main --no-tags
-          git merge-base --is-ancestor "${GITHUB_REF_NAME}^{commit}" origin/main
-      - name: Install pinned Rust toolchain
-        run: |
-          rustup toolchain install 1.81.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
-          rustup override set 1.81.0
-      - name: Full release gate
-        run: ./scripts/verify_release.sh --full
-      - name: Assemble normalized release assets
-        env:
-          SOURCE_DATE_EPOCH: "946684800"
-        run: python3 tools/package_release.py --include-pages
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" \
-            release-assets/* \
-            --verify-tag \
-            --title "Neural Boundary Game v3.0.0 — Sovereign Boundary Edition" \
-            --notes-file RELEASE_NOTES.md
+          VERSION=$(cat VERSION)
+          git archive --format=tar.gz --prefix=neural-boundary-game-${VERSION}/ \
+            -o neural-boundary-game-${VERSION}.tar.gz HEAD
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            neural-boundary-game-*.tar.gz
+            vectors/checksums.sha256
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false

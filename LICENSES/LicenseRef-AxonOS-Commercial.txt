@@ -1,0 +1,8 @@
+LicenseRef-AxonOS-Commercial
+
+AxonOS Commercial License
+Copyright © 2026 Denis Yermakou
+
+Commercial use of Neural Boundary Game requires a written licence agreement.
+This file confirms the existence of a commercial licence offering; terms are
+negotiated individually. Contact: connect@axonos.org
