@@ -20,12 +20,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Build
+
+      - name: Build playable artifact
         run: |
           bash scripts/build_web.sh
           test -s dist/index.html
           test -s dist/404.html
-          grep -q "Press Run Boundary" dist/index.html
+          test -f dist/.nojekyll
+          grep -q "Run Boundary" dist/index.html
+          grep -q "Boundary Field" dist/index.html
+          grep -q "PLAYABLE" dist/index.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
