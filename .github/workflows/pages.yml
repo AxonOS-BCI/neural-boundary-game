@@ -1,8 +1,6 @@
 name: GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,35 +8,14 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Build web
-        run: bash scripts/build_web.sh dist
-
-      - uses: actions/configure-pages@v4
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
+      - run: echo "Pages deployment is manual-only until v7.3.0 CI is stable."
 
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/deploy-pages@v4
-        id: deployment
+      - run: echo "Manual Pages deploy placeholder."
