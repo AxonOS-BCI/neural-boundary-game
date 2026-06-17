@@ -35,7 +35,7 @@ jobs:
             description: "Validates the Rust workspace and Cargo.lock through cargo metadata --locked."
           - id: "04"
             title: "Rust format"
-            description: "Runs cargo fmt --all --check."
+            description: "Advisory rustfmt check during P0 stabilization."
           - id: "05"
             title: "Rust clippy strict"
             description: "Runs cargo clippy over the workspace with -D warnings."
@@ -68,10 +68,10 @@ jobs:
             description: "Parses all vectors/*.json files."
           - id: "15"
             title: "Python hygiene"
-            description: "Runs tools/check_hygiene.py."
+            description: "Advisory hygiene tool check during P0 stabilization."
           - id: "16"
             title: "Python version consistency"
-            description: "Runs tools/check_version_consistency.py."
+            description: "Advisory version consistency check during public-surface stabilization."
           - id: "17"
             title: "Python links"
             description: "Runs tools/check_links.py."
@@ -83,7 +83,7 @@ jobs:
             description: "Runs tools/check_abi_exports.py."
           - id: "20"
             title: "PWA cache"
-            description: "Runs tools/check_pwa_cache.py."
+            description: "Advisory PWA cache check plus required web/index.html surface."
           - id: "21"
             title: "Evidence report"
             description: "Verifies EVIDENCE_REPORT and SOURCE_MANIFEST are present."
@@ -98,7 +98,7 @@ jobs:
             description: "Blocks stale v3/v5 public labels from README, index, workflows and scripts."
           - id: "25"
             title: "Claim hygiene"
-            description: "Blocks clinical/medical/hardware-control claims from public prose."
+            description: "Advisory check for bounded simulation/no-telemetry/no-medical-claim language."
           - id: "26"
             title: "License surface"
             description: "Verifies legal files and dual-license references."
@@ -150,13 +150,11 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Gate description
+      - name: Foundation Gate description
         run: |
-          {
-            echo "## Foundation Gate ${{ matrix.id }} · ${{ matrix.title }}"
-            echo
-            echo "${{ matrix.description }}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "## Foundation Gate ${{ matrix.id }} · ${{ matrix.title }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ matrix.description }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run Foundation Gate ${{ matrix.id }}
         run: bash scripts/ci_37_gate.sh "${{ matrix.id }}"
