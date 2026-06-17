@@ -5,58 +5,158 @@ on:
     branches: [main, "release/**"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-jobs:
-  test:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
-      - name: Install Rust toolchain
+jobs:
+  foundation-gate:
+    name: "${{ matrix.id }} · ${{ matrix.title }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: "01"
+            title: "Repository source surface"
+            description: "Verifies canonical source folders, workspace files, scripts, tools, vectors and web runtime exist."
+          - id: "02"
+            title: "Version identity consistency"
+            description: "Checks VERSION is non-empty and referenced by the public release surface."
+          - id: "03"
+            title: "Cargo metadata lock"
+            description: "Validates the Rust workspace and Cargo.lock through cargo metadata --locked."
+          - id: "04"
+            title: "Rust format"
+            description: "Runs cargo fmt --all --check."
+          - id: "05"
+            title: "Rust clippy strict"
+            description: "Runs cargo clippy over the workspace with -D warnings."
+          - id: "06"
+            title: "Rust workspace tests"
+            description: "Runs all workspace tests with locked dependencies."
+          - id: "07"
+            title: "Core crate tests"
+            description: "Runs deterministic core crate tests."
+          - id: "08"
+            title: "CLI crate tests"
+            description: "Runs replay/conformance CLI crate tests."
+          - id: "09"
+            title: "Web crate tests"
+            description: "Runs WASM boundary crate tests."
+          - id: "10"
+            title: "WASM target build"
+            description: "Builds neural-boundary-web for wasm32-unknown-unknown release target."
+          - id: "11"
+            title: "Web artifact build"
+            description: "Builds the static Pages artifact and verifies dist/index.html."
+          - id: "12"
+            title: "Release script syntax"
+            description: "Validates scripts/verify_release.sh syntax."
+          - id: "13"
+            title: "Replay vectors via CLI"
+            description: "Runs neural-boundary-cli verify-all over canonical vectors."
+          - id: "14"
+            title: "Replay vector JSON validity"
+            description: "Parses all vectors/*.json files."
+          - id: "15"
+            title: "Python hygiene"
+            description: "Runs tools/check_hygiene.py."
+          - id: "16"
+            title: "Python version consistency"
+            description: "Runs tools/check_version_consistency.py."
+          - id: "17"
+            title: "Python links"
+            description: "Runs tools/check_links.py."
+          - id: "18"
+            title: "Python replay validation"
+            description: "Runs tools/validate_replay.py."
+          - id: "19"
+            title: "ABI exports"
+            description: "Runs tools/check_abi_exports.py."
+          - id: "20"
+            title: "PWA cache"
+            description: "Runs tools/check_pwa_cache.py."
+          - id: "21"
+            title: "Evidence report"
+            description: "Verifies EVIDENCE_REPORT and SOURCE_MANIFEST are present."
+          - id: "22"
+            title: "Source manifest format"
+            description: "Checks SOURCE_MANIFEST.sha256 line format."
+          - id: "23"
+            title: "Public README surface"
+            description: "Verifies README contains AxonOS identity, launch language and canonical Pages URL."
+          - id: "24"
+            title: "Public stale-version hygiene"
+            description: "Blocks stale v3/v5 public labels from README, index, workflows and scripts."
+          - id: "25"
+            title: "Claim hygiene"
+            description: "Blocks clinical/medical/hardware-control claims from public prose."
+          - id: "26"
+            title: "License surface"
+            description: "Verifies legal files and dual-license references."
+          - id: "27"
+            title: "Security surface"
+            description: "Verifies SECURITY.md contains report/contact language."
+          - id: "28"
+            title: "Privacy surface"
+            description: "Verifies PRIVACY_NOTICE.md contains privacy/data/telemetry language."
+          - id: "29"
+            title: "Terms surface"
+            description: "Verifies TERMS_OF_USE.md exists and contains use/license terms."
+          - id: "30"
+            title: "No raw neural data warning"
+            description: "Verifies explicit simulation/no-raw-neural-data warning exists."
+          - id: "31"
+            title: "Architecture docs"
+            description: "Verifies architecture, gameplay, replay and UX docs exist."
+          - id: "32"
+            title: "Release process docs"
+            description: "Verifies release notes, changelog and release process docs exist."
+          - id: "33"
+            title: "QA surface"
+            description: "Verifies QA package and smoke test surface."
+          - id: "34"
+            title: "No generated artifacts"
+            description: "Blocks target, dist, node_modules and release-assets from being committed."
+          - id: "35"
+            title: "Workflow surface"
+            description: "Verifies CI, Pages and Release workflows exist."
+          - id: "36"
+            title: "Shell script syntax"
+            description: "Runs bash -n over all scripts/*.sh files."
+          - id: "37"
+            title: "Release readiness bundle"
+            description: "Verifies minimum release-ready source, docs, evidence and runtime surface."
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable with WASM target
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          python-version: "3.x"
 
-      - name: cargo fmt --check
-        run: cargo fmt --all --check
-
-      - name: cargo clippy -D warnings
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: cargo test
-        run: cargo test --workspace --locked
-
-      - name: Build WASM
-        run: bash scripts/build_web.sh dist
-
-      - name: verify-all vectors
-        run: cargo run -p neural-boundary-cli --release --locked -- verify-all
-
-      - name: Python gates
+      - name: Gate description
         run: |
-          python3 tools/validate_replay.py
-          python3 tools/check_hygiene.py
-          python3 tools/check_version_consistency.py
-          python3 tools/check_links.py
+          {
+            echo "## Foundation Gate ${{ matrix.id }} · ${{ matrix.title }}"
+            echo
+            echo "${{ matrix.description }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-  supply-chain:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: cargo audit
-        run: |
-          cargo install cargo-audit --locked 2>/dev/null || true
-          cargo audit --deny warnings || echo "WARN: cargo-audit not available"
+      - name: Run Foundation Gate ${{ matrix.id }}
+        run: bash scripts/ci_37_gate.sh "${{ matrix.id }}"
