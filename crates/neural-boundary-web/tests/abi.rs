@@ -80,7 +80,7 @@ fn builtin_vectors_runnable() {
     assert_eq!(nbg_builtin_vector_count(), 3);
     let grade = nbg_run_builtin_vector(0);
     assert!(grade <= 4); // valid grade code
-    // Hash populated.
+                         // Hash populated.
     let h = ((nbg_vector_hash_hi() as u64) << 32) | (nbg_vector_hash_lo() as u64);
     assert_ne!(h, 0);
     // Out-of-range index → sentinel.

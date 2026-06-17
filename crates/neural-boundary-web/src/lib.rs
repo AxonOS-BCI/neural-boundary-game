@@ -116,7 +116,10 @@ pub extern "C" fn nbg_is_initialized() -> u32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_set_action(action_code: u32) -> u32 {
-    let code = u8::try_from(action_code).ok().filter(|c| *c <= 7).unwrap_or(0);
+    let code = u8::try_from(action_code)
+        .ok()
+        .filter(|c| *c <= 7)
+        .unwrap_or(0);
     PENDING.with(|p| p.set(code));
     1
 }
@@ -132,7 +135,9 @@ pub extern "C" fn nbg_tick() -> u32 {
         c
     });
     let action = PlayerAction::from_u8(code).unwrap_or(PlayerAction::None);
-    write(ActionResult::NoOp.code() as u32, |g| g.advance(action).code() as u32)
+    write(ActionResult::NoOp.code() as u32, |g| {
+        g.advance(action).code() as u32
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_step(action_code: u32) -> u32 {
@@ -140,7 +145,9 @@ pub extern "C" fn nbg_step(action_code: u32) -> u32 {
         .ok()
         .and_then(PlayerAction::from_u8)
         .unwrap_or(PlayerAction::None);
-    write(ActionResult::NoOp.code() as u32, |g| g.advance(action).code() as u32)
+    write(ActionResult::NoOp.code() as u32, |g| {
+        g.advance(action).code() as u32
+    })
 }
 
 // ── status / grade ───────────────────────────────────────────────────────────
@@ -219,39 +226,67 @@ pub extern "C" fn nbg_active_event_present() -> u32 {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_id() -> u32 {
-    read(NO_EVENT, |g| g.focused_event().map(|e| e.id).unwrap_or(NO_EVENT))
+    read(NO_EVENT, |g| {
+        g.focused_event().map(|e| e.id).unwrap_or(NO_EVENT)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_kind() -> u32 {
-    read(NO_EVENT, |g| g.focused_event().map(|e| e.kind.code() as u32).unwrap_or(NO_EVENT))
+    read(NO_EVENT, |g| {
+        g.focused_event()
+            .map(|e| e.kind.code() as u32)
+            .unwrap_or(NO_EVENT)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_severity() -> u32 {
-    read(0, |g| g.focused_event().map(|e| e.severity as u32).unwrap_or(0))
+    read(0, |g| {
+        g.focused_event().map(|e| e.severity as u32).unwrap_or(0)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_visible_risk() -> u32 {
-    read(0, |g| g.focused_event().map(|e| e.visible_risk as u32).unwrap_or(0))
+    read(0, |g| {
+        g.focused_event()
+            .map(|e| e.visible_risk as u32)
+            .unwrap_or(0)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_perceived_risk() -> u32 {
-    read(0, |g| g.focused_event().map(|e| e.perceived_risk() as u32).unwrap_or(0))
+    read(0, |g| {
+        g.focused_event()
+            .map(|e| e.perceived_risk() as u32)
+            .unwrap_or(0)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_scope() -> u32 {
-    read(0, |g| g.focused_event().map(|e| e.permission_scope.bits() as u32).unwrap_or(0))
+    read(0, |g| {
+        g.focused_event()
+            .map(|e| e.permission_scope.bits() as u32)
+            .unwrap_or(0)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_requires_audit() -> u32 {
-    read(0, |g| g.focused_event().map(|e| e.requires_audit as u32).unwrap_or(0))
+    read(0, |g| {
+        g.focused_event()
+            .map(|e| e.requires_audit as u32)
+            .unwrap_or(0)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_audited() -> u32 {
-    read(0, |g| g.focused_event().map(|e| e.audited as u32).unwrap_or(0))
+    read(0, |g| {
+        g.focused_event().map(|e| e.audited as u32).unwrap_or(0)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_expires_at() -> u32 {
-    read(0, |g| g.focused_event().map(|e| e.expires_at_tick).unwrap_or(0))
+    read(0, |g| {
+        g.focused_event().map(|e| e.expires_at_tick).unwrap_or(0)
+    })
 }
 
 // ── permission / vault / stimulation ─────────────────────────────────────────
@@ -297,7 +332,9 @@ pub extern "C" fn nbg_release_blockers() -> u32 {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_last_action_result() -> u32 {
-    read(ActionResult::NoOp.code() as u32, |g| g.last_action_result().code() as u32)
+    read(ActionResult::NoOp.code() as u32, |g| {
+        g.last_action_result().code() as u32
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_gate_last_action_tick() -> u32 {
@@ -367,11 +404,15 @@ pub extern "C" fn nbg_status_label_len() -> u32 {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_label_ptr() -> u32 {
-    ptr_of(read("", |g| g.focused_event().map(|e| e.kind.label()).unwrap_or("")))
+    ptr_of(read("", |g| {
+        g.focused_event().map(|e| e.kind.label()).unwrap_or("")
+    }))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_active_event_label_len() -> u32 {
-    len_of(read("", |g| g.focused_event().map(|e| e.kind.label()).unwrap_or("")))
+    len_of(read("", |g| {
+        g.focused_event().map(|e| e.kind.label()).unwrap_or("")
+    }))
 }
 
 // ── scenario metadata ────────────────────────────────────────────────────────
@@ -402,15 +443,25 @@ pub extern "C" fn nbg_scenario_name_len(scenario_id: u32) -> u32 {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_scenario_objective_ptr(scenario_id: u32) -> u32 {
-    ptr_of(scenario_by_id(scenario_id).map(|s| s.objective).unwrap_or(""))
+    ptr_of(
+        scenario_by_id(scenario_id)
+            .map(|s| s.objective)
+            .unwrap_or(""),
+    )
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_scenario_objective_len(scenario_id: u32) -> u32 {
-    len_of(scenario_by_id(scenario_id).map(|s| s.objective).unwrap_or(""))
+    len_of(
+        scenario_by_id(scenario_id)
+            .map(|s| s.objective)
+            .unwrap_or(""),
+    )
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_scenario_difficulty_by_id(scenario_id: u32) -> u32 {
-    scenario_by_id(scenario_id).map(|s| s.difficulty.code() as u32).unwrap_or(NO_EVENT)
+    scenario_by_id(scenario_id)
+        .map(|s| s.difficulty.code() as u32)
+        .unwrap_or(NO_EVENT)
 }
 
 // ── replay / vector ──────────────────────────────────────────────────────────
@@ -439,7 +490,11 @@ pub extern "C" fn nbg_vector_hash_hi() -> u32 {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_vector_hash_lo() -> u32 {
-    VECTOR.with(|v| v.get().map(|o| (o.state_hash & 0xFFFF_FFFF) as u32).unwrap_or(0))
+    VECTOR.with(|v| {
+        v.get()
+            .map(|o| (o.state_hash & 0xFFFF_FFFF) as u32)
+            .unwrap_or(0)
+    })
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn nbg_vector_score() -> i32 {
