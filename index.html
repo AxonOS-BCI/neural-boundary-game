@@ -5,88 +5,320 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>AxonOS Boundary Console v7.3.0</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#050608;color:#f5f1e8;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
-header{padding:16px 20px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;gap:12px}
-small{color:#9aa4b2}.wrap{max-width:1180px;margin:0 auto;padding:16px}
-.grid{display:grid;grid-template-columns:240px 1fr 280px;gap:14px}.card{background:#0b0f16;border:1px solid #1f2937;border-radius:18px;padding:14px}
-h1{font-size:44px;line-height:.95;margin:0 0 12px}.hero{margin-bottom:14px}.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0}
-.m{background:#0b0f16;border:1px solid #1f2937;border-radius:14px;padding:10px}.m b{font-size:22px}.m span{display:block;color:#9aa4b2;font-size:11px}
-button{width:100%;margin:5px 0;padding:12px;border-radius:12px;border:1px solid #2b3545;background:#101827;color:#f5f1e8;font:inherit}
-button.primary{background:#e8cf8a;color:#080808;font-weight:800;border:0}
-canvas{width:100%;height:auto;border:1px solid #1f2937;border-radius:16px;background:#05080d;display:block}
-.log{height:430px;overflow:auto}.e{border-left:2px solid #e8cf8a;padding:7px 0 7px 9px;color:#c9d1d9;font-size:13px}.good{border-color:#76e6ae}.bad{border-color:#ff7186;color:#ffd0d6}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:20px}.overlay.show{display:flex}.modal{max-width:560px;background:#0b0f16;border:1px solid #1f2937;border-radius:20px;padding:24px}
-@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}h1{font-size:34px}}
+:root{
+  --bg:#050608;--panel:#0b0f16;--panel2:#101622;--line:#1f2937;
+  --text:#f5f1e8;--muted:#9aa4b2;--gold:#e8cf8a;--red:#ff7186;
+  --green:#76e6ae;--cyan:#79def5;--violet:#aa98ff
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 16% 0,rgba(232,207,138,.13),transparent 34%),radial-gradient(circle at 88% 18%,rgba(121,222,245,.10),transparent 34%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;position:sticky;top:0;background:rgba(5,6,8,.82);backdrop-filter:blur(12px);z-index:5}
+header b{letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+small,.muted{color:var(--muted)}
+.wrap{max-width:1240px;margin:0 auto;padding:14px}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-bottom:14px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.022));border:1px solid rgba(255,255,255,.10);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.pad{padding:16px}
+h1{font-size:clamp(32px,5.2vw,64px);letter-spacing:-.055em;line-height:.92;margin:0 0 10px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:0 0 10px}
+p{line-height:1.48}
+button{border:1px solid rgba(255,255,255,.14);background:#0b1119;color:var(--text);border-radius:13px;padding:12px 13px;font:inherit;cursor:pointer;touch-action:manipulation}
+button.primary{background:linear-gradient(180deg,#f2dc96,#d4ad55);color:#090806;border:0;font-weight:850}
+button.good{border-color:rgba(118,230,174,.55);box-shadow:0 0 0 2px rgba(118,230,174,.12)}
+button.warn{border-color:rgba(232,207,138,.70);box-shadow:0 0 0 2px rgba(232,207,138,.12)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.metric{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:11px}
+.metric span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.12em}
+.metric b{font-size:22px}
+.objectives{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:10px}
+.obj{border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:9px;color:var(--muted);font-size:13px}
+.obj.done{border-color:rgba(118,230,174,.55);color:#c8ffe0;background:rgba(118,230,174,.06)}
+.game{display:grid;grid-template-columns:260px 1fr 300px;gap:14px}
+.actions{display:grid;gap:8px}
+.actions button{display:flex;justify-content:space-between;align-items:center;text-align:left}
+kbd{color:var(--gold);font-family:ui-monospace,monospace}
+canvas{width:100%;height:auto;display:block;border:1px solid rgba(255,255,255,.10);border-radius:18px;background:#05080d}
+.bar{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:13px;margin-top:9px}
+.lanes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:9px}
+.lanes button{padding:10px 0}
+.lanes button.active{background:rgba(232,207,138,.16);border-color:var(--gold);color:var(--gold)}
+.target{border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:11px;background:rgba(0,0,0,.18);margin-bottom:10px}
+.target b{color:var(--gold)}
+.log{height:340px;overflow:auto}
+.e{border-left:2px solid var(--gold);padding:7px 0 7px 9px;color:#c9d1d9;font-size:13px}
+.e.good{border-color:var(--green);color:#c8ffe0}
+.e.bad{border-color:var(--red);color:#ffd0d6}
+.tip{background:rgba(232,207,138,.08);border:1px solid rgba(232,207,138,.22);border-radius:14px;padding:11px;color:#f4e6bd;margin-top:10px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.74);align-items:center;justify-content:center;padding:18px;z-index:10;backdrop-filter:blur(10px)}
+.overlay.show{display:flex}
+.modal{max-width:620px;width:100%;background:#0b0f16;border:1px solid #263244;border-radius:22px;padding:22px}
+.modal h2{font-size:38px;letter-spacing:-.04em;text-transform:none;color:var(--text)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:18px}
+@media(max-width:980px){.hero,.game{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.objectives{grid-template-columns:1fr}.log{height:240px}}
+@media(max-width:560px){.wrap{padding:10px}header{padding:12px}.metrics{grid-template-columns:repeat(2,1fr)}button{font-size:15px;padding:12px}.actions button small{display:none}}
 </style>
 </head>
 <body>
-<header><b>AxonOS Boundary Console v7.3.0</b><small>PLAYABLE · OFFLINE · NO TELEMETRY</small></header>
+<header>
+  <b>AxonOS Boundary Console v7.3.0</b>
+  <small>PLAYABLE · TUTORIAL · NO TELEMETRY</small>
+</header>
+
 <div class="wrap">
-<section class="hero card">
-<h1>Boundary Field</h1>
-<p>Press <b>Run Boundary</b>. Stop RAW / ART / CLAIM / STIM before they cross. Release only after Consent + Evidence.</p>
-<button class="primary" id="start">Run Boundary</button>
+<section class="hero">
+  <div class="card pad">
+    <h1>Boundary Field</h1>
+    <p class="muted">Goal: contain unsafe packets, build Consent + Evidence, convert two INTENT packets, then Release. The game now highlights what to press next.</p>
+    <div class="row">
+      <button class="primary" id="start">Run Boundary</button>
+      <button id="restart">Restart</button>
+      <button id="clear">Clear Cache</button>
+    </div>
+    <div class="tip" id="coach">Press Run Boundary. First packets are slow. Use highlighted action buttons.</div>
+  </div>
+
+  <div class="card pad">
+    <h2>Release Objective</h2>
+    <div class="metrics">
+      <div class="metric"><span>Trust</span><b id="trust">90</b></div>
+      <div class="metric"><span>Risk</span><b id="risk">10</b></div>
+      <div class="metric"><span>Integrity</span><b id="integrity">100</b></div>
+      <div class="metric"><span>Evidence</span><b id="evidence">L0</b></div>
+      <div class="metric"><span>Intent</span><b id="intent">0/2</b></div>
+      <div class="metric"><span>Leaks</span><b id="leaks">0</b></div>
+    </div>
+    <div class="objectives">
+      <div class="obj" id="objConsent">Consent ON</div>
+      <div class="obj" id="objEvidence">Evidence L2</div>
+      <div class="obj" id="objIntent">2 INTENT converted</div>
+      <div class="obj" id="objClear">No active hazards</div>
+    </div>
+  </div>
 </section>
 
-<section class="metrics">
-<div class="m"><span>Trust</span><b id="trust">90</b></div>
-<div class="m"><span>Risk</span><b id="risk">10</b></div>
-<div class="m"><span>Integrity</span><b id="integrity">100</b></div>
-<div class="m"><span>Evidence</span><b id="evidence">L0</b></div>
-<div class="m"><span>Score</span><b id="score">0</b></div>
-<div class="m"><span>Leaks</span><b id="leaks">0</b></div>
-</section>
+<section class="game">
+  <aside class="card pad">
+    <h2>Actions</h2>
+    <div class="actions">
+      <button data-act="validate" id="btnValidate"><span><kbd>1</kbd> Validate</span><small>UNK</small></button>
+      <button data-act="convert" id="btnConvert"><span><kbd>2</kbd> Convert</span><small>INTENT</small></button>
+      <button data-act="quarantine" id="btnQuarantine"><span><kbd>3</kbd> Quarantine</span><small>RAW/ART/STIM/CLAIM</small></button>
+      <button data-act="consent" id="btnConsent"><span><kbd>4</kbd> Consent</span><small>Gate</small></button>
+      <button data-act="evidence" id="btnEvidence"><span><kbd>5</kbd> Evidence</span><small>L0→L2</small></button>
+      <button class="primary" data-act="release" id="btnRelease"><span><kbd>Enter</kbd> Release</span><small>Finish</small></button>
+    </div>
+  </aside>
 
-<section class="grid">
-<aside class="card">
-<h3>Actions</h3>
-<button data-act="validate">1 Validate</button>
-<button data-act="convert">2 Convert</button>
-<button data-act="quarantine">3 Quarantine</button>
-<button data-act="consent">4 Consent</button>
-<button data-act="evidence">5 Evidence</button>
-<button class="primary" data-act="release">Enter Release</button>
-<button id="restart">Restart</button>
-<button id="clear">Clear Cache</button>
-</aside>
+  <main class="card pad">
+    <h2>Boundary Field</h2>
+    <canvas id="field" width="940" height="540"></canvas>
+    <div class="bar">
+      <span>Lane <b id="lane">3</b> · Tick <span id="tick">0</span> · Score <b id="score">0</b></span>
+      <span>Tap lane or use ↑/↓</span>
+    </div>
+    <div class="lanes">
+      <button data-lane="0">1</button>
+      <button data-lane="1">2</button>
+      <button data-lane="2">3</button>
+      <button data-lane="3">4</button>
+      <button data-lane="4">5</button>
+    </div>
+  </main>
 
-<main class="card">
-<canvas id="field" width="900" height="520"></canvas>
-<p><small>Lane <b id="lane">3</b> · Tick <span id="tick">0</span> · Controls: ↑/↓, 1-5, Enter, R</small></p>
-</main>
-
-<aside class="card">
-<h3>Log</h3>
-<div id="log" class="log"></div>
-</aside>
+  <aside class="card pad">
+    <h2>Selected Packet</h2>
+    <div class="target" id="targetBox">No target on selected lane.</div>
+    <h2>Event Log</h2>
+    <div id="log" class="log"></div>
+  </aside>
 </section>
 </div>
 
 <div class="overlay" id="overlay">
-<div class="modal">
-<h2 id="grade">—</h2>
-<p id="summary"></p>
-<button class="primary" id="again">Play Again</button>
-</div>
+  <div class="modal">
+    <h2 id="grade">—</h2>
+    <p id="summary"></p>
+    <button class="primary" id="again">Play Again</button>
+  </div>
 </div>
 
+<footer>AxonOS Boundary Console · deterministic simulation · no raw neural data · no backend</footer>
+
 <script>
-(()=>{const C=document.getElementById("field"),X=C.getContext("2d"),$=id=>document.getElementById(id);
-const types=[["RAW","quarantine","#ff7186",90],["ART","quarantine","#ff8fa0",70],["STIM","quarantine","#ff4d6d",130],["CLAIM","quarantine","#aa98ff",75],["UNK","validate","#f5f1e8",45],["INTENT","convert","#79def5",75],["CONSENT","consent","#e8cf8a",60],["TRACE","evidence","#76e6ae",55]];
+(()=>{
+const C=document.getElementById("field"),X=C.getContext("2d"),$=id=>document.getElementById(id);
+const packetTypes=[
+  ["RAW","quarantine","#ff7186",90],
+  ["ART","quarantine","#ff8fa0",70],
+  ["STIM","quarantine","#ff4d6d",130],
+  ["CLAIM","quarantine","#aa98ff",75],
+  ["UNK","validate","#f5f1e8",45],
+  ["INTENT","convert","#79def5",75],
+  ["CONSENT","consent","#e8cf8a",60],
+  ["TRACE","evidence","#76e6ae",55]
+];
 let S;
-function log(m,c=""){let e=document.createElement("div");e.className="e "+c;e.textContent=m;$("log").prepend(e)}
-function hud(){["trust","risk","integrity","score","leaks"].forEach(k=>$(k).textContent=Math.round(S[k]));$("evidence").textContent="L"+S.evidence;$("lane").textContent=S.lane+1;$("tick").textContent=S.tick}
-function reset(){S={run:false,end:false,tick:0,lane:2,trust:90,risk:10,integrity:100,evidence:0,score:0,leaks:0,consent:false,converted:0,items:[],last:0};$("overlay").classList.remove("show");$("log").innerHTML="";log("READY — press Run Boundary.","good");hud()}
-function spawn(){let t=types[Math.floor(Math.random()*types.length)];S.items.push({id:Math.random(),type:t[0],need:t[1],color:t[2],pts:t[3],lane:Math.floor(Math.random()*5),x:-25,v:1.3+Math.random()*1.7})}
-function target(){return S.items.filter(i=>i.lane===S.lane).sort((a,b)=>b.x-a.x)[0]}
-function finish(g,m){S.end=true;S.run=false;$("grade").textContent=g;$("summary").textContent=m+" Score: "+S.score;$("overlay").classList.add("show")}
-function act(a){if(S.end)return;if(!S.run)S.run=true;if(a==="release")return release();let i=target();if(!i){log("NO TARGET","bad");return}if(a==="convert"&&!S.consent){S.risk+=5;log("CONSENT CLOSED","bad");return hud()}if(a==="convert"&&S.evidence<1){S.risk+=4;log("EVIDENCE BELOW L1","bad");return hud()}if(a===i.need){if(a==="validate"){i.type=Math.random()<.35?"ART":"INTENT";i.need=i.type==="ART"?"quarantine":"convert";i.color=i.type==="ART"?"#ff8fa0":"#79def5";log("VALIDATED -> "+i.type,"good");return hud()}S.score+=i.pts;if(a==="quarantine")S.risk=Math.max(0,S.risk-2);if(a==="consent")S.consent=true;if(a==="evidence")S.evidence=Math.min(3,S.evidence+1);if(a==="convert")S.converted++;S.items=S.items.filter(x=>x.id!==i.id);log(a.toUpperCase()+" OK","good")}else{S.risk+=7;log("WRONG: "+i.type+" needs "+i.need,"bad")}hud()}
-function release(){let b=[];if(S.trust<90)b.push("trust");if(S.risk>20)b.push("risk");if(S.integrity<80)b.push("integrity");if(S.evidence<2)b.push("evidence L2");if(!S.consent)b.push("consent");if(S.leaks)b.push("leaks");if(S.converted<2)b.push("2 intents");if(S.items.length)b.push("active packets");if(b.length){S.risk+=3;log("RELEASE BLOCKED: "+b.join(", "),"bad");return hud()}finish("BOUNDARY SEALED","Win. Typed intent released.")}
-function step(){if(!S.run||S.end)return;S.tick++;if(S.tick-S.last>55){spawn();S.last=S.tick}for(let i of S.items)i.x+=i.v;for(let i of [...S.items])if(i.x>590){if(["RAW","ART","STIM","CLAIM"].includes(i.type)){S.leaks++;S.integrity-=i.type==="STIM"?40:18;S.risk+=i.type==="STIM"?35:14;S.items=S.items.filter(x=>x.id!==i.id);log("BREACH "+i.type,"bad");if(i.type==="STIM"||S.leaks>=3||S.integrity<=0)finish("BOUNDARY BREACHED","Loss. Unsafe object crossed.")}else{S.score+=15;S.items=S.items.filter(x=>x.id!==i.id);log(i.type+" crossed safely","good")}}hud()}
-function draw(){let w=C.width,h=C.height,lh=h/5;X.fillStyle="#05080d";X.fillRect(0,0,w,h);for(let n=0;n<5;n++){X.fillStyle=n===S.lane?"rgba(232,207,138,.10)":"rgba(255,255,255,.02)";X.fillRect(0,n*lh,w,lh-2)}X.fillStyle="rgba(121,222,245,.18)";X.fillRect(585,0,10,h);X.strokeStyle="#79def5";X.beginPath();X.moveTo(590,0);X.lineTo(590,h);X.stroke();X.fillStyle="#9aa4b2";X.font="12px monospace";X.fillText("SIGNAL",20,25);X.fillText("BOUNDARY",550,25);X.fillText("APPLICATION",625,25);for(let i of S.items){let y=i.lane*lh+lh/2;X.beginPath();X.fillStyle="#000";X.strokeStyle=i.color;X.arc(i.x,y,22,0,Math.PI*2);X.fill();X.stroke();X.fillStyle=i.color;X.font="bold 12px monospace";X.textAlign="center";X.textBaseline="middle";X.fillText(i.type,i.x,y)}if(!S.run&&!S.end){X.fillStyle="#f5f1e8";X.font="bold 30px system-ui";X.textAlign="center";X.fillText("Press Run Boundary",w/2,h/2)}requestAnimationFrame(draw)}
-function clearCache(){if("caches"in window)caches.keys().then(k=>k.forEach(x=>caches.delete(x)));if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));localStorage.clear();sessionStorage.clear();log("CACHE CLEARED","good")}
-document.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>act(b.dataset.act));$("start").onclick=()=>{S.run=true;log("RUN STARTED","good")};$("restart").onclick=reset;$("again").onclick=reset;$("clear").onclick=clearCache;
-addEventListener("keydown",e=>{let k=e.key.toLowerCase();if(k==="arrowup"||k==="w"){S.lane=Math.max(0,S.lane-1);hud()}if(k==="arrowdown"||k==="s"){S.lane=Math.min(4,S.lane+1);hud()}if(k==="1")act("validate");if(k==="2")act("convert");if(k==="3")act("quarantine");if(k==="4")act("consent");if(k==="5")act("evidence");if(k==="enter")act("release");if(k==="r")reset()});
+
+function log(m,c=""){const e=document.createElement("div");e.className="e "+c;e.textContent=m;$("log").prepend(e)}
+function reset(){
+  S={run:false,end:false,tick:0,lane:2,trust:90,risk:10,integrity:100,evidence:0,score:0,leaks:0,consent:false,converted:0,items:[],last:0,nextType:0};
+  $("overlay").classList.remove("show");$("log").innerHTML="";
+  log("READY — press Run Boundary.","good");hud();
+}
+function scriptedType(){
+  const seq=["CONSENT","TRACE","TRACE","UNK","UNK","RAW","CLAIM","STIM","INTENT","ART"];
+  const k=seq[S.nextType++ % seq.length];
+  return packetTypes.find(x=>x[0]===k) || packetTypes[0];
+}
+function spawn(){
+  const t=S.tick<760 ? scriptedType() : packetTypes[Math.floor(Math.random()*packetTypes.length)];
+  const lane=S.tick<760 ? S.nextType%5 : Math.floor(Math.random()*5);
+  S.items.push({id:Math.random(),type:t[0],need:t[1],color:t[2],pts:t[3],lane,x:-28,v:S.tick<760?0.78:1.15+Math.random()*1.15});
+}
+function hazardsActive(){
+  return S.items.some(i=>["RAW","ART","STIM","CLAIM"].includes(i.type) || i.x>470);
+}
+function releaseReady(){
+  return S.trust>=90 && S.risk<=20 && S.integrity>=80 && S.evidence>=2 && S.consent && S.leaks===0 && S.converted>=2 && !hazardsActive();
+}
+function target(){
+  return S.items.filter(i=>i.lane===S.lane).sort((a,b)=>b.x-a.x)[0] || null;
+}
+function recommended(){
+  const t=target();
+  if(t) return t.need;
+  if(!S.consent) return "consent";
+  if(S.evidence<2) return "evidence";
+  if(S.converted<2) return "validate";
+  if(releaseReady()) return "release";
+  return "";
+}
+function coachText(){
+  const t=target();
+  if(t) return "Selected "+t.type+" needs "+t.need.toUpperCase()+". Press the highlighted button.";
+  if(!S.consent) return "No packet selected. Activate Consent.";
+  if(S.evidence<2) return "Build Evidence to L2.";
+  if(S.converted<2) return "Validate UNK packets into INTENT, then Convert two INTENT packets.";
+  if(hazardsActive()) return "Clear active hazards before Release.";
+  if(releaseReady()) return "Release is ready. Press Enter Release.";
+  return "Keep boundary clean.";
+}
+function hud(){
+  $("trust").textContent=Math.round(S.trust);
+  $("risk").textContent=Math.round(S.risk);
+  $("integrity").textContent=Math.round(S.integrity);
+  $("evidence").textContent="L"+S.evidence;
+  $("intent").textContent=S.converted+"/2";
+  $("score").textContent=S.score;
+  $("leaks").textContent=S.leaks;
+  $("lane").textContent=S.lane+1;
+  $("tick").textContent=S.tick;
+  $("objConsent").className="obj "+(S.consent?"done":"");
+  $("objEvidence").className="obj "+(S.evidence>=2?"done":"");
+  $("objIntent").className="obj "+(S.converted>=2?"done":"");
+  $("objClear").className="obj "+(!hazardsActive()?"done":"");
+  document.querySelectorAll(".lanes button").forEach(b=>b.classList.toggle("active",Number(b.dataset.lane)===S.lane));
+  const t=target();
+  $("targetBox").innerHTML=t?("<b>"+t.type+"</b><br>Lane "+(t.lane+1)+"<br>Needs: <b>"+t.need.toUpperCase()+"</b>"):"No target on selected lane.";
+  $("coach").textContent=coachText();
+
+  document.querySelectorAll("[data-act]").forEach(b=>b.classList.remove("good","warn"));
+  const r=recommended();
+  const id={validate:"btnValidate",convert:"btnConvert",quarantine:"btnQuarantine",consent:"btnConsent",evidence:"btnEvidence",release:"btnRelease"}[r];
+  if(id) $(id).classList.add(r==="release"?"good":"warn");
+  $("btnRelease").disabled=!releaseReady();
+}
+function finish(g,m){
+  S.end=true;S.run=false;$("grade").textContent=g;$("summary").textContent=m+" Score: "+S.score+". Tick: "+S.tick+".";$("overlay").classList.add("show");
+}
+function act(a){
+  if(S.end)return;
+  if(!S.run)S.run=true;
+  if(a==="release")return release();
+  const i=target();
+  if(a==="consent"&&!i){S.consent=true;S.score+=40;log("CONSENT ON.","good");return hud()}
+  if(a==="evidence"&&!i){S.evidence=Math.min(3,S.evidence+1);S.score+=35;log("EVIDENCE L"+S.evidence+".","good");return hud()}
+  if(!i){log("NO TARGET ON LANE.","bad");return}
+  if(a==="convert"&&!S.consent){S.risk+=5;log("CONVERT BLOCKED: consent is OFF.","bad");return hud()}
+  if(a==="convert"&&S.evidence<1){S.risk+=4;log("CONVERT BLOCKED: evidence below L1.","bad");return hud()}
+  if(a===i.need){
+    if(a==="validate"){
+      i.type="INTENT";i.need="convert";i.color="#79def5";log("VALIDATED -> INTENT. Now Convert.","good");return hud();
+    }
+    S.score+=i.pts;
+    if(a==="quarantine")S.risk=Math.max(0,S.risk-2);
+    if(a==="consent"){S.consent=true;S.trust=Math.min(100,S.trust+2)}
+    if(a==="evidence")S.evidence=Math.min(3,S.evidence+1);
+    if(a==="convert"){S.converted++;S.trust=Math.min(100,S.trust+1)}
+    S.items=S.items.filter(x=>x.id!==i.id);
+    log(a.toUpperCase()+" OK — "+i.type,"good");
+  } else {
+    S.risk+=7;S.trust=Math.max(0,S.trust-2);
+    log("WRONG ACTION: "+i.type+" needs "+i.need.toUpperCase()+".","bad");
+  }
+  hud();
+}
+function release(){
+  const missing=[];
+  if(S.trust<90)missing.push("trust >= 90");
+  if(S.risk>20)missing.push("risk <= 20");
+  if(S.integrity<80)missing.push("integrity >= 80");
+  if(S.evidence<2)missing.push("evidence L2");
+  if(!S.consent)missing.push("consent ON");
+  if(S.leaks>0)missing.push("zero leaks");
+  if(S.converted<2)missing.push("2 intents");
+  if(hazardsActive())missing.push("clear hazards");
+  if(missing.length){log("RELEASE LOCKED: "+missing.join(", "),"bad");return hud()}
+  finish("BOUNDARY SEALED","Win. Typed intent released. Unsafe packets contained.");
+}
+function step(){
+  if(!S.run||S.end)return;
+  S.tick++;
+  if(S.tick-S.last>(S.tick<760?86:62)){spawn();S.last=S.tick}
+  for(const i of S.items)i.x+=i.v;
+  for(const i of [...S.items]){
+    if(i.x>610){
+      if(["RAW","ART","STIM","CLAIM"].includes(i.type)){
+        S.leaks++;S.integrity-=i.type==="STIM"?40:18;S.risk+=i.type==="STIM"?35:14;
+        S.items=S.items.filter(x=>x.id!==i.id);
+        log("BREACH: "+i.type,"bad");
+        if(i.type==="STIM"||S.leaks>=3||S.integrity<=0)finish("BOUNDARY BREACHED","Loss. Unsafe object crossed the boundary.");
+      } else {
+        S.score+=12;S.items=S.items.filter(x=>x.id!==i.id);log(i.type+" crossed safely.","good");
+      }
+    }
+  }
+  hud();
+}
+function draw(){
+  const w=C.width,h=C.height,lh=h/5;
+  X.fillStyle="#05080d";X.fillRect(0,0,w,h);
+  for(let n=0;n<5;n++){X.fillStyle=n===S.lane?"rgba(232,207,138,.11)":"rgba(255,255,255,.018)";X.fillRect(0,n*lh,w,lh-2);X.strokeStyle="rgba(255,255,255,.05)";X.beginPath();X.moveTo(0,n*lh);X.lineTo(w,n*lh);X.stroke()}
+  X.fillStyle="rgba(121,222,245,.16)";X.fillRect(605,0,12,h);X.strokeStyle="#79def5";X.beginPath();X.moveTo(611,0);X.lineTo(611,h);X.stroke();
+  X.fillStyle="#9aa4b2";X.font="12px monospace";X.textAlign="left";X.fillText("SIGNAL",22,25);X.fillText("BOUNDARY",570,25);X.fillText("APPLICATION",640,25);
+  const t=target();
+  for(const i of S.items){
+    const y=i.lane*lh+lh/2;
+    X.beginPath();X.fillStyle="#000";X.strokeStyle=i===t?"#e8cf8a":i.color;X.lineWidth=i===t?4:2;X.arc(i.x,y,23,0,Math.PI*2);X.fill();X.stroke();
+    X.fillStyle=i.color;X.font="bold 12px monospace";X.textAlign="center";X.textBaseline="middle";X.fillText(i.type,i.x,y);
+    if(i===t){X.fillStyle="#e8cf8a";X.font="12px monospace";X.fillText("needs "+i.need,i.x,y+34)}
+  }
+  if(!S.run&&!S.end){X.fillStyle="#f5f1e8";X.font="bold 30px system-ui";X.textAlign="center";X.fillText("Press Run Boundary",w/2,h/2)}
+  requestAnimationFrame(draw);
+}
+function clearCache(){
+  if("caches"in window)caches.keys().then(k=>k.forEach(x=>caches.delete(x)));
+  if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));
+  try{localStorage.clear();sessionStorage.clear()}catch(e){}
+  log("CACHE CLEARED.","good");
+}
+document.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>act(b.dataset.act));
+document.querySelectorAll("[data-lane]").forEach(b=>b.onclick=()=>{S.lane=Number(b.dataset.lane);hud()});
+$("start").onclick=()=>{S.run=true;log("RUN STARTED.","good");hud()};
+$("restart").onclick=reset;$("again").onclick=reset;$("clear").onclick=clearCache;
+addEventListener("keydown",e=>{const k=e.key.toLowerCase();if(k==="arrowup"||k==="w"){S.lane=Math.max(0,S.lane-1);hud();e.preventDefault()}if(k==="arrowdown"||k==="s"){S.lane=Math.min(4,S.lane+1);hud();e.preventDefault()}if(k==="1")act("validate");if(k==="2")act("convert");if(k==="3")act("quarantine");if(k==="4")act("consent");if(k==="5")act("evidence");if(k==="enter")act("release");if(k==="r")reset()});
 if("serviceWorker"in navigator)navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister())).catch(()=>{});
 reset();setInterval(step,1000/60);requestAnimationFrame(draw);
 })();
