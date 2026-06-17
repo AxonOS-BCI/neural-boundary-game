@@ -2,20 +2,31 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Neural Boundary Game v5.5.12
+# Neural Boundary Game v7.3.0
+
+### Cognitive Sovereignty Console
 
 [![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
 [![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 
-[![Play Neural Boundary Game v5.5.12](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
+[![Play Neural Boundary Game v7.3.0](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
 
 **[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game/)**
 
 ---
 
-A deterministic Rust/WASM game demonstrating the AxonOS neural boundary protocol.
-Raw signal stays private. Applications receive typed intent only.
-The Rust core is authoritative. The browser is never trusted.
+A deterministic Rust/WASM game demonstrating the AxonOS neural boundary protocol:
+raw signal stays private, applications receive typed intent only, and the Rust core remains authoritative.
+
+v7.3.0 includes:
+
+- deterministic cognitive sovereignty engine;
+- flat WASM ABI v3 with 83 exports;
+- 16 canonical replay vectors;
+- CLI conformance toolkit;
+- Grande Style Elite web UI;
+- PWA/fail-closed fallback surface;
+- evidence report and source manifest.
 
 ## 30-second walkthrough
 
@@ -39,7 +50,7 @@ The Rust core is authoritative. The browser is never trusted.
 
 ## Architecture
 
-45 kB Rust/WASM core. Flat C ABI (41 named exports, no wasm-bindgen).
+45 kB Rust/WASM core. Flat WASM ABI v3 (83 exports), deterministic Rust core, no telemetry.
 JavaScript UI. No runtime dependencies. No CDN. No telemetry.
 
 ```
@@ -54,7 +65,7 @@ neural-boundary-web/   # flat WASM ABI → web/*.js UI
 # Run the full gate
 bash scripts/verify_release.sh
 
-# Verify all 8 canonical replay vectors
+# Verify all 16 canonical replay vectors
 cargo run -p neural-boundary-cli --release -- verify-all
 
 # Build web to dist/
@@ -106,6 +117,6 @@ Build a private boundary demo or deterministic safety review: `connect@axonos.or
 
 ---
 
-*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v5.5.12 — Cognitive Sovereignty.*
+*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v7.3.0 — Cognitive Sovereignty.*
 *Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
 *AxonOS™ and Neural Boundary Game™ are claimed trademarks.*

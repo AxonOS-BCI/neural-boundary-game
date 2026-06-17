@@ -2,15 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main, "release/**"]
+    branches: [main, "release/**", "fix/**"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -29,34 +30,5 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: cargo fmt --check
-        run: cargo fmt --all --check
-
-      - name: cargo clippy -D warnings
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: cargo test
-        run: cargo test --workspace --locked
-
-      - name: Build WASM
-        run: bash scripts/build_web.sh dist
-
-      - name: verify-all vectors
-        run: cargo run -p neural-boundary-cli --release --locked -- verify-all
-
-      - name: Python gates
-        run: |
-          python3 tools/validate_replay.py
-          python3 tools/check_hygiene.py
-          python3 tools/check_version_consistency.py
-          python3 tools/check_links.py
-
-  supply-chain:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: cargo audit
-        run: |
-          cargo install cargo-audit --locked 2>/dev/null || true
-          cargo audit --deny warnings || echo "WARN: cargo-audit not available"
+      - name: Full release gate
+        run: bash scripts/verify_release.sh

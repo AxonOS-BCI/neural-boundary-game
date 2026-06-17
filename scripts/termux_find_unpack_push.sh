@@ -3,7 +3,7 @@
 # run the full gate and push. The archive ships with .git inside.
 set -euo pipefail
 
-PATTERN="${PATTERN:-neural-boundary-game-v3.0.1.tar.gz}"
+PATTERN="${PATTERN:-neural-boundary-game-v7.3.0.tar.gz}"
 SEARCH_DIR="${SEARCH_DIR:-/sdcard/Download}"
 WORK_DIR="${WORK_DIR:-$HOME}"
 
