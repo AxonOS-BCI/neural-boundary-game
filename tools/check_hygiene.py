@@ -93,7 +93,7 @@ def main() -> int:
     for name in files:
         if name.endswith(".html"):
             text = (ROOT / name).read_text(encoding="utf-8", errors="ignore")
-            if 'type="module"' in text and 'app.js' in text:
+            if 'type="module"' in text and 'main.js' in text:
                 html_roots.append(name)
     if len(html_roots) != 1:
         errors.append(f"expected exactly 1 active HTML root with ES module entry, found {len(html_roots)}: {html_roots}")

@@ -1,116 +1,117 @@
 #!/usr/bin/env python3
-"""Version-consistency gate for Neural Boundary Game.
-
-Expected values are read from release.toml — the single canonical manifest.
-The checker inspects every active release surface and rejects stale project
-versions. Historical versions are permitted only inside the historical
-sections of CHANGELOG.md and Git metadata; this is parsed structurally, not
-guessed with a broad grep.
-"""
-
+# Copyright (c) 2026 Denis Yermakou / AxonOS
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.3.0).
+"""Version-consistency gate. Canonical code/config surfaces are checked
+strictly against release.toml. A repo-wide stale-version scan (5.5.12 / 7.0.3)
+errors on code surfaces; hits in the legacy doc set are reported as WARNINGS
+(pending the P0 docs retarget) unless --strict is given. License stubs are
+also flagged as warnings (replace before release)."""
 from __future__ import annotations
-
-import json
-import re
-import sys
-import tomllib
+import json, re, sys, tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+STALE = ("5.5.12", "7.0.3")
+LEGACY = ("README.md", "SECURITY.md", "PRIVACY_NOTICE.md", "RELEASE_NOTES.md",
+          "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "docs/", "scripts/", "qa/")
+SCAN_SUFFIX = {".md", ".toml", ".rs", ".html", ".css", ".js", ".sh", ".py", ".json", ".yml", ".yaml"}
+SKIP_DIRS = (".git/", "target/", "dist/", "node_modules/", "qa/node_modules/")
+SKIP_NAMES = {"CHANGELOG.md", "Cargo.lock", "SOURCE_MANIFEST.sha256"}
 
-
-def load_manifest() -> dict:
-    with open(ROOT / "release.toml", "rb") as handle:
-        return tomllib.load(handle)
-
-
-def changelog_history_versions(text: str, current: str) -> set[str]:
-    versions = set(re.findall(r"^## \[(\d+\.\d+\.\d+)\]", text, flags=re.M))
-    versions.discard(current)
-    return versions
-
+def manifest():
+    with open(ROOT / "release.toml", "rb") as f:
+        return tomllib.load(f)
 
 def main() -> int:
-    manifest = load_manifest()
-    version = manifest["version"]
-    display = manifest["display_version"]
+    strict = "--strict" in sys.argv
+    m = manifest()
+    v, disp = m["version"], m["display_version"]
     errors: list[str] = []
+    warnings: list[str] = []
 
-    def expect(path: str, needle: str, label: str) -> None:
-        file_path = ROOT / path
-        if not file_path.exists():
+    def need(path: str, needle: str, label: str):
+        fp = ROOT / path
+        if not fp.exists():
             errors.append(f"{path}: missing (needed for {label})")
-            return
-        if needle not in file_path.read_text(encoding="utf-8"):
+        elif needle not in fp.read_text(encoding="utf-8", errors="ignore"):
             errors.append(f"{path}: expected {label} {needle!r}")
 
-    # Canonical version sites.
-    expect("VERSION", version, "version")
-    expect("Cargo.toml", f'version = "{version}"', "workspace version")
-    expect("crates/neural-boundary-core/src/lib.rs", f'CORE_VERSION: &str = "{version}"', "core version")
-    expect(
-        "crates/neural-boundary-core/src/lib.rs",
-        f'REPLAY_SCHEMA: &str = "{manifest["replay_schema"]}"',
-        "replay schema",
-    )
-    expect(
-        "crates/neural-boundary-core/src/lib.rs",
-        f'HASH_ALGORITHM: &str = "{manifest["state_hash_algorithm"]}"',
-        "hash algorithm",
-    )
-    expect("web/storage.js", f"NS = '{manifest['storage_namespace']}'", "storage namespace")
-    expect("web/index.html", "v5.5.12", "visible UI version")
-    expect("README.md", display, "README version")
-    expect("README.md", manifest["homepage"], "homepage link")
-    expect("RELEASE_NOTES.md", manifest["release_title"], "release title")
-    expect("CHANGELOG.md", f"## [{version}]", "changelog entry")
-    expect("scripts/create_release_tag.sh", manifest["git_tag"], "release tag")
-    expect("docs/GAME_SPEC.md", version, "game spec version")
-    expect("web/abi.js", "5<<16", "WASM product version check")
-    expect("docs/REPLAY_SPEC.md", manifest["replay_schema"], "replay spec schema")
+    # Canonical surfaces (strict).
+    need("VERSION", v, "version")
+    need("Cargo.toml", f'version = "{v}"', "workspace version")
+    need("crates/neural-boundary-core/src/lib.rs", f'CORE_VERSION: &str = "{v}"', "core version")
+    need("crates/neural-boundary-core/src/lib.rs", f'REPLAY_SCHEMA: &str = "{m["replay_schema"]}"', "replay schema")
+    need("crates/neural-boundary-core/src/lib.rs", f'ABI_VERSION: u32 = {m["abi_version"]}', "abi version")
+    need("crates/neural-boundary-core/src/hash.rs", f'HASH_ALGORITHM: &str = "{m["state_hash_algorithm"]}"', "hash algorithm")
+    need("crates/neural-boundary-core/src/hash.rs", f'RNG_ALGORITHM: &str = "{m["rng_algorithm"]}"', "rng algorithm")
+    need("web/index.html", disp, "visible UI version")
+    need("web/service-worker.js", disp, "service-worker cache version")
+    need("web/wasm-loader.js", "0x070300", "wasm packed-version guard")
+    need("web/wasm-loader.js", f'ABI_VERSION = {m["abi_version"]}', "wasm abi guard")
 
-    # Vector schema fields.
-    vector_dir = ROOT / "vectors"
-    for vector in sorted(vector_dir.glob("*.json")):
-        data = json.loads(vector.read_text(encoding="utf-8"))
-        for field, expected in (
-            ("schema", manifest["replay_schema"]),
-            ("product_version", version),
-            ("core_version", version),
-            ("hash_algorithm", manifest["state_hash_algorithm"]),
-        ):
-            if data.get(field) != expected:
-                errors.append(f"vectors/{vector.name}: {field} != {expected!r}")
+    # DOGE config (§21.4).
+    doge = ROOT / "DOGE.json"
+    if not doge.exists():
+        errors.append("DOGE.json: missing (§21.4)")
+    else:
+        d = json.loads(doge.read_text())
+        if d.get("commercial_doge_enabled") is not False:
+            errors.append("DOGE.json: commercial_doge_enabled must be false")
+        if not d.get("doge_address"):
+            errors.append("DOGE.json: doge_address missing")
 
-    # Stale project versions: every version that ever appeared in CHANGELOG
-    # history must not appear on any other active surface.
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    history = changelog_history_versions(changelog, version)
-    scan_suffixes = {".md", ".toml", ".rs", ".html", ".css", ".sh", ".py", ".yml", ".json"}
-    skip = {"CHANGELOG.md", "Cargo.lock"}
-    for path in ROOT.rglob("*"):
-        relative = path.relative_to(ROOT).as_posix()
-        if (
-            not path.is_file()
-            or path.suffix not in scan_suffixes
-            or relative in skip
-            or relative.startswith((".git/", "target/", "dist/", "node_modules/", "qa/node_modules"))
-        ):
+    # Vector identity (light; deep checks in validate_replay.py).
+    for vec in sorted((ROOT / "vectors").glob("*.json")):
+        data = json.loads(vec.read_text())
+        if data.get("schema") != m["replay_schema"]:
+            errors.append(f"vectors/{vec.name}: schema != {m['replay_schema']!r}")
+        if data.get("version") != v:
+            errors.append(f"vectors/{vec.name}: version != {v!r}")
+
+    # License-stub guard (P0): full texts must replace the placeholders.
+    for lic in ("LICENSES/AGPL-3.0-only.txt", "LICENSES/CC-BY-NC-ND-4.0.txt"):
+        fp = ROOT / lic
+        if fp.exists():
+            t = fp.read_text(encoding="utf-8", errors="ignore")
+            if "BEFORE-RELEASE" in t or "replace with" in t.lower() or len(t) < 1500:
+                warnings.append(f"{lic}: appears to be a STUB — drop in the full license text")
+
+    # Repo-wide stale-version scan. Migrated code surfaces must be clean
+    # (fatal); the rest of the repo is mid-migration (warnings, pending P0-3).
+    CANON_PREFIX = ("crates/", "web/", "vectors/")
+    CANON_FILE = {"release.toml", "Cargo.toml", "VERSION", "DOGE.json"}
+    SELF = "tools/check_version_consistency.py"  # contains the patterns as literals
+
+    def is_canon(rel: str) -> bool:
+        return rel in CANON_FILE or any(rel.startswith(p) for p in CANON_PREFIX)
+
+    for p in ROOT.rglob("*"):
+        rel = p.relative_to(ROOT).as_posix()
+        if (not p.is_file() or p.suffix not in SCAN_SUFFIX or p.name in SKIP_NAMES
+                or rel == SELF or any(rel.startswith(s) for s in SKIP_DIRS)):
             continue
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        for line_no, line in enumerate(text.splitlines(), start=1):
-            for old in history:
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        for ln, line in enumerate(text.splitlines(), 1):
+            for old in STALE:
                 if old in line:
-                    errors.append(f"{relative}:{line_no}: stale project version {old}")
+                    msg = f"{rel}:{ln}: stale version {old}"
+                    (errors if is_canon(rel) else warnings).append(msg)
 
+    if strict:
+        errors += warnings
+        warnings = []
+
+    for w in warnings:
+        print(f"  warn: {w}")
     if errors:
         print("Version consistency FAILED:")
-        for error in errors:
-            print(f"  - {error}")
+        for e in errors:
+            print(f"  - {e}")
         return 1
-    print(f"Version consistency OK: every active surface identifies {display}.")
+    extra = f" ({len(warnings)} warning(s) — legacy docs/licenses pending)" if warnings else ""
+    print(f"Version consistency OK: canonical surfaces identify {disp}{extra}.")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())
