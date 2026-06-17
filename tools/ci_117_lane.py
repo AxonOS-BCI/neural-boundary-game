@@ -49,11 +49,22 @@ def scan_conflict_markers() -> None:
             continue
         if p.suffix.lower() not in {".md", ".rs", ".toml", ".json", ".yml", ".yaml", ".py", ".sh", ".html", ".css", ".js", ".txt"}:
             continue
+
         text = p.read_text(encoding="utf-8", errors="ignore")
-        if "<<<<<<< " in text or "=======" in text and ">>>>>>> " in text:
+        lines = text.splitlines()
+
+        # Real Git conflict markers must appear as full line-start markers.
+        # Do not match markdown separators, generated manifests, arrows, or prose.
+        has_start = any(line.startswith("<<<<<<< ") or line == "<<<<<<<" for line in lines)
+        has_sep = any(line == "=======" for line in lines)
+        has_end = any(line.startswith(">>>>>>> ") or line == ">>>>>>>" for line in lines)
+
+        if has_start and has_sep and has_end:
             bad.append(rel)
+
     if bad:
         fail("merge conflict markers found: " + ", ".join(bad[:20]))
+
     ok("no merge conflict markers")
 
 def check_json(path: Path) -> None:

@@ -1,6 +1,8 @@
 name: GitHub Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -8,14 +10,38 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
 jobs:
   build:
+    name: build
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Pages deployment is manual-only until v7.3.0 CI is stable."
+      - uses: actions/checkout@v4
+
+      - name: Validate static web surface
+        run: |
+          test -f web/index.html
+          test -f web/manifest.json
+          cp web/index.html web/404.html
+          touch web/.nojekyll
+          ls -lah web
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
 
   deploy:
+    name: deploy
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - run: echo "Manual Pages deploy placeholder."
+      - uses: actions/deploy-pages@v4
+        id: deployment

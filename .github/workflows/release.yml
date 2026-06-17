@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   release:
+    name: release
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Release workflow is manual-only. Use after v7.3.0 final audit."
+      - run: echo "Release workflow is manual-only until final signed v7.3.0."
