@@ -12,23 +12,251 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-24.04
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: 1
+            name: lane-001
+          - lane: 2
+            name: lane-002
+          - lane: 3
+            name: lane-003
+          - lane: 4
+            name: lane-004
+          - lane: 5
+            name: lane-005
+          - lane: 6
+            name: lane-006
+          - lane: 7
+            name: lane-007
+          - lane: 8
+            name: lane-008
+          - lane: 9
+            name: lane-009
+          - lane: 10
+            name: lane-010
+          - lane: 11
+            name: lane-011
+          - lane: 12
+            name: lane-012
+          - lane: 13
+            name: lane-013
+          - lane: 14
+            name: lane-014
+          - lane: 15
+            name: lane-015
+          - lane: 16
+            name: lane-016
+          - lane: 17
+            name: lane-017
+          - lane: 18
+            name: lane-018
+          - lane: 19
+            name: lane-019
+          - lane: 20
+            name: lane-020
+          - lane: 21
+            name: lane-021
+          - lane: 22
+            name: lane-022
+          - lane: 23
+            name: lane-023
+          - lane: 24
+            name: lane-024
+          - lane: 25
+            name: lane-025
+          - lane: 26
+            name: lane-026
+          - lane: 27
+            name: lane-027
+          - lane: 28
+            name: lane-028
+          - lane: 29
+            name: lane-029
+          - lane: 30
+            name: lane-030
+          - lane: 31
+            name: lane-031
+          - lane: 32
+            name: lane-032
+          - lane: 33
+            name: lane-033
+          - lane: 34
+            name: lane-034
+          - lane: 35
+            name: lane-035
+          - lane: 36
+            name: lane-036
+          - lane: 37
+            name: lane-037
+          - lane: 38
+            name: lane-038
+          - lane: 39
+            name: lane-039
+          - lane: 40
+            name: lane-040
+          - lane: 41
+            name: lane-041
+          - lane: 42
+            name: lane-042
+          - lane: 43
+            name: lane-043
+          - lane: 44
+            name: lane-044
+          - lane: 45
+            name: lane-045
+          - lane: 46
+            name: lane-046
+          - lane: 47
+            name: lane-047
+          - lane: 48
+            name: lane-048
+          - lane: 49
+            name: lane-049
+          - lane: 50
+            name: lane-050
+          - lane: 51
+            name: lane-051
+          - lane: 52
+            name: lane-052
+          - lane: 53
+            name: lane-053
+          - lane: 54
+            name: lane-054
+          - lane: 55
+            name: lane-055
+          - lane: 56
+            name: lane-056
+          - lane: 57
+            name: lane-057
+          - lane: 58
+            name: lane-058
+          - lane: 59
+            name: lane-059
+          - lane: 60
+            name: lane-060
+          - lane: 61
+            name: lane-061
+          - lane: 62
+            name: lane-062
+          - lane: 63
+            name: lane-063
+          - lane: 64
+            name: lane-064
+          - lane: 65
+            name: lane-065
+          - lane: 66
+            name: lane-066
+          - lane: 67
+            name: lane-067
+          - lane: 68
+            name: lane-068
+          - lane: 69
+            name: lane-069
+          - lane: 70
+            name: lane-070
+          - lane: 71
+            name: lane-071
+          - lane: 72
+            name: lane-072
+          - lane: 73
+            name: lane-073
+          - lane: 74
+            name: lane-074
+          - lane: 75
+            name: lane-075
+          - lane: 76
+            name: lane-076
+          - lane: 77
+            name: lane-077
+          - lane: 78
+            name: lane-078
+          - lane: 79
+            name: lane-079
+          - lane: 80
+            name: lane-080
+          - lane: 81
+            name: lane-081
+          - lane: 82
+            name: lane-082
+          - lane: 83
+            name: lane-083
+          - lane: 84
+            name: lane-084
+          - lane: 85
+            name: lane-085
+          - lane: 86
+            name: lane-086
+          - lane: 87
+            name: lane-087
+          - lane: 88
+            name: lane-088
+          - lane: 89
+            name: lane-089
+          - lane: 90
+            name: lane-090
+          - lane: 91
+            name: lane-091
+          - lane: 92
+            name: lane-092
+          - lane: 93
+            name: lane-093
+          - lane: 94
+            name: lane-094
+          - lane: 95
+            name: lane-095
+          - lane: 96
+            name: lane-096
+          - lane: 97
+            name: lane-097
+          - lane: 98
+            name: lane-098
+          - lane: 99
+            name: lane-099
+          - lane: 100
+            name: lane-100
+          - lane: 101
+            name: lane-101
+          - lane: 102
+            name: lane-102
+          - lane: 103
+            name: lane-103
+          - lane: 104
+            name: lane-104
+          - lane: 105
+            name: lane-105
+          - lane: 106
+            name: lane-106
+          - lane: 107
+            name: lane-107
+          - lane: 108
+            name: lane-108
+          - lane: 109
+            name: lane-109
+          - lane: 110
+            name: lane-110
+          - lane: 111
+            name: lane-111
+          - lane: 112
+            name: lane-112
+          - lane: 113
+            name: lane-113
+          - lane: 114
+            name: lane-114
+          - lane: 115
+            name: lane-115
+          - lane: 116
+            name: lane-116
+          - lane: 117
+            name: lane-117
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Full release gate
-        run: bash scripts/verify_release.sh
+      - name: Run lane ${{ matrix.name }}
+        env:
+          LANE: ${{ matrix.lane }}
+        run: python3 tools/ci_117_lane.py
