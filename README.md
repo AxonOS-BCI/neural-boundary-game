@@ -10,7 +10,7 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 [![Release](https://img.shields.io/badge/release-v7.3.0--rc.1-black)](https://github.com/AxonOS-BCI/neural-boundary-game/releases)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 
-**Run the console:** https://axonos-bci.github.io/neural-boundary-game/
+**Run the console:** build locally from this source repository, or deploy a public artifact build. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
@@ -133,3 +133,11 @@ Build a private boundary demo or deterministic safety review: `connect@axonos.or
 *© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v7.3.0 — Cognitive Sovereignty.*
 *Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
 *AxonOS™ and Neural Boundary Game™ are claimed trademarks.*
+
+## Public distribution
+
+Canonical public demo URL:
+
+https://axonos-bci.github.io/neural-boundary-game/
+
+The Pages deployment is built from this repository through `.github/workflows/pages.yml`.

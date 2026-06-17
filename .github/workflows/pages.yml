@@ -92,8 +92,8 @@ from pathlib import Path
 p = Path("dist/index.html")
 s = p.read_text(encoding="utf-8", errors="ignore")
 
-s = s.replace("Neural Boundary Game v3.0.0", "AxonOS Boundary Console v7.3.0 RC1")
-s = s.replace("SOVEREIGN BOUNDARY SIMULATION · v3.0.0", "AXONOS BOUNDARY CONSOLE · v7.3.0 RC1")
+s = s.replace("AxonOS Boundary Console v7.3.0 RC1", "AxonOS Boundary Console v7.3.0 RC1")
+s = s.replace("AXONOS BOUNDARY CONSOLE · v7.3.0 RC1", "AXONOS BOUNDARY CONSOLE · v7.3.0 RC1")
 s = s.replace("Neural Boundary Game", "AxonOS Boundary Console")
 
 if "cache-reset.js" not in s:
