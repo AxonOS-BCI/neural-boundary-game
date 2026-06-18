@@ -45,8 +45,24 @@ fn release_evidence_runs_green() {
 
 #[test]
 fn hash_state_is_deterministic() {
-    let a = run(&["hash-state", "--scenario", "9", "--seed", "abc123", "--policy", "clean"]);
-    let b = run(&["hash-state", "--scenario", "9", "--seed", "abc123", "--policy", "clean"]);
+    let a = run(&[
+        "hash-state",
+        "--scenario",
+        "9",
+        "--seed",
+        "abc123",
+        "--policy",
+        "clean",
+    ]);
+    let b = run(&[
+        "hash-state",
+        "--scenario",
+        "9",
+        "--seed",
+        "abc123",
+        "--policy",
+        "clean",
+    ]);
     assert_eq!(a.0, 0);
     assert_eq!(a.1, b.1, "same inputs must give identical output");
 }
