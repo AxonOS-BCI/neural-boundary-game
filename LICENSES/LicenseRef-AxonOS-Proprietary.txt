@@ -1,0 +1,10 @@
+LicenseRef-AxonOS-Proprietary
+
+AxonOS Proprietary Asset License
+Copyright © 2026 Denis Yermakou
+
+Designated proprietary assets — including the AxonOS logo, Neural Boundary Game
+visual identity, premium illustrations, original sound design, and commercial
+scenario packs — are not licensed under AGPL-3.0 or any open-source licence.
+
+All rights reserved. Contact: connect@axonos.org for licensing.

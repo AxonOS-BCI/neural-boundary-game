@@ -1,0 +1,15 @@
+[package]
+name = "neural-boundary-web"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Flat WASM ABI v3 adapter for Neural Boundary Game v7.9.812 — Cognitive Sovereignty Console."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+neural-boundary-core = { path = "../neural-boundary-core" }

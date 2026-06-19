@@ -1,0 +1,34 @@
+Neural Boundary Game v7.9.812
+Copyright © 2026 Denis Yermakou
+AxonOS intellectual property
+
+LICENSING OVERVIEW
+==================
+
+This repository contains files under multiple licensing classes.
+The applicable licence for each file is identified by its SPDX-License-Identifier.
+
+1. ORIGINAL SOFTWARE (source code: .rs, .js, .html, .css, .sh, .py, etc.)
+   SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+   See: LICENSES/AGPL-3.0-only.txt, LICENSES/LicenseRef-AxonOS-Commercial.txt
+
+2. PUBLIC DOCUMENTATION (.md docs, guides, specifications)
+   SPDX-License-Identifier: CC-BY-NC-ND-4.0
+   See: LICENSES/CC-BY-NC-ND-4.0.txt
+
+3. DESIGNATED PROPRIETARY ASSETS (logos, branding, premium materials)
+   SPDX-License-Identifier: LicenseRef-AxonOS-Proprietary
+   See: LICENSES/LicenseRef-AxonOS-Proprietary.txt
+
+COMMERCIAL USE
+==============
+
+Use of this software in proprietary or closed-source products requires an
+AxonOS Commercial License. Contact: connect@axonos.org
+
+TRADEMARK NOTICE
+================
+
+AxonOS™, Neural Boundary Game™, Neural Permissions™, Privacy Vault™,
+Cognitive Sovereignty™, OS for the Brain™ and Cognitive Operating System™
+are claimed trademarks of their applicable AxonOS IP owner.

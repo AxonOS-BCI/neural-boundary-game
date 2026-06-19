@@ -1,0 +1,12 @@
+{
+  "name": "neural-boundary-game-qa",
+  "version": "7.9.812",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter=junit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

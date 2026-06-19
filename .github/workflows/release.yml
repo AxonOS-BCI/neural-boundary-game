@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Full gate
+        run: python3 tools/release_check.py
+
+      - name: Package source archive
+        run: |
+          VERSION=$(cat VERSION)
+          git archive --format=tar.gz --prefix=neural-boundary-game-${VERSION}/ \
+            -o neural-boundary-game-${VERSION}.tar.gz HEAD
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            neural-boundary-game-*.tar.gz
+            vectors/checksums.sha256
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false

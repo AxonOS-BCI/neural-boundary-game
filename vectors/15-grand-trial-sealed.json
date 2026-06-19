@@ -1,0 +1,58 @@
+{
+  "schema": "neural-boundary-replay-v3",
+  "product": "Neural Boundary Game",
+  "version": "7.9.812",
+  "scenario_id": 9,
+  "seed": "0000000000000001",
+  "tick_rate": 20,
+  "title": "15-grand-trial-sealed",
+  "generated_by": "neural-boundary-cli 7.9.812",
+  "actions": [
+    {
+      "tick": 41,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 181,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 182,
+      "action": "SEAL_VAULT"
+    },
+    {
+      "tick": 183,
+      "action": "QUARANTINE"
+    },
+    {
+      "tick": 361,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 362,
+      "action": "QUARANTINE"
+    },
+    {
+      "tick": 541,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 542,
+      "action": "THROTTLE"
+    },
+    {
+      "tick": 543,
+      "action": "QUARANTINE"
+    },
+    {
+      "tick": 601,
+      "action": "RELEASE"
+    }
+  ],
+  "expected": {
+    "grade": "SEALED",
+    "reason": "SUCCESS_RELEASE",
+    "score_min": 1090,
+    "state_hash": "0xe6f703df16c7bf8d"
+  }
+}

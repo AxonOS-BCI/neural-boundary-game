@@ -1,0 +1,42 @@
+{
+  "schema": "neural-boundary-replay-v3",
+  "product": "Neural Boundary Game",
+  "version": "7.9.812",
+  "scenario_id": 5,
+  "seed": "0000000000000001",
+  "tick_rate": 20,
+  "title": "09-latency-storm-reviewable",
+  "generated_by": "neural-boundary-cli 7.9.812",
+  "actions": [
+    {
+      "tick": 41,
+      "action": "QUARANTINE"
+    },
+    {
+      "tick": 181,
+      "action": "QUARANTINE"
+    },
+    {
+      "tick": 321,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 461,
+      "action": "QUARANTINE"
+    },
+    {
+      "tick": 601,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 602,
+      "action": "RELEASE"
+    }
+  ],
+  "expected": {
+    "grade": "REVIEWABLE",
+    "reason": "SUCCESS_RELEASE",
+    "score_min": 931,
+    "state_hash": "0x9bec5773a9e63014"
+  }
+}

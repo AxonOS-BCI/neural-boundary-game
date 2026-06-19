@@ -1,0 +1,15 @@
+{
+  "schema": "axonos-payment-config-v1",
+  "product": "Neural Boundary Game",
+  "version": "7.9.812",
+  "dogecoin": {
+    "network": "mainnet",
+    "address": "DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp",
+    "display_fingerprint": "DMwHAh\u2026P5MTp",
+    "mode": "voluntary_support",
+    "uri": "dogecoin:DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp",
+    "uri_labelled": "dogecoin:DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp?label=AxonOS%20Neural%20Boundary%20Game",
+    "commercial_doge_enabled": false,
+    "commercial_doge_note": "Commercial DOGE settlement disabled pending Singapore legal and compliance review. Fiat invoice is the default commercial payment method."
+  }
+}

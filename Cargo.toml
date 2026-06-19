@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/neural-boundary-core",
+    "crates/neural-boundary-cli",
+    "crates/neural-boundary-web",
+]
+
+[workspace.package]
+version = "7.9.812"
+edition = "2021"
+authors = ["Denis Yermakou <connect@axonos.org>"]
+license = "AGPL-3.0-only OR LicenseRef-AxonOS-Commercial"
+repository = "https://github.com/AxonOS-BCI/neural-boundary-game"
+homepage = "https://axonos-bci.github.io/neural-boundary-game/"
+description = "AxonOS Standard Foundation Grande Rust/WASM demo: raw signal stays inside the device; apps receive typed intent only."
+keywords = ["rust", "wasm", "bci", "no-std", "privacy"]
+categories = ["games", "wasm", "embedded", "simulation"]

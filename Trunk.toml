@@ -1,0 +1,6 @@
+# Neural Boundary Game v7.9.812
+# Build pipeline: cargo build --target wasm32-unknown-unknown (no Trunk required)
+# Trunk is not used for v7.9.812; this file is retained for tooling compatibility.
+# [build]
+# target = "web/index.html"
+# dist = "dist"

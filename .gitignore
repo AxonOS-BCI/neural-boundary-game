@@ -1,0 +1,12 @@
+/target/
+/dist/
+/node_modules/
+qa/node_modules/
+*.swp
+*.bak
+*.orig
+*.rej
+*~
+.env
+.DS_Store
+Thumbs.db

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Copyright (c) 2026 Denis Yermakou / AxonOS — SPDX: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial -->
+  <rect width="32" height="32" rx="7" fill="#050608"/>
+  <g fill="none" stroke="#C8A96A" stroke-width="2.2" stroke-linecap="round">
+    <circle cx="16" cy="16" r="10"/>
+  </g>
+  <circle cx="16" cy="16" r="4" fill="#83D9B5"/>
+</svg>

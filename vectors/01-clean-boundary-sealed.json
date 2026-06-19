@@ -1,0 +1,914 @@
+{
+  "schema": "neural-boundary-replay-v3",
+  "product": "Neural Boundary Game",
+  "version": "7.9.812",
+  "scenario_id": 1,
+  "seed": "0000000000000001",
+  "tick_rate": 20,
+  "title": "01-clean-boundary-sealed",
+  "generated_by": "neural-boundary-cli 7.9.812",
+  "actions": [
+    {
+      "tick": 41,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 151,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 321,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 322,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 323,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 324,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 325,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 326,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 327,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 328,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 329,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 330,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 331,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 332,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 333,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 334,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 335,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 336,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 337,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 338,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 339,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 340,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 341,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 342,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 343,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 344,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 345,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 346,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 347,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 348,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 349,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 350,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 351,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 352,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 353,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 354,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 355,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 356,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 357,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 358,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 359,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 360,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 361,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 362,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 363,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 364,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 365,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 366,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 367,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 368,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 369,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 370,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 371,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 372,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 373,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 374,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 375,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 376,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 377,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 378,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 379,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 380,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 381,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 382,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 383,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 384,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 385,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 386,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 387,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 388,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 389,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 390,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 391,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 392,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 393,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 394,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 395,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 396,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 397,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 398,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 399,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 400,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 401,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 402,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 403,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 404,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 405,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 406,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 407,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 408,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 409,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 410,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 411,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 412,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 413,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 414,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 415,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 416,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 417,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 418,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 419,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 420,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 421,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 422,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 423,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 424,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 425,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 426,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 427,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 428,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 429,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 430,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 431,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 432,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 433,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 434,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 435,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 436,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 437,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 438,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 439,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 440,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 441,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 442,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 443,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 444,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 445,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 446,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 447,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 448,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 449,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 450,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 451,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 452,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 453,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 454,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 455,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 456,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 457,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 458,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 459,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 460,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 461,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 462,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 463,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 464,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 465,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 466,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 467,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 468,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 469,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 470,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 471,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 472,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 473,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 474,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 475,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 476,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 477,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 478,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 479,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 480,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 481,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 482,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 483,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 484,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 485,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 486,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 487,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 488,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 489,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 490,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 491,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 492,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 493,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 494,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 495,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 496,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 497,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 498,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 499,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 500,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 501,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 502,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 503,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 504,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 505,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 506,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 507,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 508,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 509,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 510,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 511,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 512,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 513,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 514,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 515,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 516,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 517,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 518,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 519,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 520,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 521,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 522,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 523,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 524,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 525,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 526,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 527,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 528,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 529,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 530,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 531,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 532,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 533,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 534,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 535,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 536,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 537,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 538,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 539,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 540,
+      "action": "AUDIT"
+    },
+    {
+      "tick": 541,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 601,
+      "action": "RELEASE"
+    }
+  ],
+  "expected": {
+    "grade": "SEALED",
+    "reason": "SUCCESS_RELEASE",
+    "score_min": 1061,
+    "state_hash": "0xecd972d283c2ddb1"
+  }
+}

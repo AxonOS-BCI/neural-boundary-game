@@ -1,0 +1,46 @@
+{
+  "schema": "neural-boundary-replay-v3",
+  "product": "Neural Boundary Game",
+  "version": "7.9.812",
+  "scenario_id": 7,
+  "seed": "0000000000000001",
+  "tick_rate": 20,
+  "title": "12-vault-siege-breached",
+  "generated_by": "neural-boundary-cli 7.9.812",
+  "actions": [
+    {
+      "tick": 51,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 221,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 401,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 581,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 761,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 941,
+      "action": "AUTHORIZE"
+    },
+    {
+      "tick": 1121,
+      "action": "AUTHORIZE"
+    }
+  ],
+  "expected": {
+    "grade": "BREACHED",
+    "reason": "RAW_LEAK_LIMIT",
+    "score_min": -1000,
+    "state_hash": "0x49e816c7f95cf417"
+  }
+}
