@@ -57,6 +57,13 @@ impl ProofStatus {
 }
 
 #[cfg(test)]
+#[allow(clippy::derivable_impls)]
+impl Default for ProofStatus {
+    fn default() -> Self {
+        Self::Pending
+    }
+}
+
 mod tests {
     use super::*;
 
@@ -78,12 +85,5 @@ mod tests {
         assert!(ProofStatus::Clean.is_clean());
         assert!(!ProofStatus::Pending.is_clean());
         assert!(!ProofStatus::Tampered.is_clean());
-    }
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for ProofStatus {
-    fn default() -> Self {
-        Self::Pending
     }
 }
