@@ -9,8 +9,8 @@ const CACHE_NAME = "nbg-v8.0.1-elite";
 const PRECACHE = [
   "./",
   "index.html",
-  "styles.css?v=8.0.1",
-  "main.js?v=8.0.1",
+  "styles.css?v=8.0.2",
+  "main.js?v=8.0.2",
   "fallback.js?v=8.0.1",
   "wasm-loader.js",
   "renderer.js",

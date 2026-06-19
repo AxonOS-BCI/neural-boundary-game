@@ -11,13 +11,13 @@ All source code is Denis Yermakou sole-authored (AxonOS).
 
 | Crate | Version | Licence |
 |-------|---------|---------|
-| serde | 1.x | MIT OR Apache-2.0 |
-| serde_json | 1.x | MIT OR Apache-2.0 |
-| sha2 | 0.10.x | MIT OR Apache-2.0 |
+| serde | 1.x | MIT OR Apache-8.0.2 |
+| serde_json | 1.x | MIT OR Apache-8.0.2 |
+| sha2 | 0.10.x | MIT OR Apache-8.0.2 |
 
 ## Build toolchain
 
-Rust (rustc, cargo) — MIT OR Apache-2.0.
+Rust (rustc, cargo) — MIT OR Apache-8.0.2.
 
 ## Runtime
 

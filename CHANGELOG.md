@@ -86,6 +86,6 @@ All notable changes to Neural Boundary Game follow [Keep a Changelog](https://ke
 
 Neural Boundary Game v2.1.2 Foundation Grande Edition — baseline Rust/WASM release.
 
-## [2.0.0] — 2026-04-15
+## [8.0.2.0] — 2026-04-15
 
 Initial public release.
