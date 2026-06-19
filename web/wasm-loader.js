@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 //
 // Instantiates the flat WASM ABI v4 core and wraps it in a typed JS facade.
 // The facade is read-only over engine state (§16.2): it never computes grade,
 // score, or hash. Health is verified against §14.3 / §17.1.
 
-const PRODUCT_VERSION_PACKED = 0x080001;
+const PRODUCT_VERSION_PACKED = 0x080201;
 const ABI_VERSION = 4;
 
 export const ACTION = {

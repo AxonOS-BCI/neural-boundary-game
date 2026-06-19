@@ -1,14 +1,14 @@
-# Evidence Report — Neural Boundary Game v8.0.1
+# Evidence Report — Neural Boundary Game v8.2.1
 
-_Generated 2026-06-19 07:19 UTC by `tools/build_evidence_report.py`._
+_Generated 2026-06-19 16:36 UTC by `tools/build_evidence_report.py`._
 
 ## Identity (§17.1)
 | Field | Value |
 |---|---|
-| Version | 8.0.1 |
+| Version | 8.2.1 |
 | Codename | Cognitive Sovereignty Console |
 | ABI version | 4 |
-| Product version packed | 524289 (0x080001) |
+| Product version packed | 524801 (0x080201) |
 | Replay schema | neural-boundary-replay-v4 |
 | Tick rate | 20 Hz |
 | Storage namespace | nbg_v8_0_1_ |
@@ -20,11 +20,11 @@ _Generated 2026-06-19 07:19 UTC by `tools/build_evidence_report.py`._
 ## Build provenance
 | Field | Value |
 |---|---|
-| Git tip | 3bce061 |
-| Tip subject | release(core): v8.0.1 — Tactical Boundary Defense (Phase 2 integration) |
+| Git tip | 6ee87f3 |
+| Tip subject | ci(release): fix release workflow and document full v8.0.1 chronology |
 | Author | Denis Yermakou |
-| Commits on branch | 65 |
-| Source manifest aggregate | 2a000a2de5bdb9a2… |
+| Commits on branch | 23 |
+| Source manifest aggregate | f187e90f63fc2054… |
 | Toolchain | stable Rust (no RUSTC_BOOTSTRAP in project; CI: dtolnay/rust-toolchain@stable) |
 
 ## Verified facts (run by this tool)

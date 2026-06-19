@@ -1,12 +1,12 @@
 {
   "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "8.0.1",
+  "version": "8.2.1",
   "scenario_id": 4,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "08-stimulation-throttled-sealed",
-  "generated_by": "neural-boundary-cli 8.0.1",
+  "generated_by": "neural-boundary-cli 8.2.1",
   "actions": [
     {
       "tick": 61,
@@ -37,6 +37,6 @@
     "grade": "SEALED",
     "reason": "SUCCESS_RELEASE",
     "score_min": 1012,
-    "state_hash": "0x2423c98ed44d6b14"
+    "state_hash": "0x0c8a2b98ffa685cc"
   }
 }

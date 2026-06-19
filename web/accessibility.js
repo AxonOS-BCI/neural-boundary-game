@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 //
 // Accessibility (§11) and local preferences (§12). No authoritative gameplay
 // state is ever stored.
@@ -11,7 +11,7 @@ const ALLOWED = new Set([
   NS + "last_scenario", NS + "quality_profile",
 ]);
 const SCHEMA = "nbg-local-preferences-v1";
-const PRODUCT = "8.0.1";
+const PRODUCT = "8.2.1";
 
 function safeLS() {
   try {

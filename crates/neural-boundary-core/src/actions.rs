@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! Player actions, the action gate, and action results (§4.3, §4.4).

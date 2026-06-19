@@ -1,17 +1,17 @@
 {
   "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "8.0.1",
+  "version": "8.2.1",
   "scenario_id": 1,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "02-clean-boundary-timeout-reviewable",
-  "generated_by": "neural-boundary-cli 8.0.1",
+  "generated_by": "neural-boundary-cli 8.2.1",
   "actions": [],
   "expected": {
     "grade": "REVIEWABLE",
     "reason": "TIMEOUT",
     "score_min": 824,
-    "state_hash": "0x1f10dc4e19d3066d"
+    "state_hash": "0x1195b7bac9a82355"
   }
 }

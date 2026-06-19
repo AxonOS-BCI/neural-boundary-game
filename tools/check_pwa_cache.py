@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Denis Yermakou / AxonOS
 # SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 """Verify the service worker precache list (§14) is consistent with web/:
 every precached path resolves to a real file, and every ES module / stylesheet
 shipped in web/ is precached. The wasm is built by CI, so it may be absent."""
@@ -26,8 +26,8 @@ def main() -> int:
     text = SW.read_text(encoding="utf-8")
     entries = precache_entries(text)
     errors, notes = [], []
-    if "CACHE_NAME" not in text or "v8.0.1" not in text:
-        errors.append("service-worker.js: CACHE_NAME must be versioned (v8.0.1)")
+    if "CACHE_NAME" not in text or "v8.2.1" not in text:
+        errors.append("service-worker.js: CACHE_NAME must be versioned (v8.2.1)")
     cached = set()
     for e in entries:
         rel = e.split("?", 1)[0]

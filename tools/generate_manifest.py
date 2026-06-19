@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Denis Yermakou / AxonOS
 # SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 """Write SOURCE_MANIFEST.sha256: a sorted SHA-256 manifest of the source tree
 (§25/§26). Excludes VCS, build output, vendored deps, binaries, and generated
 artifacts so the manifest is reproducible."""

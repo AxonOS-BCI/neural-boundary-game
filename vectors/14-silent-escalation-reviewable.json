@@ -1,12 +1,12 @@
 {
   "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "8.0.1",
+  "version": "8.2.1",
   "scenario_id": 8,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "14-silent-escalation-reviewable",
-  "generated_by": "neural-boundary-cli 8.0.1",
+  "generated_by": "neural-boundary-cli 8.2.1",
   "actions": [
     {
       "tick": 61,
@@ -33,6 +33,6 @@
     "grade": "REVIEWABLE",
     "reason": "SUCCESS_RELEASE",
     "score_min": 912,
-    "state_hash": "0x5f6b14cd0490aba9"
+    "state_hash": "0xf2fab6ca81136ed1"
   }
 }

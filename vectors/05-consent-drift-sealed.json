@@ -1,12 +1,12 @@
 {
   "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "8.0.1",
+  "version": "8.2.1",
   "scenario_id": 3,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "05-consent-drift-sealed",
-  "generated_by": "neural-boundary-cli 8.0.1",
+  "generated_by": "neural-boundary-cli 8.2.1",
   "actions": [
     {
       "tick": 61,
@@ -41,6 +41,6 @@
     "grade": "SEALED",
     "reason": "SUCCESS_RELEASE",
     "score_min": 1110,
-    "state_hash": "0xb8ee4ed7656a260a"
+    "state_hash": "0x6f103c27f1aa1b32"
   }
 }

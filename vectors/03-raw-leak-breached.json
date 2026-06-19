@@ -1,17 +1,17 @@
 {
   "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "8.0.1",
+  "version": "8.2.1",
   "scenario_id": 2,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "03-raw-leak-breached",
-  "generated_by": "neural-boundary-cli 8.0.1",
+  "generated_by": "neural-boundary-cli 8.2.1",
   "actions": [],
   "expected": {
     "grade": "BREACHED",
     "reason": "RAW_LEAK_LIMIT",
     "score_min": -1000,
-    "state_hash": "0x26e6495bc8d2ccad"
+    "state_hash": "0x6b06c0f5ef347cd5"
   }
 }

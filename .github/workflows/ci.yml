@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test-gates:
+    name: build · test · clippy · gates
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+
+      - name: Test core + CLI
+        run: cargo test -p neural-boundary-core -p neural-boundary-cli --locked
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy -p neural-boundary-core -p neural-boundary-cli --all-targets --locked -- -D warnings
+
+      - name: Build WASM from Rust core
+        run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release --locked
+
+      - name: Determinism — replay vectors
+        run: cargo run -p neural-boundary-cli --release --locked -- verify-all
+
+      - name: Gates (version / ABI / replay)
+        run: |
+          python3 tools/check_version_consistency.py
+          python3 tools/check_abi_exports.py
+          python3 tools/validate_replay.py

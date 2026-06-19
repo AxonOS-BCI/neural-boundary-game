@@ -2,7 +2,7 @@
 <!--
   Copyright (c) 2026 Denis Yermakou / AxonOS
   SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-  Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+  Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 -->
 <html lang="en" data-quality="standard">
 <head>
@@ -12,10 +12,11 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#050608" />
   <meta name="description" content="Neural Boundary Game — a deterministic Rust/WASM game about defending cognitive sovereignty in a brain–computer interface." />
-  <title>Neural Boundary Game v8.0.1 — Cognitive Sovereignty Console</title>
+  <title>Neural Boundary Game v8.2.1 — Cognitive Sovereignty Console</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="styles.css?v=8.0.2" />
+  <link rel="stylesheet" href="styles.css?v=8.2.1" />
+  <script src="self-heal.js?v=8.2.1"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-canvas">Skip to game</a>
@@ -27,7 +28,7 @@
       <span class="brand-name">AxonOS</span>
       <span class="brand-sep">·</span>
       <span class="brand-product">Neural Boundary Game</span>
-      <span class="brand-version">v8.0.1</span>
+      <span class="brand-version">v8.2.1</span>
     </div>
     <dl class="topbar-meta" aria-label="Run identity">
       <div><dt>Scenario</dt><dd id="meta-scenario">—</dd></div>
@@ -52,6 +53,15 @@
       Educational technical simulation. No sensor, no real neural data, no
       stimulation hardware. Local-only.
     </p>
+    <div class="menu-howto" style="max-width:64ch; margin:0 auto 1.6rem; padding:1rem 1.25rem; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(255,255,255,.035); text-align:left;">
+      <h2 style="margin:0 0 .55rem; font-size:1rem; letter-spacing:.02em;">How to play &mdash; in 30 seconds</h2>
+      <ol style="margin:0; padding-left:1.25rem; line-height:1.65; font-size:.95rem;">
+        <li>Pick a scenario below &mdash; <b>Clean Boundary</b> (EASY) is the tutorial.</li>
+        <li>Threats hit the boundary in real time. The <b>Active Event</b> panel names each one and shows the <b>recommended action</b>.</li>
+        <li>Each tick, take <b>one</b> action from the console (Audit, Authorize, Revoke, Quarantine, Seal Vault, Throttle). Unsure? <b>Audit first</b> &mdash; it reveals hidden risk.</li>
+        <li>Keep the telemetry bars out of the red, then hit <b>Release</b> when it unlocks. Sealing the boundary is the win.</li>
+      </ol>
+    </div>
     <ul id="scenario-list" class="scenario-list"></ul>
   </section>
 
@@ -128,7 +138,7 @@
     <a href="https://axonos.org" rel="noopener">axonos.org</a>
   </footer>
 
-  <script src="fallback.js?v=8.0.1"></script>
-  <script type="module" src="main.js?v=8.0.2"></script>
+  <script src="fallback.js?v=8.2.1"></script>
+  <script type="module" src="main.js?v=8.2.1"></script>
 </body>
 </html>

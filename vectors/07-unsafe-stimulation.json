@@ -1,12 +1,12 @@
 {
   "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "8.0.1",
+  "version": "8.2.1",
   "scenario_id": 4,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "07-unsafe-stimulation",
-  "generated_by": "neural-boundary-cli 8.0.1",
+  "generated_by": "neural-boundary-cli 8.2.1",
   "actions": [
     {
       "tick": 61,
@@ -21,6 +21,6 @@
     "grade": "UNSAFE",
     "reason": "UNSAFE_STIMULATION_ESCAPE",
     "score_min": -1000,
-    "state_hash": "0x33cfe9bed1fee130"
+    "state_hash": "0x542ca3e986a49038"
   }
 }

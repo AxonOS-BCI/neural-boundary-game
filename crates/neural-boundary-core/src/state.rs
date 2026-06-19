@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! Deterministic state machine (§4, §5). The canonical per-tick step is
@@ -177,7 +177,7 @@ pub struct GameState {
     pub counters: ScoreCounters,
     pub gate: ActionGate,
     pub last_action_result: ActionResult,
-    // v8.0.1 tactical state (TZ §5.2) — all folded into compute_hash (hash v4).
+    // v8.2.1 tactical state (TZ §5.2) — all folded into compute_hash (hash v4).
     pub active_threat_kind: crate::threat::ThreatKind,
     pub active_threat_id: u32,
     pub last_action_code: u8,
@@ -355,7 +355,7 @@ impl GameState {
     }
 
     // ── v8 tactical views (TZ §3.4 / §3.8) ────────────────────────────────────
-    // Read-only projections of existing state onto the v8.0.1 vocabulary. They
+    // Read-only projections of existing state onto the v8.2.1 vocabulary. They
     // change neither state nor `compute_hash`, so replay determinism is intact.
     // Phase 2 promotes these to stored fields and exports them over ABI v4.
 
@@ -895,7 +895,7 @@ impl GameState {
         h.feed_i32(self.counters.clean_release_bonus);
         h.feed_u32(self.gate.rejected_actions_total);
         h.feed_u8(self.last_action_result.code());
-        // ── v8.0.1 hash v4 additions (TZ §5.6) ──
+        // ── v8.2.1 hash v4 additions (TZ §5.6) ──
         self.active_threat_kind.feed_hash(&mut h);
         h.feed_u32(self.active_threat_id);
         h.feed_u8(self.last_action_code);

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 //
 // Fail-closed WASM fallback (§15). Classic script so it runs even if ES
 // modules fail. Never fakes the game and never claims native binaries.

@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! `neural-boundary-core` — Cognitive Sovereignty Console deterministic engine
-//! (v8.0.1). Canonical source of truth (§16.2): the browser never computes
+//! (v8.2.1). Canonical source of truth (§16.2): the browser never computes
 //! grade, score, or state hash independently.
 //!
 //! Module layout follows §25:
@@ -32,15 +32,15 @@ pub mod threat;
 
 // ── Identity (§0, §17.1) ─────────────────────────────────────────────────────
 
-pub const CORE_VERSION: &str = "8.0.1";
+pub const CORE_VERSION: &str = "8.2.1";
 pub const CODENAME: &str = "Cognitive Sovereignty Console";
 pub const STYLE_SYSTEM: &str = "AxonOS Standard Foundation Grande Style Elite";
 pub const REPLAY_SCHEMA: &str = "neural-boundary-replay-v4";
 
 /// ABI v3 (§17.1).
 pub const ABI_VERSION: u32 = 4;
-/// (major<<16)|(minor<<8)|patch == 0x080001 == 524289 (§17.1).
-pub const PRODUCT_VERSION_PACKED: u32 = (8 << 16) | 1;
+/// (major<<16)|(minor<<8)|patch == 0x080201 == 524801 (§17.1).
+pub const PRODUCT_VERSION_PACKED: u32 = (8 << 16) | (2 << 8) | 1;
 
 // ── Fixed bounds (§18) ───────────────────────────────────────────────────────
 
@@ -75,10 +75,10 @@ mod lib_tests {
 
     #[test]
     fn version_constants_match_spec() {
-        assert_eq!(PRODUCT_VERSION_PACKED, 0x080001);
-        assert_eq!(PRODUCT_VERSION_PACKED, 524289);
+        assert_eq!(PRODUCT_VERSION_PACKED, 0x080201);
+        assert_eq!(PRODUCT_VERSION_PACKED, 524801);
         assert_eq!(ABI_VERSION, 4);
-        assert_eq!(CORE_VERSION, "8.0.1");
+        assert_eq!(CORE_VERSION, "8.2.1");
         assert_eq!(REPLAY_SCHEMA, "neural-boundary-replay-v4");
         assert_eq!(TICK_RATE_HZ, 20);
     }

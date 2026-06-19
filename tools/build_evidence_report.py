@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Denis Yermakou / AxonOS
 # SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 """Assemble EVIDENCE_REPORT.md from verifiable facts (§26): identity, git tip,
 scenario/vector counts, a live verify-all run, the ABI export count, and the
 source-manifest aggregate. Heavy Rust gates (fmt/clippy/test) are enforced in

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! CLI integration tests (§19): the shipped 16-vector suite must pass
@@ -40,7 +40,7 @@ fn verify_all_passes_on_shipped_vectors() {
 fn release_evidence_runs_green() {
     let (code, out) = run(&["release-evidence"]);
     assert_eq!(code, 0, "{out}");
-    assert!(out.contains("8.0.1"));
+    assert!(out.contains("8.2.1"));
 }
 
 #[test]

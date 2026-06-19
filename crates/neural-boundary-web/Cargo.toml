@@ -5,7 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Flat WASM ABI v3 adapter for Neural Boundary Game v8.0.1 — Cognitive Sovereignty Console."
+description = "Flat WASM ABI v3 adapter for Neural Boundary Game v8.2.1 — Cognitive Sovereignty Console."
 
 [lib]
 crate-type = ["cdylib", "rlib"]

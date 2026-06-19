@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 //
 // Builds the scenario menu from engine metadata (§8.2). No hardcoded copy —
 // names, objectives, and difficulty come from the deterministic core.

@@ -1,24 +1,25 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 //
 // Offline strategy (§14). Versioned cache; precache immutable assets;
 // network-first for navigation; cache-first for hashed assets.
 
-const CACHE_NAME = "nbg-v8.0.1-elite";
+const CACHE_NAME = "nbg-v8.2.1-elite";
 const PRECACHE = [
   "./",
   "index.html",
-  "styles.css?v=8.0.2",
-  "main.js?v=8.0.2",
-  "fallback.js?v=8.0.1",
+  "styles.css?v=8.2.1",
+  "main.js?v=8.2.1",
+  "fallback.js?v=8.2.1",
+  "self-heal.js?v=8.2.1",
   "wasm-loader.js",
   "renderer.js",
   "hud.js",
   "scenarios.js",
   "accessibility.js",
   "audio.js",
-  "neural_boundary_web.wasm?v=8.0.1",
+  "neural_boundary_web.wasm?v=8.2.1",
   "manifest.json",
   "assets/favicon.svg",
   "assets/axonos-mark.svg",
