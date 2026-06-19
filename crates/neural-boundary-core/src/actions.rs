@@ -11,6 +11,7 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PlayerAction {
+    #[default]
     None = 0,
     Audit = 1,
     Authorize = 2,
@@ -206,11 +207,5 @@ impl ActionReason {
 
     pub fn feed_hash(&self, h: &mut crate::hash::Fnv64) {
         h.feed_u8(self.code());
-    }
-}
-
-impl Default for ActionReason {
-    fn default() -> Self {
-        Self::None
     }
 }
