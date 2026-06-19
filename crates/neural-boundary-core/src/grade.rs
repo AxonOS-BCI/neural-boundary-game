@@ -198,7 +198,10 @@ mod tests {
 
     #[test]
     fn terminal_failure_is_f() {
-        let g = GradeInputs { terminal_failure: true, ..base() };
+        let g = GradeInputs {
+            terminal_failure: true,
+            ..base()
+        };
         assert_eq!(grade_for(g), Grade::Unsafe);
     }
 
@@ -209,19 +212,32 @@ mod tests {
 
     #[test]
     fn strong_release_is_s() {
-        let g = GradeInputs { score: 750, boundary_integrity: 80, consent_coherence: 80, vault_integrity: 80, ..base() };
+        let g = GradeInputs {
+            score: 750,
+            boundary_integrity: 80,
+            consent_coherence: 80,
+            vault_integrity: 80,
+            ..base()
+        };
         assert_eq!(grade_for(g), Grade::Sealed);
     }
 
     #[test]
     fn imperfect_release_is_a() {
-        let g = GradeInputs { score: 400, ..base() };
+        let g = GradeInputs {
+            score: 400,
+            ..base()
+        };
         assert_eq!(grade_for(g), Grade::Reviewable);
     }
 
     #[test]
     fn timeout_with_health_is_contained_else_compromised() {
-        let survived = GradeInputs { released_safely: false, score: 300, ..base() };
+        let survived = GradeInputs {
+            released_safely: false,
+            score: 300,
+            ..base()
+        };
         assert_eq!(grade_for(survived), Grade::Contained);
         let damaged = GradeInputs {
             released_safely: false,
@@ -231,7 +247,11 @@ mod tests {
             ..base()
         };
         assert_eq!(grade_for(damaged), Grade::Compromised);
-        let breached = GradeInputs { released_safely: false, breached: true, ..base() };
+        let breached = GradeInputs {
+            released_safely: false,
+            breached: true,
+            ..base()
+        };
         assert_eq!(grade_for(breached), Grade::Compromised);
     }
 

@@ -230,9 +230,17 @@ mod tests {
         use PlayerAction as A;
         // (threat, best, follow) straight from TZ §3.4.
         let table = [
-            (ThreatKind::RawSignalExposure, A::Quarantine, Some(A::SealVault)),
+            (
+                ThreatKind::RawSignalExposure,
+                A::Quarantine,
+                Some(A::SealVault),
+            ),
             (ThreatKind::ConsentDrift, A::Audit, Some(A::Revoke)),
-            (ThreatKind::PermissionEscalation, A::Audit, Some(A::Authorize)),
+            (
+                ThreatKind::PermissionEscalation,
+                A::Audit,
+                Some(A::Authorize),
+            ),
             (ThreatKind::VaultLeak, A::SealVault, None),
             (ThreatKind::StimulationSpike, A::Throttle, None),
             (ThreatKind::LatencyStorm, A::Throttle, None),
@@ -241,7 +249,11 @@ mod tests {
             (ThreatKind::SensorNoiseBurst, A::Audit, None),
             (ThreatKind::PolicyConflict, A::Audit, Some(A::Revoke)),
             (ThreatKind::CognitiveOverload, A::Throttle, None),
-            (ThreatKind::EmergencyOverride, A::Quarantine, Some(A::SealVault)),
+            (
+                ThreatKind::EmergencyOverride,
+                A::Quarantine,
+                Some(A::SealVault),
+            ),
         ];
         for (threat, best, follow) in table {
             assert_eq!(threat.best_action(), best, "best for {:?}", threat);
@@ -252,8 +264,14 @@ mod tests {
     #[test]
     fn rate_action_classifies_correctly() {
         let t = ThreatKind::RawSignalExposure;
-        assert_eq!(t.rate_action(PlayerAction::Quarantine), CounterRating::Correct);
-        assert_eq!(t.rate_action(PlayerAction::SealVault), CounterRating::Partial);
+        assert_eq!(
+            t.rate_action(PlayerAction::Quarantine),
+            CounterRating::Correct
+        );
+        assert_eq!(
+            t.rate_action(PlayerAction::SealVault),
+            CounterRating::Partial
+        );
         assert_eq!(t.rate_action(PlayerAction::Throttle), CounterRating::Wrong);
         assert_eq!(t.rate_action(PlayerAction::None), CounterRating::Neutral);
     }
@@ -269,7 +287,10 @@ mod tests {
             ThreatKind::from_event(EventKind::RawSignalExposure),
             ThreatKind::RawSignalExposure
         );
-        assert_eq!(ThreatKind::from_event(EventKind::BenignFlow), ThreatKind::None);
+        assert_eq!(
+            ThreatKind::from_event(EventKind::BenignFlow),
+            ThreatKind::None
+        );
     }
 
     #[test]

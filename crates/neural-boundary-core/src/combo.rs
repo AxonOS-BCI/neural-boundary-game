@@ -168,10 +168,19 @@ mod tests {
     #[test]
     fn detect_matches_all_five_combos() {
         use PlayerAction::*;
-        assert_eq!(ComboKind::detect(Audit, Authorize), ComboKind::AuditAuthorize);
-        assert_eq!(ComboKind::detect(Quarantine, SealVault), ComboKind::QuarantineSeal);
+        assert_eq!(
+            ComboKind::detect(Audit, Authorize),
+            ComboKind::AuditAuthorize
+        );
+        assert_eq!(
+            ComboKind::detect(Quarantine, SealVault),
+            ComboKind::QuarantineSeal
+        );
         assert_eq!(ComboKind::detect(Throttle, Audit), ComboKind::ThrottleAudit);
-        assert_eq!(ComboKind::detect(Revoke, Quarantine), ComboKind::RevokeQuarantine);
+        assert_eq!(
+            ComboKind::detect(Revoke, Quarantine),
+            ComboKind::RevokeQuarantine
+        );
         assert_eq!(ComboKind::detect(Audit, Release), ComboKind::AuditRelease);
     }
 
@@ -190,7 +199,10 @@ mod tests {
         assert_eq!(w.on_action(PlayerAction::Audit), ComboKind::None);
         assert_eq!(w.ticks_left, COMBO_WINDOW_TICKS);
         // Follow-up within window: combo completes.
-        assert_eq!(w.on_action(PlayerAction::Authorize), ComboKind::AuditAuthorize);
+        assert_eq!(
+            w.on_action(PlayerAction::Authorize),
+            ComboKind::AuditAuthorize
+        );
         assert_eq!(w.last(), ComboKind::AuditAuthorize);
     }
 
