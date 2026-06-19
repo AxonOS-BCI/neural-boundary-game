@@ -2,11 +2,11 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Security Policy — Neural Boundary Game v8.0.1
+# Security Policy — Neural Boundary Game v8.2.1
 
 ## Supported version
 
-Only the current release tag (`v8.0.1`) receives security attention.
+Only the current release tag (`v8.2.1`) receives security attention.
 
 ## Reporting a vulnerability
 

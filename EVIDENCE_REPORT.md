@@ -1,6 +1,6 @@
 # Evidence Report — Neural Boundary Game v8.2.1
 
-_Generated 2026-06-19 21:34 UTC by `tools/build_evidence_report.py`._
+_Generated 2026-06-19 21:59 UTC by `tools/build_evidence_report.py`._
 
 ## Identity (§17.1)
 | Field | Value |
@@ -20,11 +20,11 @@ _Generated 2026-06-19 21:34 UTC by `tools/build_evidence_report.py`._
 ## Build provenance
 | Field | Value |
 |---|---|
-| Git tip | b8f8d17 |
-| Tip subject | release: Neural Boundary Game v8.2.1 — clean rebuild + stale-cache self-heal |
+| Git tip | d37f4b3 |
+| Tip subject | docs: AxonOS Standard Foundation polish — CITATION, Code of Conduct, rustfmt |
 | Author | Denis Yermakou |
-| Commits on branch | 24 |
-| Source manifest aggregate | 707a857b3082391e… |
+| Commits on branch | 25 |
+| Source manifest aggregate | 2ece70f60c23b932… |
 | Toolchain | stable Rust (no RUSTC_BOOTSTRAP in project; CI: dtolnay/rust-toolchain@stable) |
 
 ## Verified facts (run by this tool)

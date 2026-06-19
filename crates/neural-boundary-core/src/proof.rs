@@ -13,12 +13,13 @@
 use crate::hash::Fnv64;
 
 /// State of the replay proof chain for the current run (TZ §5.6).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ProofStatus {
     /// Action stream is consistent and the replay hash chain is intact.
     Clean = 0,
     /// Run in progress; proof not yet finalized.
+    #[default]
     Pending = 1,
     /// Action stream anomaly or replay hash mismatch detected.
     Tampered = 2,
@@ -53,12 +54,6 @@ impl ProofStatus {
 
     pub fn feed_hash(&self, h: &mut Fnv64) {
         h.feed_u8(self.code());
-    }
-}
-
-impl Default for ProofStatus {
-    fn default() -> Self {
-        Self::Pending
     }
 }
 

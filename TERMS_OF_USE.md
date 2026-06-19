@@ -2,7 +2,7 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Terms of Use — Neural Boundary Game v8.0.1
+# Terms of Use — Neural Boundary Game v8.2.1
 
 ## 1. Nature of the product
 

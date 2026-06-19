@@ -2,9 +2,9 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Neural Boundary Game v8.0.1 — Game Specification
+# Neural Boundary Game v8.2.1 — Game Specification
 
-**Canonical schema**: `neural-boundary-replay-v8.0.1`
+**Canonical schema**: `neural-boundary-replay-v8.2.1`
 **RNG**: `xorshift64star-v1` · **Hash**: `fnv1a64-v1` · **Tick rate**: 60 Hz
 
 ## §7 Field geometry
@@ -18,7 +18,7 @@ Positions stored as Q24.8 (stored_x = logical_x × 256). Pool capacity: 32 slots
 xorshift64star-v1: `x ^= x>>12; x ^= x<<25; x ^= x>>27; return x * 0x2545F4914F6CDD1D`.
 Seed 0 remapped to `0x9E3779B97F4A7C15`.
 
-Daily seed: FNV-1a 64-bit over `"NBG|8.0.1|YYYY-MM-DD|DAILY"` then one xorshift64star round.
+Daily seed: FNV-1a 64-bit over `"NBG|8.2.1|YYYY-MM-DD|DAILY"` then one xorshift64star round.
 
 ## §9 Entity taxonomy (19 stable IDs)
 

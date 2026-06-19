@@ -146,9 +146,10 @@ impl ActionGate {
 /// Detailed reason behind an `ActionResult` (TZ §5.4). Where `ActionResult`
 /// says *whether* an action was accepted, `ActionReason` says *why* — including
 /// how well it countered the active threat. Exposed over the ABI for the UI.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[repr(u8)]
 pub enum ActionReason {
+    #[default]
     None = 0,
     AcceptedCorrectCounter = 1,
     AcceptedPartialCounter = 2,
@@ -206,11 +207,5 @@ impl ActionReason {
 
     pub fn feed_hash(&self, h: &mut crate::hash::Fnv64) {
         h.feed_u8(self.code());
-    }
-}
-
-impl Default for ActionReason {
-    fn default() -> Self {
-        Self::None
     }
 }
