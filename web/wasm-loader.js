@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 // Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 //
-// Instantiates the flat WASM ABI v3 core and wraps it in a typed JS facade.
+// Instantiates the flat WASM ABI v4 core and wraps it in a typed JS facade.
 // The facade is read-only over engine state (§16.2): it never computes grade,
 // score, or hash. Health is verified against §14.3 / §17.1.
 
