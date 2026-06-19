@@ -20,6 +20,7 @@ pub enum ProofStatus {
     Clean = 0,
     /// Run in progress; proof not yet finalized.
     #[default]
+    #[default]
     Pending = 1,
     /// Action stream anomaly or replay hash mismatch detected.
     Tampered = 2,

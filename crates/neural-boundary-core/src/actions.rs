@@ -12,6 +12,7 @@
 #[repr(u8)]
 pub enum PlayerAction {
     #[default]
+    #[default]
     None = 0,
     Audit = 1,
     Authorize = 2,
