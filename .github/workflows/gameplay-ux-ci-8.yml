@@ -1,0 +1,66 @@
+name: Gameplay UX CI 8
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ux-01:
+    name: "44 · Gameplay Mission Clarity"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -q "Mission" web/index.html && echo "green: mission visible"
+
+  ux-02:
+    name: "45 · Recommended Move Guidance"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -q "Recommended Move" web/index.html && echo "green: guidance visible"
+
+  ux-03:
+    name: "46 · Rust WASM Entry Points"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -q "nbg_new" web/index.html && grep -q "nbg_tick" web/index.html && grep -q "nbg_set_action" web/index.html
+
+  ux-04:
+    name: "47 · Action Vocabulary"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -q "Quarantine" web/index.html && grep -q "Seal Vault" web/index.html && grep -q "Throttle" web/index.html
+
+  ux-05:
+    name: "48 · Risk Console"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -q "Risk Console" web/index.html && grep -q "raw_leak_risk" web/index.html && grep -q "stimulation_risk" web/index.html
+
+  ux-06:
+    name: "49 · Mobile Controls"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -q "bottom-pad" web/index.html && grep -q "data-action-bottom" web/index.html
+
+  ux-07:
+    name: "50 · Direct Root Build"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/build_web.sh dist
+
+  ux-08:
+    name: "51 · No Cyrillic In Game UI"
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: "! grep -P '[\\x{0400}-\\x{04FF}]' web/index.html"
