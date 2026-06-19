@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: "Neural Boundary Game — Cognitive Sovereignty Console"
+message: "If you use this software, please cite the AxonOS preprint below (preferred-citation)."
+type: software
+authors:
+  - family-names: Yermakou
+    given-names: Denis
+    affiliation: AxonOS
+repository-code: "https://github.com/AxonOS-BCI/neural-boundary-game"
+url: "https://axonos.org/neural-boundary-game.html"
+abstract: >-
+  A deterministic Rust/WebAssembly educational simulation that demonstrates the
+  AxonOS cognitive-sovereignty architecture: protocol-level consent enforcement,
+  least-privilege permission scopes, a sealed privacy vault, and stimulation
+  safety, on a no_std core with byte-for-byte replay. Not a medical device.
+keywords:
+  - brain-computer interface
+  - cognitive sovereignty
+  - consent enforcement
+  - Rust
+  - WebAssembly
+  - no_std
+  - deterministic simulation
+  - AxonOS
+license: AGPL-3.0-only
+version: "8.2.1"
+date-released: "2026-06-20"
+preferred-citation:
+  type: article
+  title: "An Analytical Microkernel Design for Safety-Critical Brain-Computer Interfaces: Schedulability, Capability Isolation, and Falsifiable Predictions"
+  authors:
+    - family-names: Yermakou
+      given-names: Denis
+  year: 2026
+  publisher:
+    name: Zenodo
+  doi: "10.5281/zenodo.20552007"
+  url: "https://doi.org/10.5281/zenodo.20552007"

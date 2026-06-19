@@ -1,8 +1,8 @@
-# Neural Boundary Game v8.0.1 — Elite Foundation Grande AxonOS Standard
+# Neural Boundary Game v8.2.1 — Elite Foundation Grande AxonOS Standard
 
 Neural Boundary Game is an interactive AxonOS simulation focused on neural permissions, consent enforcement, privacy boundaries, evidence-based trust, raw signal exposure, cognitive sovereignty, and operational protection of cognitive data.
 
-This release is the current canonical public build. The chronology below is intentionally ordered in descending version order: from the current v8.0.1 release down to the original v0.1.0 prototype lineage.
+This release is the current canonical public build. The chronology below is intentionally ordered in descending version order: from the current v8.2.1 release down to the original v0.1.0 prototype lineage.
 
 Total documented release milestones in this chronology: **77**.
 
@@ -23,7 +23,7 @@ Neural Boundary Game is a playable demonstration of the AxonOS thesis:
 
 # Full Release Chronology — Descending Order
 
-## v8.0.1 — Current Stable Force Release
+## v8.2.1 — Current Stable Force Release
 
 ### Annotation
 
@@ -48,7 +48,7 @@ Opened the v8 line by consolidating the single-page public build and aligning re
 
 - Consolidated static deployment assets.
 - Aligned public version surface.
-- Prepared the v8.0.1 force release path.
+- Prepared the v8.2.1 force release path.
 - Improved mobile browser validation.
 
 ---
@@ -867,7 +867,7 @@ Extended the v2 milestone with additional polish and packaging cleanup.
 
 ### Annotation
 
-First major public identity milestone. This release created the visible public AxonOS-branded game identity, but is now superseded by v8.0.1.
+First major public identity milestone. This release created the visible public AxonOS-branded game identity, but is now superseded by v8.2.1.
 
 ### Added / Changed
 
@@ -1200,4 +1200,4 @@ Privacy before optimization.
 Consent before capability.  
 Trust through evidence.
 
-Neural Boundary Game v8.0.1 is a simulation of cognitive boundaries in an era of intelligent neurotechnology.
+Neural Boundary Game v8.2.1 is a simulation of cognitive boundaries in an era of intelligent neurotechnology.
