@@ -16,22 +16,69 @@ concurrency:
 
 jobs:
   build:
+    name: Build playable Rust/WASM Pages artifact
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Run Game Rust/WASM artifact
+      - name: Build static Rust/WASM game artifact
         run: bash scripts/build_web.sh dist
 
-      - name: Assert Run Game calls Rust/WASM
+      - name: Verify artifact contains full playable game
         run: |
           test -s dist/index.html
+          test -s dist/main.js
+          test -s dist/wasm-loader.js
+          test -s dist/renderer.js
+          test -s dist/hud.js
+          test -s dist/scenarios.js
+          test -s dist/accessibility.js
+          test -s dist/audio.js
+          test -s dist/fallback.js
+          test -s dist/styles.css
           test -s dist/neural_boundary_web.wasm
-          grep -q "Run Game" dist/index.html
-          grep -q "nbg_new" dist/index.html
-          grep -q "nbg_tick" dist/index.html
-          grep -q "nbg_set_action" dist/index.html
-          grep -q "0x070900" dist/index.html
+          grep -q "v7.9.812" dist/index.html
+          grep -q "v=7.9.812" dist/main.js
+          grep -q "0x070900" dist/wasm-loader.js
+          ! grep -RIn "v=7.3.0\|0x070300" dist
+
+      - name: Verify Rust/WASM exports execute
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const bytes = fs.readFileSync("dist/neural_boundary_web.wasm");
+          WebAssembly.instantiate(bytes, {}).then(({instance}) => {
+            const e = instance.exports;
+            const required = [
+              "nbg_abi_version",
+              "nbg_product_version_packed",
+              "nbg_health_check",
+              "nbg_new",
+              "nbg_tick",
+              "nbg_set_action",
+              "nbg_score",
+              "nbg_grade",
+              "nbg_state_hash_hi",
+              "nbg_state_hash_lo"
+            ];
+            for (const name of required) {
+              if (typeof e[name] !== "function") throw new Error("missing export " + name);
+            }
+            if (e.nbg_abi_version() !== 3) throw new Error("bad ABI");
+            if (e.nbg_product_version_packed() !== 0x070900) throw new Error("bad packed version");
+            if (e.nbg_health_check() !== 0x070900) throw new Error("bad health check");
+            if (e.nbg_new(1, 0x12345678, 0x9abcdef0) !== 1) throw new Error("nbg_new failed");
+            e.nbg_set_action(1);
+            e.nbg_tick();
+            const score = e.nbg_score();
+            const hi = e.nbg_state_hash_hi();
+            const lo = e.nbg_state_hash_lo();
+            console.log({score, hi, lo});
+          }).catch(err => {
+            console.error(err);
+            process.exit(1);
+          });
+          NODE
 
       - uses: actions/configure-pages@v4
 
@@ -40,6 +87,7 @@ jobs:
           path: dist
 
   deploy:
+    name: Deploy playable game to GitHub Pages
     needs: build
     runs-on: ubuntu-24.04
     environment:
