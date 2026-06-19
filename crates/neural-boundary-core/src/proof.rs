@@ -19,8 +19,6 @@ pub enum ProofStatus {
     /// Action stream is consistent and the replay hash chain is intact.
     Clean = 0,
     /// Run in progress; proof not yet finalized.
-    #[default]
-    #[default]
     Pending = 1,
     /// Action stream anomaly or replay hash mismatch detected.
     Tampered = 2,
