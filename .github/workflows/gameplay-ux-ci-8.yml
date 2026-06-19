@@ -9,56 +9,67 @@ permissions:
   contents: read
 
 jobs:
-  ux-01:
+  ux-44-mission-clarity:
     name: "44 · Gameplay Mission Clarity"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: grep -q "Mission" web/index.html && echo "green: mission visible"
+      - run: grep -q "Mission" web/index.html
 
-  ux-02:
+  ux-45-recommended-move:
     name: "45 · Recommended Move Guidance"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: grep -q "Recommended Move" web/index.html && echo "green: guidance visible"
+      - run: grep -q "Recommended Move" web/index.html
 
-  ux-03:
+  ux-46-wasm-entrypoints:
     name: "46 · Rust WASM Entry Points"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: grep -q "nbg_new" web/index.html && grep -q "nbg_tick" web/index.html && grep -q "nbg_set_action" web/index.html
+      - run: |
+          grep -q "nbg_new" web/index.html
+          grep -q "nbg_tick" web/index.html
+          grep -q "nbg_set_action" web/index.html
 
-  ux-04:
+  ux-47-action-vocabulary:
     name: "47 · Action Vocabulary"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: grep -q "Quarantine" web/index.html && grep -q "Seal Vault" web/index.html && grep -q "Throttle" web/index.html
+      - run: |
+          grep -q "Quarantine" web/index.html
+          grep -q "Seal Vault" web/index.html
+          grep -q "Throttle" web/index.html
 
-  ux-05:
+  ux-48-risk-console:
     name: "48 · Risk Console"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: grep -q "Risk Console" web/index.html && grep -q "raw_leak_risk" web/index.html && grep -q "stimulation_risk" web/index.html
+      - run: |
+          grep -q "Risk Console" web/index.html
+          grep -q "raw_leak_risk" web/index.html
+          grep -q "stimulation_risk" web/index.html
 
-  ux-06:
+  ux-49-mobile-controls:
     name: "49 · Mobile Controls"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: grep -q "bottom-pad" web/index.html && grep -q "data-action-bottom" web/index.html
+      - run: |
+          grep -q "bottom-pad" web/index.html
+          grep -q "data-action-bottom" web/index.html
 
-  ux-07:
+  ux-50-direct-root-build:
     name: "50 · Direct Root Build"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/build_web.sh dist
 
-  ux-08:
+  ux-51-no-cyrillic:
     name: "51 · No Cyrillic In Game UI"
     runs-on: ubuntu-24.04
     steps:
