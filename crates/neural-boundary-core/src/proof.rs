@@ -64,6 +64,7 @@ impl Default for ProofStatus {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::ProofStatus;
 
