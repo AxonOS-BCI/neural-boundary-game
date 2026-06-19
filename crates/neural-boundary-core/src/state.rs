@@ -994,7 +994,12 @@ mod state_tests {
         use crate::threat::ThreatKind;
         let mut g = fresh(2);
         assert_eq!(g.active_threat(), ThreatKind::None); // quiet at start
-        inject(&mut g, EventKind::RawSignalExposure, PermissionScope::RAW, true);
+        inject(
+            &mut g,
+            EventKind::RawSignalExposure,
+            PermissionScope::RAW,
+            true,
+        );
         assert_eq!(g.active_threat(), ThreatKind::RawSignalExposure);
     }
 
