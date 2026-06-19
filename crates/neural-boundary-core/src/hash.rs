@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! Deterministic primitives (§19): xorshift64star-v1 RNG, fnv1a64-v1 little-endian
@@ -104,14 +104,14 @@ impl Default for Fnv64 {
     }
 }
 
-/// Daily seed from `"NBG|7.9.812|YYYY-MM-DD|DAILY"` via FNV-1a then one xorshift round.
+/// Daily seed from `"NBG|8.0.1|YYYY-MM-DD|DAILY"` via FNV-1a then one xorshift round.
 pub fn daily_seed(year: u16, month: u8, day: u8) -> u64 {
     let mut h: u64 = FNV_OFFSET;
     let mut feed = |b: u8| {
         h ^= b as u64;
         h = h.wrapping_mul(FNV_PRIME);
     };
-    for b in b"NBG|7.9.812|" {
+    for b in b"NBG|8.0.1|" {
         feed(*b);
     }
     feed(b'0' + (year / 1000) as u8);

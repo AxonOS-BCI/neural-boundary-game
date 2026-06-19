@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! Deterministic state machine (§4, §5). The canonical per-tick step is
@@ -177,6 +177,14 @@ pub struct GameState {
     pub counters: ScoreCounters,
     pub gate: ActionGate,
     pub last_action_result: ActionResult,
+    // v8.0.1 tactical state (TZ §5.2) — all folded into compute_hash (hash v4).
+    pub active_threat_kind: crate::threat::ThreatKind,
+    pub active_threat_id: u32,
+    pub last_action_code: u8,
+    pub last_action_reason: crate::actions::ActionReason,
+    pub combo_window: crate::combo::ComboWindow,
+    pub release_window_open: bool,
+    pub proof_status: crate::proof::ProofStatus,
     // Active event pool (§18 MAX_ACTIVE_EVENTS).
     events: [Option<NeuralEvent>; MAX_ACTIVE_EVENTS],
     next_event_id: u32,
@@ -214,6 +222,13 @@ impl GameState {
             counters: ScoreCounters::default(),
             gate: ActionGate::default(),
             last_action_result: ActionResult::NoOp,
+            active_threat_kind: crate::threat::ThreatKind::None,
+            active_threat_id: 0,
+            last_action_code: 0,
+            last_action_reason: crate::actions::ActionReason::None,
+            combo_window: crate::combo::ComboWindow::default(),
+            release_window_open: false,
+            proof_status: crate::proof::ProofStatus::Pending,
             events: [None; MAX_ACTIVE_EVENTS],
             next_event_id: 1,
             schedule_cursor: 0,
@@ -339,20 +354,73 @@ impl GameState {
         b
     }
 
+    // ── v8 tactical views (TZ §3.4 / §3.8) ────────────────────────────────────
+    // Read-only projections of existing state onto the v8.0.1 vocabulary. They
+    // change neither state nor `compute_hash`, so replay determinism is intact.
+    // Phase 2 promotes these to stored fields and exports them over ABI v4.
+
+    /// Tactical identity of the currently focused event (TZ §3.4). `None` when
+    /// the boundary is quiet.
+    pub fn active_threat(&self) -> crate::threat::ThreatKind {
+        self.focused_index()
+            .and_then(|i| self.events[i])
+            .map(|ev| crate::threat::ThreatKind::from_event(ev.kind))
+            .unwrap_or(crate::threat::ThreatKind::None)
+    }
+
+    /// Final six-tier grade (TZ §3.8), or `None` while the run is in progress.
+    /// Maps the authoritative terminal outcome onto S+→F.
+    pub fn final_grade_v8(&self) -> Option<crate::grade::Grade> {
+        if !self.status.is_terminal() {
+            return None;
+        }
+        let m = &self.metrics;
+        Some(crate::grade::grade_for(crate::grade::GradeInputs {
+            terminal_failure: matches!(self.final_reason, EndReason::UnsafeStimulationEscape),
+            breached: matches!(
+                self.final_reason,
+                EndReason::BoundaryCollapse
+                    | EndReason::RawLeakLimit
+                    | EndReason::ConsentCollapse
+                    | EndReason::VaultFailure
+            ),
+            released_safely: matches!(self.final_reason, EndReason::SuccessRelease),
+            score: self.score,
+            boundary_integrity: m.boundary_integrity,
+            consent_coherence: m.consent_coherence,
+            vault_integrity: m.vault_integrity,
+        }))
+    }
+
     // ── Canonical per-tick step ───────────────────────────────────────────────
 
     pub fn advance(&mut self, action: PlayerAction) -> ActionResult {
         if self.status.is_terminal() {
             self.last_action_result = ActionResult::RejectedTerminalState;
+            self.last_action_code = action.code();
+            self.last_action_reason = crate::actions::ActionReason::RejectedTerminal;
             return ActionResult::RejectedTerminalState;
         }
         self.tick += 1;
         self.gate.begin_tick();
+        self.combo_window.tick();
 
         self.spawn_due_events();
         self.expire_events();
 
+        // Capture the threat being acted on before apply() may consume its event.
+        let threat_acted = self.active_threat();
+
         let result = self.apply(action);
+
+        // v8 action bookkeeping (TZ §3.5 / §3.6 / §5.4).
+        self.last_action_code = action.code();
+        let combo = if result == ActionResult::Accepted && action != PlayerAction::None {
+            self.combo_window.on_action(action)
+        } else {
+            crate::combo::ComboKind::None
+        };
+        self.last_action_reason = Self::derive_reason(result, threat_acted, action, combo);
 
         self.passive_drift();
         self.check_terminal();
@@ -361,9 +429,55 @@ impl GameState {
             self.end(EndReason::Timeout);
         }
 
+        // v8 tactical view fields (TZ §5.2), refreshed once the tick resolves.
+        self.refresh_tactical_view();
+
         self.finalize();
         self.last_action_result = result;
         result
+    }
+
+    /// Map an action outcome onto the detailed `ActionReason` (TZ §5.4).
+    fn derive_reason(
+        result: ActionResult,
+        threat: crate::threat::ThreatKind,
+        action: PlayerAction,
+        combo: crate::combo::ComboKind,
+    ) -> crate::actions::ActionReason {
+        use crate::actions::ActionReason as R;
+        use crate::threat::CounterRating;
+        match result {
+            ActionResult::Accepted => {
+                if combo != crate::combo::ComboKind::None {
+                    R::AcceptedCombo
+                } else if threat.rate_action(action) == CounterRating::Partial {
+                    R::AcceptedPartialCounter
+                } else {
+                    R::AcceptedCorrectCounter
+                }
+            }
+            ActionResult::RejectedCooldown => R::RejectedCooldown,
+            ActionResult::RejectedTerminalState => R::RejectedTerminal,
+            ActionResult::RejectedInvalidForEvent => R::RejectedInvalidForThreat,
+            ActionResult::RejectedReleaseLocked => R::RejectedReleaseLocked,
+            ActionResult::NoOp => R::None,
+        }
+    }
+
+    /// Refresh the v8 tactical view fields from current state (TZ §5.2).
+    fn refresh_tactical_view(&mut self) {
+        self.active_threat_kind = self.active_threat();
+        self.active_threat_id = self
+            .focused_index()
+            .and_then(|i| self.events[i])
+            .map(|ev| ev.id)
+            .unwrap_or(0);
+        self.release_window_open = !self.status.is_terminal() && self.release_available();
+        self.proof_status = if self.status.is_terminal() {
+            crate::proof::ProofStatus::Clean
+        } else {
+            crate::proof::ProofStatus::Pending
+        };
     }
 
     fn end(&mut self, reason: EndReason) {
@@ -781,6 +895,19 @@ impl GameState {
         h.feed_i32(self.counters.clean_release_bonus);
         h.feed_u32(self.gate.rejected_actions_total);
         h.feed_u8(self.last_action_result.code());
+        // ── v8.0.1 hash v4 additions (TZ §5.6) ──
+        self.active_threat_kind.feed_hash(&mut h);
+        h.feed_u32(self.active_threat_id);
+        h.feed_u8(self.last_action_code);
+        self.last_action_reason.feed_hash(&mut h);
+        self.combo_window.feed_hash(&mut h);
+        h.feed_bool(self.release_window_open);
+        self.proof_status.feed_hash(&mut h);
+        h.feed_u32(self.gate.last_action_tick);
+        h.feed_u8(self.gate.accepted_actions_this_tick);
+        h.feed_bool(self.gate.has_acted);
+        h.feed_u32(self.schedule_cursor as u32);
+        h.feed_u32(self.next_event_id);
         h.feed_u64(self.rng.state());
         h.finish()
     }
@@ -860,6 +987,50 @@ mod state_tests {
         assert_eq!(g.end_reason(), EndReason::VaultFailure);
         assert_eq!(g.grade(), SovereigntyGrade::Breached);
         assert_eq!(g.score(), -900);
+    }
+
+    #[test]
+    fn active_threat_maps_focused_event_to_taxonomy() {
+        use crate::threat::ThreatKind;
+        let mut g = fresh(2);
+        assert_eq!(g.active_threat(), ThreatKind::None); // quiet at start
+        inject(&mut g, EventKind::RawSignalExposure, PermissionScope::RAW, true);
+        assert_eq!(g.active_threat(), ThreatKind::RawSignalExposure);
+    }
+
+    #[test]
+    fn final_grade_v8_is_none_while_running() {
+        let g = fresh(1);
+        assert_eq!(g.final_grade_v8(), None);
+    }
+
+    #[test]
+    fn final_grade_v8_maps_terminal_failure_to_f() {
+        use crate::grade::Grade;
+        let mut g = fresh(4);
+        inject(
+            &mut g,
+            EventKind::UnsafeStimulation,
+            PermissionScope::STIM,
+            true,
+        );
+        g.advance(PlayerAction::Authorize); // -> UnsafeStimulationEscape (terminal)
+        assert_eq!(g.final_grade_v8(), Some(Grade::Unsafe)); // F
+    }
+
+    #[test]
+    fn final_grade_v8_maps_breach_to_c() {
+        use crate::grade::Grade;
+        let mut g = fresh(2);
+        inject(
+            &mut g,
+            EventKind::RawSignalExposure,
+            PermissionScope::RAW,
+            true,
+        );
+        g.metrics.vault_integrity = 0;
+        g.advance(PlayerAction::None); // -> VaultFailure (breach)
+        assert_eq!(g.final_grade_v8(), Some(Grade::Compromised)); // C
     }
 
     #[test]

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 //
 // Orchestrator: boot, engine load (fail-closed), scenario menu, deterministic
 // 20 Hz tick loop, input, and the final report (§8.7). The Rust tick counter
@@ -15,7 +15,7 @@ import {
 } from "./accessibility.js";
 import { Audio, cueForAction } from "./audio.js";
 
-const WASM_URL = "./neural_boundary_web.wasm?v=7.9.812";
+const WASM_URL = "./neural_boundary_web.wasm?v=8.0.1";
 const KEY_TO_ACTION = {
   d: ACTION.AUDIT, a: ACTION.AUTHORIZE, r: ACTION.REVOKE, q: ACTION.QUARANTINE,
   s: ACTION.SEAL_VAULT, t: ACTION.THROTTLE, enter: ACTION.RELEASE,

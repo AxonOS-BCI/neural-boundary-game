@@ -1,17 +1,17 @@
-# Evidence Report — Neural Boundary Game v7.9.812
+# Evidence Report — Neural Boundary Game v8.0.1
 
-_Generated 2026-06-19 01:17 UTC by `tools/build_evidence_report.py`._
+_Generated 2026-06-19 07:19 UTC by `tools/build_evidence_report.py`._
 
 ## Identity (§17.1)
 | Field | Value |
 |---|---|
-| Version | 7.9.812 |
+| Version | 8.0.1 |
 | Codename | Cognitive Sovereignty Console |
-| ABI version | 3 |
-| Product version packed | 461056 (0x070900) |
-| Replay schema | neural-boundary-replay-v3 |
+| ABI version | 4 |
+| Product version packed | 524289 (0x080001) |
+| Replay schema | neural-boundary-replay-v4 |
 | Tick rate | 20 Hz |
-| Storage namespace | nbg_v7_9_812_ |
+| Storage namespace | nbg_v8_0_1_ |
 | State hash | fnv1a64-v1 |
 | RNG | xorshift64star-v1 |
 | License (software) | AGPL-3.0-only OR LicenseRef-AxonOS-Commercial |
@@ -20,17 +20,17 @@ _Generated 2026-06-19 01:17 UTC by `tools/build_evidence_report.py`._
 ## Build provenance
 | Field | Value |
 |---|---|
-| Git tip | 68254d9 |
-| Tip subject | Release v7.9.812: single canonical Sovereignty Console; prebuilt verified WASM (0x070900); scripts/ removed; full AGPL-3.0 + CC-BY-NC-ND-4.0 license texts; web ABI test version fix; CI builds via cargo |
+| Git tip | 3bce061 |
+| Tip subject | release(core): v8.0.1 — Tactical Boundary Defense (Phase 2 integration) |
 | Author | Denis Yermakou |
-| Commits on branch | 62 |
-| Source manifest aggregate | a2925b7348321a6f… |
+| Commits on branch | 65 |
+| Source manifest aggregate | 2a000a2de5bdb9a2… |
 | Toolchain | stable Rust (no RUSTC_BOOTSTRAP in project; CI: dtolnay/rust-toolchain@stable) |
 
 ## Verified facts (run by this tool)
 - **Scenarios:** 9 (§7)
 - **Replay vectors:** 16 (§19.3)
-- **verify-all:** PASS — verify-all OK: 16 vector(s) · schema neural-boundary-replay-v3
+- **verify-all:** PASS — verify-all OK: 16 vector(s) · schema neural-boundary-replay-v4
 - **WASM ABI exports:** 83 `nbg_*` functions (floor 64, §17.2)
 
 ## Gates enforced in CI

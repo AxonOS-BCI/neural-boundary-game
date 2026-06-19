@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! CLI integration tests (§19): the shipped 16-vector suite must pass
@@ -32,7 +32,7 @@ fn run(args: &[&str]) -> (i32, String) {
 fn verify_all_passes_on_shipped_vectors() {
     let (code, out) = run(&["verify-all"]);
     assert_eq!(code, 0, "verify-all must pass:\n{out}");
-    assert!(out.contains("neural-boundary-replay-v3"));
+    assert!(out.contains("neural-boundary-replay-v4"));
     assert!(out.contains("16 vector"));
 }
 
@@ -40,29 +40,13 @@ fn verify_all_passes_on_shipped_vectors() {
 fn release_evidence_runs_green() {
     let (code, out) = run(&["release-evidence"]);
     assert_eq!(code, 0, "{out}");
-    assert!(out.contains("7.9.812"));
+    assert!(out.contains("8.0.1"));
 }
 
 #[test]
 fn hash_state_is_deterministic() {
-    let a = run(&[
-        "hash-state",
-        "--scenario",
-        "9",
-        "--seed",
-        "abc123",
-        "--policy",
-        "clean",
-    ]);
-    let b = run(&[
-        "hash-state",
-        "--scenario",
-        "9",
-        "--seed",
-        "abc123",
-        "--policy",
-        "clean",
-    ]);
+    let a = run(&["hash-state", "--scenario", "9", "--seed", "abc123", "--policy", "clean"]);
+    let b = run(&["hash-state", "--scenario", "9", "--seed", "abc123", "--policy", "clean"]);
     assert_eq!(a.0, 0);
     assert_eq!(a.1, b.1, "same inputs must give identical output");
 }

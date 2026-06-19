@@ -1,12 +1,12 @@
 {
-  "schema": "neural-boundary-replay-v3",
+  "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "7.9.812",
+  "version": "8.0.1",
   "scenario_id": 8,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "13-silent-escalation-breached",
-  "generated_by": "neural-boundary-cli 7.9.812",
+  "generated_by": "neural-boundary-cli 8.0.1",
   "actions": [
     {
       "tick": 61,
@@ -61,6 +61,6 @@
     "grade": "BREACHED",
     "reason": "CONSENT_COLLAPSE",
     "score_min": -900,
-    "state_hash": "0xc396761f51d52830"
+    "state_hash": "0xeba61b8c20420a74"
   }
 }

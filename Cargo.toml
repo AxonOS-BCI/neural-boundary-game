@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "7.9.812"
+version = "8.0.1"
 edition = "2021"
 authors = ["Denis Yermakou <connect@axonos.org>"]
 license = "AGPL-3.0-only OR LicenseRef-AxonOS-Commercial"

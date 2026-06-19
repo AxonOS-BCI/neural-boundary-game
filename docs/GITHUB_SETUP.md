@@ -16,7 +16,7 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 - Hardware-backed 2FA for all maintainers.
 - `CODEOWNERS` requires maintainer approval.
 - No force-push or branch deletion on `main`.
-- Release signing: `git tag -s v7.9.812`.
+- Release signing: `git tag -s v8.0.1`.
 
 ## Secrets
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Denis Yermakou / AxonOS
 # SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-# Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 """Version-consistency gate. Canonical code/config surfaces are checked
 strictly against release.toml. A repo-wide stale-version scan (5.5.12 / 7.0.3)
 errors on code surfaces; hits in the legacy doc set are reported as WARNINGS
@@ -47,7 +47,7 @@ def main() -> int:
     need("crates/neural-boundary-core/src/hash.rs", f'RNG_ALGORITHM: &str = "{m["rng_algorithm"]}"', "rng algorithm")
     need("web/index.html", disp, "visible UI version")
     need("web/service-worker.js", disp, "service-worker cache version")
-    need("web/wasm-loader.js", "0x070900", "wasm packed-version guard")
+    need("web/wasm-loader.js", "0x080001", "wasm packed-version guard")
     need("web/wasm-loader.js", f'ABI_VERSION = {m["abi_version"]}', "wasm abi guard")
 
     # DOGE config (§21.4).

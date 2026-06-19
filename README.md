@@ -2,13 +2,13 @@
 SPDX-FileContributor: AxonOS
 SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
-# Neural Boundary Game v7.9.812 — Cognitive Sovereignty Console
+# Neural Boundary Game v8.0.1 — Cognitive Sovereignty Console
 
 [![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
 [![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 [![Style: AxonOS Standard Foundation Grande Elite](https://img.shields.io/badge/style-AxonOS%20Grande%20Elite-C8A96A)](docs/UX_STANDARD.md)
 
-[![Play Neural Boundary Game v7.9.812](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
+[![Play Neural Boundary Game v8.0.1](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
 
 **[▶ RUN BOUNDARY](https://axonos-bci.github.io/neural-boundary-game/)**
 
@@ -124,7 +124,7 @@ Build a private boundary demo or deterministic safety review: `connect@axonos.or
 
 ---
 
-*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v7.9.812 — Cognitive Sovereignty Console.*
+*© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v8.0.1 — Cognitive Sovereignty Console.*
 *Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
 *AxonOS™ and Neural Boundary Game™ are claimed trademarks.*
 

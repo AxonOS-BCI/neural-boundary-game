@@ -1,27 +1,48 @@
-# Neural Boundary Game v7.9.812 — Cognitive Sovereignty Console
+<!-- SPDX-FileCopyrightText: 2026 Denis Yermakou
+SPDX-FileContributor: AxonOS
+SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
+
+# Release Notes — Neural Boundary Game v8.0.1
+
+**Neural Boundary Game v8.0.1 — Production Grand AxonOS Standard Foundation**
+
+**Production Grand AxonOS Standard Foundation — Cognitive Sovereignty**
 
 ## Summary
 
-Neural Boundary Game v7.9.812 is a deterministic Rust/WASM browser game and educational simulation for neural privacy boundary scenarios.
+Neural Boundary Game v8.0.1 is the Production Grand release. The deterministic
+Rust/WASM core is complete: 19 entity kinds, 7 review gates, Neural Permissions
+epoch model, Privacy Vault FSM, WCET timing budget, and 7 run modes including
+the Grand Run (four phases) and Kernel Trial (deadline pressure).
 
-## Runtime
+The WASM ABI is flat (41 named exports, no wasm-bindgen). The JavaScript UI
+uses ES modules with a fixed-step RAF loop. Daily seed computation mirrors the
+Rust core in JavaScript for offline verification.
 
-- Rust/WASM core
-- ABI v3
-- Packed product version: 0x070900
-- Replay schema: neural-boundary-replay-v3
-- No telemetry
-- No accounts
-- No real neural data
-- No medical-device claim
+The release includes 8 canonical replay vectors verified by SHA-256 and
+deterministic re-execution. Every vector is covered by 18 integration tests.
 
-## Verification
+## How to verify
 
+```bash
 cargo run -p neural-boundary-cli --release -- verify-all
-
-python3 tools/release_check.py
+python3 tools/validate_replay.py
+```
 
 ## Known limitations
 
-- Browser QA depends on the deployed GitHub Pages artifact.
-- This release is not a medical device, not clinical software, and not stimulation-control software.
+- Browser QA (Playwright) requires network access; BLOCKED in the Termux environment.
+  QA specs are in `qa/` for CI execution.
+- AGPL licence text files require the full GNU GPL text; stubs are present.
+- Commercial DOGE payments disabled pending Singapore MAS legal review.
+
+## Acceptance checklist (Denis Yermakou)
+
+- [ ] Test DOGE transaction confirming wallet control (DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp)
+- [ ] Replace AGPL/CC licence stubs with full texts from gnu.org / creativecommons.org
+- [ ] Singapore legal review of DOGE commercial flow (MAS Payment Services Act)
+- [ ] Tag signature: `git tag -s v8.0.1 -m "..."`
+- [ ] Enable GitHub branch protection on main
+- [ ] Upload preview.png as GitHub repository social preview
+- [ ] Set Pages source to GitHub Actions (pages.yml)
+- [ ] Publish Article #39 on Medium (AxonOS–SYM.BOT collaboration)

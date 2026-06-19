@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Denis Yermakou / AxonOS
 # SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-# Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 """Assert the built WASM exports >= 64 nbg_* functions (§17.2) and that the
 mandatory health trio is present. Reads the .wasm export section directly."""
 from __future__ import annotations

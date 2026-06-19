@@ -76,7 +76,7 @@ checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 
 [[package]]
 name = "neural-boundary-cli"
-version = "7.9.812"
+version = "8.0.1"
 dependencies = [
  "neural-boundary-core",
  "serde",
@@ -86,11 +86,11 @@ dependencies = [
 
 [[package]]
 name = "neural-boundary-core"
-version = "7.9.812"
+version = "8.0.1"
 
 [[package]]
 name = "neural-boundary-web"
-version = "7.9.812"
+version = "8.0.1"
 dependencies = [
  "neural-boundary-core",
 ]

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! WASM ABI v3 conformance (§17). These run on the host via the `rlib`
@@ -12,9 +12,9 @@ use neural_boundary_web::*;
 
 #[test]
 fn health_values_match_spec_17() {
-    assert_eq!(nbg_abi_version(), 3);
-    assert_eq!(nbg_product_version_packed(), 461_056);
-    assert_eq!(nbg_health_check(), 461_056);
+    assert_eq!(nbg_abi_version(), 4);
+    assert_eq!(nbg_product_version_packed(), 524_289);
+    assert_eq!(nbg_health_check(), 524_289);
     assert_eq!(nbg_health_check(), nbg_product_version_packed());
     assert_eq!(nbg_tick_rate(), 20);
 }

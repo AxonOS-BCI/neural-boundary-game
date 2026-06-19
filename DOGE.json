@@ -1,7 +1,7 @@
 {
   "schema": "nbg-doge-config-v1",
   "product": "Neural Boundary Game",
-  "product_version": "7.9.812",
+  "product_version": "8.0.1",
   "commercial_doge_enabled": false,
   "doge_address": "DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp",
   "donations_solicited": false,

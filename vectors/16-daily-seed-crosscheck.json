@@ -1,12 +1,12 @@
 {
-  "schema": "neural-boundary-replay-v3",
+  "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "7.9.812",
+  "version": "8.0.1",
   "scenario_id": 1,
-  "seed": "de14052b619864ed",
+  "seed": "24efcce8edb9ac1d",
   "tick_rate": 20,
   "title": "daily 2026-06-16",
-  "generated_by": "neural-boundary-cli 7.9.812",
+  "generated_by": "neural-boundary-cli 8.0.1",
   "actions": [
     {
       "tick": 41,
@@ -909,6 +909,6 @@
     "grade": "SEALED",
     "reason": "SUCCESS_RELEASE",
     "score_min": 1061,
-    "state_hash": "0x084ede3d91a700b4"
+    "state_hash": "0xbf44c70c6cbeb8c0"
   }
 }

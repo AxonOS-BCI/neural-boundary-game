@@ -1,17 +1,17 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 //
 // Accessibility (§11) and local preferences (§12). No authoritative gameplay
 // state is ever stored.
 
-const NS = "nbg_v7_9_812_";
+const NS = "nbg_v8_0_1_";
 const ALLOWED = new Set([
   NS + "tutorial_seen", NS + "audio_muted", NS + "reduced_motion",
   NS + "last_scenario", NS + "quality_profile",
 ]);
 const SCHEMA = "nbg-local-preferences-v1";
-const PRODUCT = "7.9.812";
+const PRODUCT = "8.0.1";
 
 function safeLS() {
   try {
@@ -27,7 +27,7 @@ function safeLS() {
 export const Prefs = {
   ls: safeLS(),
 
-  // §12.3 boot cleanup: keep only nbg_v7_9_812_*, drop other nbg_ keys.
+  // §12.3 boot cleanup: keep only nbg_v8_0_1_*, drop other nbg_ keys.
   cleanup() {
     if (!this.ls) return;
     const drop = [];

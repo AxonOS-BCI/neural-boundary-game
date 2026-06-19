@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Denis Yermakou / AxonOS
 # SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-# Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
-"""Validate the replay vector suite against schema neural-boundary-replay-v3
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+"""Validate the replay vector suite against schema neural-boundary-replay-v4
 (§19.2), check SHA-256 integrity, and cross-check the daily seed (§19.3 #16).
 Structural validation only — deterministic replay equality is enforced by the
 Rust CLI `verify-all`."""
@@ -46,7 +46,7 @@ def _xss(state: int) -> int:
     return (x * 0x2545F4914F6CDD1D) & MASK
 
 def daily_seed(y: int, m: int, d: int) -> int:
-    s = f"NBG|7.9.812|{y:04d}-{m:02d}-{d:02d}|DAILY".encode()
+    s = f"NBG|8.0.1|{y:04d}-{m:02d}-{d:02d}|DAILY".encode()
     h = _fnv(s)
     seed = h or 0x7300
     return _xss(seed)

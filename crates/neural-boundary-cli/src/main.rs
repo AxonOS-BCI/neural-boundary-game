@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! Conformance toolkit (§16.2): verify-all, run-vector, record, dump-scenario,
 //! hash-state, explain-grade, generate-daily-vector, release-evidence.
-//! Replay schema: `neural-boundary-replay-v3` (§19.2).
+//! Replay schema: `neural-boundary-replay-v4` (§19.2).
 
 mod bot;
 

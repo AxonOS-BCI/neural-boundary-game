@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! `neural-boundary-core` — Cognitive Sovereignty Console deterministic engine
-//! (v7.9.812). Canonical source of truth (§16.2): the browser never computes
+//! (v8.0.1). Canonical source of truth (§16.2): the browser never computes
 //! grade, score, or state hash independently.
 //!
 //! Module layout follows §25:
@@ -18,25 +18,29 @@
 #![forbid(unsafe_code)]
 
 pub mod actions;
+pub mod combo;
 pub mod events;
+pub mod grade;
 pub mod hash;
 pub mod metrics;
+pub mod proof;
 pub mod replay;
 pub mod scenario;
 pub mod scoring;
 pub mod state;
+pub mod threat;
 
 // ── Identity (§0, §17.1) ─────────────────────────────────────────────────────
 
-pub const CORE_VERSION: &str = "7.9.812";
+pub const CORE_VERSION: &str = "8.0.1";
 pub const CODENAME: &str = "Cognitive Sovereignty Console";
 pub const STYLE_SYSTEM: &str = "AxonOS Standard Foundation Grande Style Elite";
-pub const REPLAY_SCHEMA: &str = "neural-boundary-replay-v3";
+pub const REPLAY_SCHEMA: &str = "neural-boundary-replay-v4";
 
 /// ABI v3 (§17.1).
-pub const ABI_VERSION: u32 = 3;
-/// (major<<16)|(minor<<8)|patch == 0x070900 == 461056 (§17.1).
-pub const PRODUCT_VERSION_PACKED: u32 = (7 << 16) | (9 << 8);
+pub const ABI_VERSION: u32 = 4;
+/// (major<<16)|(minor<<8)|patch == 0x080001 == 524289 (§17.1).
+pub const PRODUCT_VERSION_PACKED: u32 = (8 << 16) | 1;
 
 // ── Fixed bounds (§18) ───────────────────────────────────────────────────────
 
@@ -71,11 +75,11 @@ mod lib_tests {
 
     #[test]
     fn version_constants_match_spec() {
-        assert_eq!(PRODUCT_VERSION_PACKED, 0x070900);
-        assert_eq!(PRODUCT_VERSION_PACKED, 461056);
-        assert_eq!(ABI_VERSION, 3);
-        assert_eq!(CORE_VERSION, "7.9.812");
-        assert_eq!(REPLAY_SCHEMA, "neural-boundary-replay-v3");
+        assert_eq!(PRODUCT_VERSION_PACKED, 0x080001);
+        assert_eq!(PRODUCT_VERSION_PACKED, 524289);
+        assert_eq!(ABI_VERSION, 4);
+        assert_eq!(CORE_VERSION, "8.0.1");
+        assert_eq!(REPLAY_SCHEMA, "neural-boundary-replay-v4");
         assert_eq!(TICK_RATE_HZ, 20);
     }
 

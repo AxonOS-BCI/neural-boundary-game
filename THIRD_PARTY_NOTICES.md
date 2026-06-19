@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
 # Third-Party Notices
 
-Neural Boundary Game v7.9.812 uses the following third-party dependencies.
+Neural Boundary Game v8.0.1 uses the following third-party dependencies.
 All source code is Denis Yermakou sole-authored (AxonOS).
 
 ## Rust crate dependencies

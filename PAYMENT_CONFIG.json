@@ -1,7 +1,7 @@
 {
   "schema": "axonos-payment-config-v1",
   "product": "Neural Boundary Game",
-  "version": "7.9.812",
+  "version": "8.0.1",
   "dogecoin": {
     "network": "mainnet",
     "address": "DMwHAhqVNWf7dyEznukxCufNS5rjuP5MTp",

@@ -1,12 +1,12 @@
 {
-  "schema": "neural-boundary-replay-v3",
+  "schema": "neural-boundary-replay-v4",
   "product": "Neural Boundary Game",
-  "version": "7.9.812",
+  "version": "8.0.1",
   "scenario_id": 1,
   "seed": "0000000000000001",
   "tick_rate": 20,
   "title": "01-clean-boundary-sealed",
-  "generated_by": "neural-boundary-cli 7.9.812",
+  "generated_by": "neural-boundary-cli 8.0.1",
   "actions": [
     {
       "tick": 41,
@@ -909,6 +909,6 @@
     "grade": "SEALED",
     "reason": "SUCCESS_RELEASE",
     "score_min": 1061,
-    "state_hash": "0xecd972d283c2ddb1"
+    "state_hash": "0x0a6a74721970cc4c"
   }
 }

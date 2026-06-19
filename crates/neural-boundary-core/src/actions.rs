@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
 //
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
 // See LICENSE and IP_NOTICE.md for details.
 
 //! Player actions, the action gate, and action results (§4.3, §4.4).
@@ -140,5 +140,77 @@ impl ActionGate {
 
     pub fn record_reject(&mut self) {
         self.rejected_actions_total = self.rejected_actions_total.saturating_add(1);
+    }
+}
+
+/// Detailed reason behind an `ActionResult` (TZ §5.4). Where `ActionResult`
+/// says *whether* an action was accepted, `ActionReason` says *why* — including
+/// how well it countered the active threat. Exposed over the ABI for the UI.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum ActionReason {
+    None = 0,
+    AcceptedCorrectCounter = 1,
+    AcceptedPartialCounter = 2,
+    AcceptedCombo = 3,
+    RejectedCooldown = 4,
+    RejectedTerminal = 5,
+    RejectedInvalidForThreat = 6,
+    RejectedReleaseLocked = 7,
+    RejectedUnsafeRelease = 8,
+    RejectedScenarioInvalid = 9,
+}
+
+impl ActionReason {
+    pub fn from_u8(v: u8) -> Option<Self> {
+        Some(match v {
+            0 => Self::None,
+            1 => Self::AcceptedCorrectCounter,
+            2 => Self::AcceptedPartialCounter,
+            3 => Self::AcceptedCombo,
+            4 => Self::RejectedCooldown,
+            5 => Self::RejectedTerminal,
+            6 => Self::RejectedInvalidForThreat,
+            7 => Self::RejectedReleaseLocked,
+            8 => Self::RejectedUnsafeRelease,
+            9 => Self::RejectedScenarioInvalid,
+            _ => return None,
+        })
+    }
+
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "NONE",
+            Self::AcceptedCorrectCounter => "ACCEPTED_CORRECT_COUNTER",
+            Self::AcceptedPartialCounter => "ACCEPTED_PARTIAL_COUNTER",
+            Self::AcceptedCombo => "ACCEPTED_COMBO",
+            Self::RejectedCooldown => "REJECTED_COOLDOWN",
+            Self::RejectedTerminal => "REJECTED_TERMINAL",
+            Self::RejectedInvalidForThreat => "REJECTED_INVALID_FOR_THREAT",
+            Self::RejectedReleaseLocked => "REJECTED_RELEASE_LOCKED",
+            Self::RejectedUnsafeRelease => "REJECTED_UNSAFE_RELEASE",
+            Self::RejectedScenarioInvalid => "REJECTED_SCENARIO_INVALID",
+        }
+    }
+
+    pub const fn is_accepted(self) -> bool {
+        matches!(
+            self,
+            Self::AcceptedCorrectCounter | Self::AcceptedPartialCounter | Self::AcceptedCombo
+        )
+    }
+
+    pub fn feed_hash(&self, h: &mut crate::hash::Fnv64) {
+        h.feed_u8(self.code());
+    }
+}
+
+impl Default for ActionReason {
+    fn default() -> Self {
+        Self::None
     }
 }

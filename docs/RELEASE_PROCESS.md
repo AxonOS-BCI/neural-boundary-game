@@ -18,9 +18,9 @@ check_version_consistency, check_links, release_check).
 
 ```bash
 git switch main
-git merge release/v7.9.812 --no-ff -m "chore(release): merge v7.9.812"
-git tag -a v7.9.812 -m "Neural Boundary Game v7.9.812 — Cognitive Sovereignty"
-git push origin main v7.9.812
+git merge release/v8.0.1 --no-ff -m "chore(release): merge v8.0.1"
+git tag -a v8.0.1 -m "Neural Boundary Game v8.0.1 — Cognitive Sovereignty"
+git push origin main v8.0.1
 ```
 
 ## From Android Termux
@@ -31,8 +31,8 @@ git push origin main && git push origin --tags
 
 ## GitHub Release
 
-Create a GitHub Release from tag `v7.9.812`. Attach:
-- `neural-boundary-game-v7.9.812.tar.gz` (source archive)
+Create a GitHub Release from tag `v8.0.1`. Attach:
+- `neural-boundary-game-v8.0.1.tar.gz` (source archive)
 - `vectors/checksums.sha256`
 
 Pages deploys automatically from the `pages.yml` workflow.
