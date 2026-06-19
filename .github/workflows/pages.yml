@@ -1,0 +1,56 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build game from Rust/WASM core
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: bash scripts/build_web.sh dist
+      - name: Verify WASM exports from core
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          WebAssembly.instantiate(fs.readFileSync("dist/neural_boundary_web.wasm"), {}).then(({instance}) => {
+            const e = instance.exports;
+            for (const n of ["nbg_new","nbg_tick","nbg_set_action","nbg_score","nbg_grade","nbg_state_hash_hi","nbg_state_hash_lo"]) {
+              if (typeof e[n] !== "function") throw new Error("missing " + n);
+            }
+            if (e.nbg_new(1, 0x12345678, 0x9abcdef0) !== 1) throw new Error("nbg_new failed");
+            e.nbg_set_action(1);
+            e.nbg_tick();
+            console.log("OK core wasm", e.nbg_score(), e.nbg_state_hash_hi(), e.nbg_state_hash_lo());
+          }).catch(e => { console.error(e); process.exit(1); });
+          NODE
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy game from Rust/WASM core
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
