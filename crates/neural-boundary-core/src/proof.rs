@@ -80,3 +80,10 @@ mod tests {
         assert!(!ProofStatus::Tampered.is_clean());
     }
 }
+
+#[allow(clippy::derivable_impls)]
+impl Default for ProofStatus {
+    fn default() -> Self {
+        Self::Pending
+    }
+}

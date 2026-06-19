@@ -208,3 +208,10 @@ impl ActionReason {
         h.feed_u8(self.code());
     }
 }
+
+#[allow(clippy::derivable_impls)]
+impl Default for ActionReason {
+    fn default() -> Self {
+        Self::None
+    }
+}
