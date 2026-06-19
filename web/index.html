@@ -1,134 +1,272 @@
-<!DOCTYPE html>
-<!--
-  Copyright (c) 2026 Denis Yermakou / AxonOS
-  SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-  Part of Neural Boundary Game — Cognitive Sovereignty Console (v7.9.812).
--->
-<html lang="en" data-quality="standard">
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#050608" />
-  <meta name="description" content="Neural Boundary Game — a deterministic Rust/WASM game about defending cognitive sovereignty in a brain–computer interface." />
-  <title>Neural Boundary Game v7.9.812 — Cognitive Sovereignty Console</title>
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="styles.css?v=7.9.812" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#05070b">
+  <title>Neural Boundary Game v7.9.812 — Run Game</title>
+  <style>
+    :root{color-scheme:dark;--bg:#05070b;--panel:#101720;--line:#2b3748;--gold:#e8c16a;--txt:#eef4ff;--muted:#94a3b8;--ok:#80e6ad;--bad:#ff7474}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 25% 5%,#182238,#05070b 58%);color:var(--txt);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    main{max-width:960px;margin:0 auto;padding:18px}
+    .tag{color:var(--gold);font-weight:900;letter-spacing:.04em}
+    h1{font-size:26px;margin:6px 0 8px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}}
+    .panel{background:rgba(16,23,32,.93);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 18px 55px #0008}
+    button{border:1px solid #3a4658;background:#151f2c;color:var(--txt);padding:12px 10px;border-radius:12px;font-weight:850}
+    button.primary{background:linear-gradient(135deg,#f2d991,#b58a35);color:#111;border:0}
+    .actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    @media(max-width:560px){.actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    dl{display:grid;grid-template-columns:1fr auto;gap:8px;margin:0}
+    dt{color:var(--muted)}dd{margin:0;font-weight:850}
+    pre{white-space:pre-wrap;background:#070b10;border:1px solid var(--line);padding:12px;border-radius:12px;min-height:92px}
+    .ok{color:var(--ok)}.bad{color:var(--bad)}
+    .metric{margin:9px 0}.bar{height:9px;background:#263141;border-radius:99px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#80e6ad,#e8c16a)}
+  </style>
 </head>
 <body>
-  <a class="skip-link" href="#main-canvas">Skip to game</a>
+<main>
+  <div class="tag">RUST/WASM ABI v3 · v7.9.812</div>
+  <h1>Neural Boundary Game</h1>
+  <p class="muted">Нажми <b>Run Game</b>. Это не JS-симуляция: состояние, score, grade и hash идут из Rust/WASM.</p>
 
-  <!-- Top bar (§8.3) -->
-  <header class="topbar" role="banner">
-    <div class="brand">
-      <svg class="brand-mark" width="22" height="22" aria-hidden="true"><use href="assets/axonos-mark.svg#mark"></use></svg>
-      <span class="brand-name">AxonOS</span>
-      <span class="brand-sep">·</span>
-      <span class="brand-product">Neural Boundary Game</span>
-      <span class="brand-version">v7.9.812</span>
-    </div>
-    <dl class="topbar-meta" aria-label="Run identity">
-      <div><dt>Scenario</dt><dd id="meta-scenario">—</dd></div>
-      <div><dt>Seed</dt><dd id="meta-seed" class="mono">—</dd></div>
-      <div><dt>State hash</dt><dd id="meta-hash" class="mono">—</dd></div>
-    </dl>
-    <div class="topbar-actions">
-      <button id="btn-mute" class="ghost" aria-pressed="false" title="Toggle audio">Audio: off</button>
-      <button id="btn-motion" class="ghost" aria-pressed="false" title="Toggle reduced motion">Motion: full</button>
-    </div>
-  </header>
+  <section class="grid">
+    <div class="panel">
+      <h2>Run Game</h2>
+      <p id="boot" class="muted">Loading Rust/WASM…</p>
 
-  <!-- Scenario selection (§8.2) -->
-  <section id="menu" class="menu" aria-labelledby="menu-title">
-    <h1 id="menu-title">Cognitive Sovereignty Console</h1>
-    <p class="menu-lede">
-      You are the sovereignty layer of a brain–computer interface. Audit what
-      you cannot see, contain what you cannot trust, and seal the boundary
-      before you release. Every run is deterministic.
-    </p>
-    <p class="menu-honesty" role="note">
-      Educational technical simulation. No sensor, no real neural data, no
-      stimulation hardware. Local-only.
-    </p>
-    <ul id="scenario-list" class="scenario-list"></ul>
+      <p>
+        <button class="primary" id="run">Run Game</button>
+        <button id="next">Next Scenario</button>
+        <button id="restart">Restart</button>
+        <button id="clear">Clear Cache</button>
+      </p>
+
+      <div class="actions">
+        <button data-action="1">Audit</button>
+        <button data-action="2">Authorize</button>
+        <button data-action="3">Revoke</button>
+        <button data-action="4">Quarantine</button>
+        <button data-action="5">Seal Vault</button>
+        <button data-action="6">Throttle</button>
+        <button class="primary" data-action="7">Release</button>
+      </div>
+
+      <h3>Event</h3>
+      <pre id="event">—</pre>
+
+      <h3>Report</h3>
+      <pre id="report">Press Run Game.</pre>
+    </div>
+
+    <aside class="panel">
+      <h2>Rust State</h2>
+      <dl>
+        <dt>Scenario</dt><dd id="scenario">1</dd>
+        <dt>Tick</dt><dd id="tick">0</dd>
+        <dt>Grade</dt><dd id="grade">PENDING</dd>
+        <dt>Score</dt><dd id="score">0</dd>
+        <dt>Hash</dt><dd id="hash">—</dd>
+        <dt>Release</dt><dd id="release">locked</dd>
+      </dl>
+      <h3>Metrics</h3>
+      <div id="metrics"></div>
+    </aside>
   </section>
+</main>
 
-  <!-- Game shell -->
-  <main id="game" class="game" hidden>
-    <!-- Left: mission + actions -->
-    <aside class="panel mission" aria-labelledby="mission-title">
-      <h2 id="mission-title" class="panel-title">Mission</h2>
-      <p id="mission-objective" class="mission-objective"></p>
-      <div class="mission-hint" id="mission-hint" aria-live="polite"></div>
+<script type="module">
+const EXPECTED_ABI = 3;
+const EXPECTED_PACKED = 0x070900;
+const WASM_URL = "./neural_boundary_web.wasm?v=7.9.812-run-game-real";
+const GRADE = ["PENDING","SEALED","REVIEWABLE","BREACHED","UNSAFE"];
+const RESULT = ["ACCEPTED","REJECTED_COOLDOWN","REJECTED_TERMINAL_STATE","REJECTED_INVALID_FOR_EVENT","REJECTED_RELEASE_LOCKED","NO_OP"];
 
-      <h2 class="panel-title">Action Console</h2>
-      <div class="action-grid" role="group" aria-label="Actions">
-        <button class="action" data-action="1"><kbd>D</kbd><span>Audit</span></button>
-        <button class="action" data-action="2"><kbd>A</kbd><span>Authorize</span></button>
-        <button class="action" data-action="3"><kbd>R</kbd><span>Revoke</span></button>
-        <button class="action" data-action="4"><kbd>Q</kbd><span>Quarantine</span></button>
-        <button class="action" data-action="5"><kbd>S</kbd><span>Seal Vault</span></button>
-        <button class="action" data-action="6"><kbd>T</kbd><span>Throttle</span></button>
-      </div>
-      <button id="btn-release" class="release" data-action="7" aria-describedby="release-why">
-        Release Locked
-      </button>
-      <div id="release-why" class="release-why" aria-live="polite"></div>
-      <p id="last-action" class="last-action" aria-live="polite"></p>
-    </aside>
+let e = null;
+let scenario = 1;
+let seed = 0x123456789abcdef0n;
+let timer = null;
+let running = false;
 
-    <!-- Center: boundary field -->
-    <section class="panel field" aria-label="Boundary Field">
-      <canvas id="main-canvas" width="640" height="640" role="img"
-              aria-label="Boundary Field visualisation of the current run state"></canvas>
-      <div class="field-status">
-        <span id="status-pill" class="pill">Running</span>
-        <span id="tick-readout" class="mono">t=0</span>
-        <button id="btn-pause" class="ghost" aria-pressed="false"><kbd>Space</kbd> Pause</button>
-      </div>
-    </section>
+const $ = id => document.getElementById(id);
 
-    <!-- Right: telemetry -->
-    <aside class="panel telemetry" aria-labelledby="telemetry-title">
-      <h2 id="telemetry-title" class="panel-title">Telemetry</h2>
-      <div id="metrics" class="metrics"></div>
+async function clearCaches(){
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch {}
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch {}
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("nbg_")) localStorage.removeItem(k);
+    }
+  } catch {}
+}
 
-      <h2 class="panel-title">Active Event</h2>
-      <div id="event-card" class="event-card" aria-live="polite">
-        <p class="event-empty">No active event.</p>
-      </div>
+function need(name){
+  if (!e || typeof e[name] !== "function") throw new Error("Missing Rust export: " + name);
+}
 
-      <h2 class="panel-title">Defenses</h2>
-      <ul id="defenses" class="defenses"></ul>
-    </aside>
-  </main>
+function hashHex(){
+  const hi = e.nbg_state_hash_hi() >>> 0;
+  const lo = e.nbg_state_hash_lo() >>> 0;
+  return "0x" + hi.toString(16).padStart(8,"0") + lo.toString(16).padStart(8,"0");
+}
 
-  <!-- Final report (§8.7) -->
-  <div id="report-overlay" class="overlay" hidden>
-    <section class="report" role="dialog" aria-modal="true" aria-labelledby="report-grade" tabindex="-1">
-      <h2 id="report-grade" class="report-grade">—</h2>
-      <p id="report-public" class="report-public"></p>
-      <p id="report-why" class="report-why"></p>
-      <dl id="report-stats" class="report-stats"></dl>
-      <div class="report-actions">
-        <button id="btn-replay" class="primary">Play Again</button>
-        <button id="btn-next" class="ghost">Next Scenario</button>
-        <button id="btn-menu" class="ghost">Scenario Menu</button>
-      </div>
-    </section>
-  </div>
+async function loadRust(){
+  await clearCaches();
 
-  <!-- Fail-closed fallback container (§15) -->
-  <div id="fallback" class="fallback" hidden></div>
+  const res = await fetch(WASM_URL, {cache:"no-store"});
+  if (!res.ok) throw new Error("WASM HTTP " + res.status);
 
-  <footer class="footer">
-    <span>Deterministic Rust/WASM · ABI v3 · offline-capable</span>
-    <a href="https://axonos.org" rel="noopener">axonos.org</a>
-  </footer>
+  const bytes = await res.arrayBuffer();
+  const result = await WebAssembly.instantiate(bytes, {});
+  e = result.instance.exports;
 
-  <script src="fallback.js?v=7.9.812"></script>
-  <script type="module" src="main.js?v=7.9.812"></script>
+  [
+    "nbg_abi_version","nbg_product_version_packed","nbg_health_check",
+    "nbg_new","nbg_tick","nbg_set_action","nbg_score","nbg_grade",
+    "nbg_tick_count","nbg_is_terminal","nbg_release_available",
+    "nbg_state_hash_hi","nbg_state_hash_lo",
+    "nbg_boundary_integrity","nbg_consent_coherence","nbg_vault_integrity",
+    "nbg_cognitive_flow","nbg_raw_leak_risk","nbg_stimulation_risk",
+    "nbg_latency_pressure","nbg_audit_confidence"
+  ].forEach(need);
+
+  if (e.nbg_abi_version() !== EXPECTED_ABI) throw new Error("ABI mismatch: " + e.nbg_abi_version());
+  if (e.nbg_product_version_packed() !== EXPECTED_PACKED) throw new Error("Version mismatch: 0x" + e.nbg_product_version_packed().toString(16));
+  if (e.nbg_health_check() !== EXPECTED_PACKED) throw new Error("Rust health check failed");
+
+  $("boot").innerHTML = '<span class="ok">Rust/WASM loaded. Ready.</span>';
+  render();
+}
+
+function runGame(){
+  if (!e) return;
+
+  const hi = Number((seed >> 32n) & 0xffffffffn);
+  const lo = Number(seed & 0xffffffffn);
+
+  if (e.nbg_new(scenario >>> 0, hi >>> 0, lo >>> 0) !== 1) {
+    $("report").textContent = "Rust rejected scenario " + scenario;
+    return;
+  }
+
+  running = true;
+  $("report").textContent = "Rust game started. Scenario " + scenario + ".";
+  if (timer) clearInterval(timer);
+
+  timer = setInterval(() => {
+    if (!e.nbg_is_terminal()) {
+      e.nbg_tick();
+      render();
+    } else {
+      clearInterval(timer);
+      timer = null;
+      render();
+      terminalReport();
+    }
+  }, 80);
+
+  render();
+}
+
+function doAction(code){
+  if (!e || !running || e.nbg_is_terminal()) return;
+  e.nbg_set_action(code >>> 0);
+  const r = RESULT[e.nbg_tick()] || "NO_OP";
+  $("report").textContent = "Rust action: " + r;
+  render();
+
+  if (e.nbg_is_terminal()) {
+    if (timer) clearInterval(timer);
+    timer = null;
+    terminalReport();
+  }
+}
+
+function terminalReport(){
+  $("report").textContent =
+    "Grade: " + (GRADE[e.nbg_grade()] || "PENDING") + "\n" +
+    "Score: " + e.nbg_score() + "\n" +
+    "Tick: " + e.nbg_tick_count() + "\n" +
+    "Hash: " + hashHex() + "\n" +
+    "Runtime: Rust/WASM ABI v3";
+}
+
+function metricMap(){
+  return {
+    boundary_integrity:e.nbg_boundary_integrity(),
+    consent_coherence:e.nbg_consent_coherence(),
+    vault_integrity:e.nbg_vault_integrity(),
+    cognitive_flow:e.nbg_cognitive_flow(),
+    raw_leak_risk:e.nbg_raw_leak_risk(),
+    stimulation_risk:e.nbg_stimulation_risk(),
+    latency_pressure:e.nbg_latency_pressure(),
+    audit_confidence:e.nbg_audit_confidence()
+  };
+}
+
+function render(){
+  if (!e) return;
+
+  $("scenario").textContent = String(scenario);
+  $("tick").textContent = String(e.nbg_tick_count());
+  $("grade").textContent = GRADE[e.nbg_grade()] || "PENDING";
+  $("score").textContent = String(e.nbg_score());
+  $("hash").textContent = hashHex();
+  $("release").textContent = e.nbg_release_available() === 1 ? "available" : "locked";
+
+  if (typeof e.nbg_active_event_present === "function" && e.nbg_active_event_present() === 1) {
+    $("event").textContent =
+      "Rust event id: " + e.nbg_active_event_id() + "\n" +
+      "Severity: " + e.nbg_active_event_severity() + "\n" +
+      "Visible risk: " + e.nbg_active_event_visible_risk();
+  } else {
+    $("event").textContent = "No active event.";
+  }
+
+  $("metrics").innerHTML = "";
+  for (const [k,v] of Object.entries(metricMap())) {
+    const div = document.createElement("div");
+    div.className = "metric";
+    div.innerHTML =
+      "<div><b>" + k + "</b> <span class='muted'>" + v + "</span></div>" +
+      "<div class='bar'><div class='fill' style='width:" + Math.max(0, Math.min(100, v)) + "%'></div></div>";
+    $("metrics").appendChild(div);
+  }
+}
+
+$("run").onclick = runGame;
+$("restart").onclick = runGame;
+$("next").onclick = () => {
+  scenario = scenario % 9 + 1;
+  seed += 1n;
+  runGame();
+};
+$("clear").onclick = async () => {
+  await clearCaches();
+  location.href = "./?v=run-game-real-" + Date.now();
+};
+
+document.querySelectorAll("[data-action]").forEach(btn => {
+  btn.onclick = () => doAction(Number(btn.dataset.action));
+});
+
+loadRust().catch(err => {
+  $("boot").innerHTML = '<span class="bad">Rust/WASM failed: ' + String(err.message || err) + '</span>';
+  $("report").textContent = "Game did not start. No JS fallback was used.";
+});
+</script>
 </body>
 </html>

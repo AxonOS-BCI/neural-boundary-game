@@ -1,0 +1,50 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Run Game Rust/WASM artifact
+        run: bash scripts/build_web.sh dist
+
+      - name: Assert Run Game calls Rust/WASM
+        run: |
+          test -s dist/index.html
+          test -s dist/neural_boundary_web.wasm
+          grep -q "Run Game" dist/index.html
+          grep -q "nbg_new" dist/index.html
+          grep -q "nbg_tick" dist/index.html
+          grep -q "nbg_set_action" dist/index.html
+          grep -q "0x070900" dist/index.html
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
