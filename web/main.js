@@ -30,6 +30,23 @@ const WHY = {
   SUCCESS_RELEASE: "You held sovereignty and released cleanly.",
 };
 
+
+function hideReportOverlay() {
+  const ov = document.getElementById("report-overlay");
+  if (!ov) return;
+  ov.hidden = true;
+  ov.classList.remove("show");
+}
+
+function showReportOverlay() {
+  const ov = document.getElementById("report-overlay");
+  if (!ov) return;
+  ov.hidden = false;
+  ov.classList.add("show");
+}
+
+window.addEventListener("load", hideReportOverlay);
+
 const App = {
   engine: null, field: null, hud: null, audio: null,
   running: false, paused: false, reported: false,
@@ -110,7 +127,7 @@ function startScenario(id) {
   if (!App.engine.start(id, seed)) return;
   Prefs.set(Prefs.key("last_scenario"), id);
   document.getElementById("menu").hidden = true;
-  document.getElementById("report-overlay").hidden = true;
+  hideReportOverlay();
   document.getElementById("game").hidden = false;
   App.audio.unlock();
   App.paused = false;
@@ -243,13 +260,16 @@ function showReport() {
 }
 
 function wireReport() {
-  document.getElementById("btn-replay").addEventListener("click", () => startScenario(App.currentScenario));
-  document.getElementById("btn-next").addEventListener("click", () => {
+  document.getElementById("btn-replay").addEventListener("click", (event) => { hideReportOverlay(); });
+document.getElementById("btn-replay").addEventListener("click", () => startScenario(App.currentScenario));
+  document.getElementById("btn-next").addEventListener("click", (event) => { hideReportOverlay(); });
+document.getElementById("btn-next").addEventListener("click", () => {
     const next = (App.currentScenario % App.engine.scenarioCount()) + 1;
     startScenario(next);
   });
-  document.getElementById("btn-menu").addEventListener("click", () => {
-    document.getElementById("report-overlay").hidden = true;
+  document.getElementById("btn-menu").addEventListener("click", (event) => { hideReportOverlay(); });
+document.getElementById("btn-menu").addEventListener("click", () => {
+    hideReportOverlay();
     document.getElementById("game").hidden = true;
     document.getElementById("menu").hidden = false;
   });

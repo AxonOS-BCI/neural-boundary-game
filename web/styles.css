@@ -359,3 +359,11 @@ html[data-motion="reduced"] *::after {
   #main-canvas { max-width: 340px; }
   .action { min-height: 52px; }
 }
+
+
+/* hardfix: report overlay must never block game unless explicitly shown */
+#report-overlay:not(.show) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
