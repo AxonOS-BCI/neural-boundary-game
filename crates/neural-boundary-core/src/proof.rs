@@ -65,6 +65,7 @@ impl Default for ProofStatus {
 }
 
 mod tests {
+    use super::ProofStatus;
 
     #[test]
     fn code_roundtrips() {
