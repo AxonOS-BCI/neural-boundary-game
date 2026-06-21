@@ -66,11 +66,11 @@ crates/
   neural-boundary-cli    replay verifier + bot, 16 canonical vectors, SHA-256
   neural-boundary-web     flat WASM ABI v3 (cdylib) → web/*.js UI
 web/                       13-file Grande Style Elite UI + Boundary Field + PWA
-vectors/                   16 replay vectors + checksums (neural-boundary-replay-v3)
+vectors/                   16 replay vectors + checksums (neural-boundary-replay-v4)
 ```
 
 Identity: ABI v3 · product version packed `0x080201` · replay schema
-`neural-boundary-replay-v3` · hash `fnv1a64-v1` · RNG `xorshift64star-v1` ·
+`neural-boundary-replay-v4` · hash `fnv1a64-v1` · RNG `xorshift64star-v1` ·
 20 Hz tick.
 
 ## Build and verify

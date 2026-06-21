@@ -6,6 +6,39 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 
 All notable changes to Neural Boundary Game follow [Keep a Changelog](https://keepachangelog.com/).
 
+## [8.2.1] — 2026-06-20
+
+**Clean rebuild + stale-cache self-heal**
+
+### Changed
+
+- Clean rebuild of the canonical Cognitive Sovereignty Console.
+- Web UI self-heals stale caches: an `nbg_build` marker detects a new build and
+  clears outdated Service Worker / PWA caches once.
+- README refreshed with status badges; identity line corrected to packed product
+  version `0x080201`.
+- CITATION, Code of Conduct and rustfmt configuration aligned to the AxonOS Standard.
+
+### Fixed
+
+- Engine proof tests gated behind `cfg(test)` so they do not affect release builds.
+- clippy `derivable_impls` lint cleared; `cargo fmt` applied across crates.
+
+## [8.0.1] — 2026-06-19
+
+**Full-source rebuild + playable Pages launch**
+
+### Changed
+
+- Repository rebuilt from full source.
+- Tagged-release workflow fixed: GitHub Releases are created from `v*` tags.
+
+### Fixed
+
+- Root URL launches the playable Rust/WASM game directly.
+- Report overlay no longer blocks gameplay after a run.
+- WASM web loader aligned with the core flat C ABI.
+
 ## [7.9.812] — 2026-06-18
 
 **AxonOS Standard Foundation Grande Style Elite — Cognitive Sovereignty Console**

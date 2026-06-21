@@ -6,7 +6,7 @@ test('landing loads, CTA visible, no boot error', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#boot-error')).toBeHidden({ timeout: 10_000 });
   await expect(page.locator('text=RUN BOUNDARY')).toBeVisible();
-  await expect(page.locator('text=v7.9.812')).toBeVisible();
+  await expect(page.locator('text=v8.2.1')).toBeVisible();
 });
 
 test('honesty line visible', async ({ page }) => {

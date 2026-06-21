@@ -6,6 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test-gates:
     name: build · test · clippy · gates
@@ -18,11 +25,18 @@ jobs:
           components: clippy, rustfmt
           targets: wasm32-unknown-unknown
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Format (all crates)
+        run: cargo fmt --all -- --check
+
+      - name: Clippy core + CLI (deny warnings)
+        run: cargo clippy -p neural-boundary-core -p neural-boundary-cli --all-targets --locked -- -D warnings
+
       - name: Test core + CLI
         run: cargo test -p neural-boundary-core -p neural-boundary-cli --locked
-
-      - name: Clippy (deny warnings)
-        run: cargo clippy -p neural-boundary-core -p neural-boundary-cli --all-targets --locked -- -D warnings
 
       - name: Build WASM from Rust core
         run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release --locked
@@ -30,8 +44,16 @@ jobs:
       - name: Determinism — replay vectors
         run: cargo run -p neural-boundary-cli --release --locked -- verify-all
 
-      - name: Gates (version / ABI / replay)
+      - name: Repository gates (version / ABI / replay / hygiene / links / PWA)
         run: |
           python3 tools/check_version_consistency.py
           python3 tools/check_abi_exports.py
           python3 tools/validate_replay.py
+          python3 tools/check_hygiene.py
+          python3 tools/check_links.py
+          python3 tools/check_pwa_cache.py
+
+      - name: Source manifest is up to date
+        run: |
+          python3 tools/generate_manifest.py
+          git diff --exit-code SOURCE_MANIFEST.sha256

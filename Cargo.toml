@@ -9,6 +9,7 @@ members = [
 [workspace.package]
 version = "8.2.1"
 edition = "2021"
+rust-version = "1.82"
 authors = ["Denis Yermakou <connect@axonos.org>"]
 license = "AGPL-3.0-only OR LicenseRef-AxonOS-Commercial"
 repository = "https://github.com/AxonOS-BCI/neural-boundary-game"

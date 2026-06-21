@@ -12,7 +12,7 @@ import json, re, sys, tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-STALE = ("5.5.12", "7.0.3")
+STALE = ("5.5.12", "7.0.3", "7.9.812", "0x070900", "neural-boundary-replay-v3")
 LEGACY = ("README.md", "SECURITY.md", "PRIVACY_NOTICE.md", "RELEASE_NOTES.md",
           "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "docs/", "qa/")
 SCAN_SUFFIX = {".md", ".toml", ".rs", ".html", ".css", ".js", ".sh", ".py", ".json", ".yml", ".yaml"}
