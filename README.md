@@ -7,6 +7,8 @@ SPDX-License-Identifier: CC-BY-NC-ND-4.0 -->
 [![CI](https://github.com/AxonOS-BCI/neural-boundary-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AxonOS-BCI/neural-boundary-game/actions)
 [![License: AGPL-3.0-only OR AxonOS Commercial](https://img.shields.io/badge/license-AGPL--3.0--only%20OR%20AxonOS%20Commercial-blue)](LICENSE)
 [![Style: AxonOS Standard Foundation Grande Elite](https://img.shields.io/badge/style-AxonOS%20Grande%20Elite-C8A96A)](docs/UX_STANDARD.md)
+[![Release v8.2.1](https://img.shields.io/badge/release-v8.2.1-C8A96A)](https://github.com/AxonOS-BCI/neural-boundary-game/releases)
+[![Replay: deterministic SHA-256](https://img.shields.io/badge/replay-deterministic%20SHA--256-2ea44f)](#replay-proof)
 
 [![Play Neural Boundary Game v8.2.1](preview.png)](https://axonos-bci.github.io/neural-boundary-game/)
 
@@ -67,7 +69,7 @@ web/                       13-file Grande Style Elite UI + Boundary Field + PWA
 vectors/                   16 replay vectors + checksums (neural-boundary-replay-v3)
 ```
 
-Identity: ABI v3 · product version packed `0x070900` · replay schema
+Identity: ABI v3 · product version packed `0x080201` · replay schema
 `neural-boundary-replay-v3` · hash `fnv1a64-v1` · RNG `xorshift64star-v1` ·
 20 Hz tick.
 
@@ -127,23 +129,3 @@ Build a private boundary demo or deterministic safety review: `connect@axonos.or
 *© 2026 Denis Yermakou / AxonOS. Neural Boundary Game™ v8.2.1 — Cognitive Sovereignty Console.*
 *Software: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial.*
 *AxonOS™ and Neural Boundary Game™ are claimed trademarks.*
-
-## Quick Launch
-
-**Run the console:** https://axonos-bci.github.io/neural-boundary-game/
-
-```bash
-git clone https://github.com/AxonOS-BCI/neural-boundary-game.git
-cd neural-boundary-game
-cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release
-python3 -m http.server -d dist 8080
-```
-
-Then open `http://127.0.0.1:8080/`.
-
-Verification:
-
-```bash
-python3 tools/release_check.py
-cargo run -p neural-boundary-cli --release -- verify-all
-```
