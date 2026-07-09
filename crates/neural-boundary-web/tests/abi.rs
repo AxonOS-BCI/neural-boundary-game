@@ -4,7 +4,7 @@
 // Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 // See LICENSE and IP_NOTICE.md for details.
 
-//! WASM ABI v3 conformance (§17). These run on the host via the `rlib`
+//! WASM ABI v4 conformance (§17). These run on the host via the `rlib`
 //! crate type; the same symbols are exported from the `cdylib` for wasm32.
 
 use neural_boundary_core::{GameState, PlayerAction};

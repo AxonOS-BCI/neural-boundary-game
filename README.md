@@ -57,19 +57,19 @@ Breached · Unsafe**.
 
 ## Architecture
 
-50 kB Rust/WASM core. Flat C ABI v3 (**83 named exports, no `wasm-bindgen`**).
+50 kB Rust/WASM core. Flat C ABI v4 (**83 named exports, no `wasm-bindgen`**).
 Vanilla ES-module UI. No runtime dependencies. No CDN. No telemetry.
 
 ```
 crates/
   neural-boundary-core   #![no_std] #![forbid(unsafe_code)] deterministic engine
   neural-boundary-cli    replay verifier + bot, 16 canonical vectors, SHA-256
-  neural-boundary-web     flat WASM ABI v3 (cdylib) → web/*.js UI
+  neural-boundary-web     flat WASM ABI v4 (cdylib) → web/*.js UI
 web/                       13-file Grande Style Elite UI + Boundary Field + PWA
 vectors/                   16 replay vectors + checksums (neural-boundary-replay-v4)
 ```
 
-Identity: ABI v3 · product version packed `0x080201` · replay schema
+Identity: ABI v4 · product version packed `0x080201` · replay schema
 `neural-boundary-replay-v4` · hash `fnv1a64-v1` · RNG `xorshift64star-v1` ·
 20 Hz tick.
 

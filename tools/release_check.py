@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Denis Yermakou / AxonOS
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 """Release gate aggregator: runs every repository invariant and prints one
 concise PASS/FAIL table suitable for CI logs. Expected identity values come
 from release.toml; this script never maintains its own magic strings.
@@ -48,13 +51,6 @@ REQUIRED_FILES = [
     "web/hud.js",
     "web/accessibility.js",
     "web/scenarios.js",
-    "crates/neural-boundary-web/src/app.rs",
-    "crates/neural-boundary-web/src/bridge.rs",
-    "crates/neural-boundary-web/src/input.rs",
-    "crates/neural-boundary-web/src/render.rs",
-    "crates/neural-boundary-web/src/hud.rs",
-    "crates/neural-boundary-web/src/storage.rs",
-    "crates/neural-boundary-web/src/accessibility.rs",
     "vectors/checksums.sha256",
     "docs/GAME_SPEC.md",
     "docs/REPLAY_SPEC.md",

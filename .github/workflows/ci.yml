@@ -33,10 +33,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy core + CLI (deny warnings)
-        run: cargo clippy -p neural-boundary-core -p neural-boundary-cli --all-targets --locked -- -D warnings
+        run: cargo clippy -p neural-boundary-core -p neural-boundary-cli -p neural-boundary-web --all-targets --locked -- -D warnings
 
       - name: Test core + CLI
-        run: cargo test -p neural-boundary-core -p neural-boundary-cli --locked
+        run: cargo test -p neural-boundary-core -p neural-boundary-cli -p neural-boundary-web --locked
 
       - name: Build WASM from Rust core
         run: cargo build -p neural-boundary-web --target wasm32-unknown-unknown --release --locked

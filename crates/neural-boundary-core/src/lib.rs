@@ -37,7 +37,7 @@ pub const CODENAME: &str = "Cognitive Sovereignty Console";
 pub const STYLE_SYSTEM: &str = "AxonOS Standard Foundation Grande Style Elite";
 pub const REPLAY_SCHEMA: &str = "neural-boundary-replay-v4";
 
-/// ABI v3 (§17.1).
+/// ABI v4 (§17.1).
 pub const ABI_VERSION: u32 = 4;
 /// (major<<16)|(minor<<8)|patch == 0x080201 == 524801 (§17.1).
 pub const PRODUCT_VERSION_PACKED: u32 = (8 << 16) | (2 << 8) | 1;

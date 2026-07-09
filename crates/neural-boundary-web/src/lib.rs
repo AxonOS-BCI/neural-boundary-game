@@ -4,7 +4,7 @@
 // Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 // See LICENSE and IP_NOTICE.md for details.
 
-//! Flat WASM ABI v3 (§17). Eighty-plus C-ABI exports over the canonical core.
+//! Flat WASM ABI v4 (§17). Eighty-plus C-ABI exports over the canonical core.
 //! No wasm-bindgen; `#[unsafe(no_mangle)] extern "C"` (stable since Rust 1.82).
 //! The core crate keeps `#![forbid(unsafe_code)]`; this thin ABI shim does not.
 //!

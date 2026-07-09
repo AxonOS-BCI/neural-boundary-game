@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Denis Yermakou / AxonOS
 // SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
-// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.0.1).
+// Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 //
 // Self-heal: when the build version changes, evict any service worker and
 // caches left by a previous deploy, then reload once so the current tree is

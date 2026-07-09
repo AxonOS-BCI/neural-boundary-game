@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Denis Yermakou / AxonOS
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AxonOS-Commercial
+# Part of Neural Boundary Game — Cognitive Sovereignty Console (v8.2.1).
 """Internal-link gate: every relative Markdown link and anchor must resolve.
 
 External http(s) links are not fetched (the gate runs offline); only
